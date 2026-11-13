@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Ajustes
+Name[pt_BR]=Ajustes
+Comment=Personalize o visual do Guatá: transparência, som, tema
+Exec=guata-ajustes
+Icon=/usr/share/icons/guata/app-ajustes.png
+Terminal=false
+Categories=Settings;DesktopSettings;GTK;
+Keywords=transparencia;dock;tema;som;personalizar;ajustes;

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Expedições Guatá
+Comment=Aprenda explorando o Brasil com a Capivara (educativo, 5 Rs)
+Exec=expedicoes
+Icon=/usr/share/icons/guata/app-expedicoes.png
+Terminal=false
+Categories=Education;Game;
+Keywords=educacao;criancas;sustentabilidade;5rs;capivara;natureza;heloisa;

@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+systemctl mask smbd nmbd winbind >/dev/null 2>&1 || true
+chmod 755 /usr/local/sbin/guata-files-* /usr/local/bin/guata-files 2>/dev/null || true
+mkdir -p /etc/guata-files /srv/guata-files /etc/guata-files/shares
+chmod 700 /etc/guata-files 2>/dev/null || true
+
+# Certificado TLS self-signed (cifra o tráfego do painel: senhas não viajam em claro)
+if [ ! -f /etc/guata-files/web-cert.pem ] && command -v openssl >/dev/null 2>&1; then
+  CN=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo guata-files)
+  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+    -keyout /etc/guata-files/web-key.pem -out /etc/guata-files/web-cert.pem \
+    -subj "/CN=${CN}" -addext "subjectAltName=DNS:${CN},DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1 || true
+  chmod 600 /etc/guata-files/web-key.pem 2>/dev/null || true
+  chmod 644 /etc/guata-files/web-cert.pem 2>/dev/null || true
+fi
+
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl restart rsyslog >/dev/null 2>&1 || true
+systemctl enable guata-files-web >/dev/null 2>&1 || true
+systemctl restart guata-files-web >/dev/null 2>&1 || true
+if [ ! -f /etc/guata-files/configurado ]; then
+cat <<'MSG'
+
+  Guatá Files instalado!
+  1) Configure (no proprio servidor):  sudo guata-files-configurar
+  2) Abra o painel web (HTTPS):         https://localhost:8080
+     (certificado proprio - aceite o aviso do navegador na primeira vez)
+
+MSG
+fi
+# atualiza menu e cache de ícones (lançador do painel)
+update-desktop-database >/dev/null 2>&1 || true
+gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+exit 0

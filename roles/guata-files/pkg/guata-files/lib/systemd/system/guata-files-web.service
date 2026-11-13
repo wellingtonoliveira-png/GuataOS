@@ -1,0 +1,13 @@
+[Unit]
+Description=Guatá Files — painel web (porta 8080)
+After=network-online.target smbd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/guata-files-web
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

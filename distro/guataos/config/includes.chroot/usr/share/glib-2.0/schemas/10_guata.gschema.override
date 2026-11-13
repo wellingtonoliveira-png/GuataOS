@@ -1,0 +1,9 @@
+# Padrões do Guatá — interface + dock (wallpaper fica no 90, som no 91)
+[org.gnome.desktop.interface]
+accent-color='green'
+color-scheme='prefer-dark'
+
+[org.gnome.shell]
+welcome-dialog-last-shown-version='99.0'
+enabled-extensions=['guata-leaf@guataos.com.br', 'dash-to-dock@micxgx.gmail.com', 'ubuntu-appindicators@ubuntu.com', 'user-theme@gnome-shell-extensions.gcampax.github.com']
+favorite-apps=['br.com.guataos.Ocara.desktop', 'firefox-esr.desktop', 'org.gnome.Nautilus.desktop', 'guata-central.desktop', 'guata-ajustes.desktop']

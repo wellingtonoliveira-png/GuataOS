@@ -1,0 +1,192 @@
+#!/bin/bash
+# Guatá ID — Assistente de criação do domínio (Samba AD DC) — pt-BR, marca Guatá
+# Roda como root. Interface whiptail verde Guatá.
+set -euo pipefail
+export NEWT_COLORS='
+root=,black
+window=,white
+border=green,white
+textbox=black,white
+listbox=black,white
+actlistbox=white,green
+button=white,green
+compactbutton=black,white
+entry=black,white
+checkbox=black,white
+actcheckbox=white,green
+title=green,white
+'
+TITLE="Guatá ID  —  Servidor de Domínio"
+ETC=/etc/guata-id
+mkdir -p "$ETC"
+
+if [ "$(id -u)" != "0" ]; then echo "Rode como root (sudo)."; exit 1; fi
+if [ -f "$ETC/provisionado" ]; then
+  whiptail --title "$TITLE" --msgbox "Este servidor JÁ é um controlador de domínio Guatá ID.\n\nPara ver o estado, use:  guata-id painel" 12 64
+  exit 0
+fi
+
+msg(){ whiptail --title "$TITLE" --msgbox "$1" "${2:-12}" "${3:-70}"; }
+ask(){ whiptail --title "$TITLE" --inputbox "$1" "${2:-10}" "${3:-70}" "${4:-}" 3>&1 1>&2 2>&3; }
+pass(){ whiptail --title "$TITLE" --passwordbox "$1" 10 70 3>&1 1>&2 2>&3; }
+
+whiptail --title "$TITLE" --msgbox "Bem-vindo ao Guatá ID.\n\nEm poucos passos este servidor vira o CÉREBRO da sua rede:\nlogin único, usuários, grupos, senhas e permissões para\ntodos os computadores da empresa.\n\nVamos criar o seu domínio com segurança." 15 72
+
+# ── Domínio ──
+while true; do
+  REALM=$(ask "Qual o nome do seu domínio?\n\nUse o padrão da empresa, terminando em .local\nExemplos:  minhaempresa.local   soprema.local" 12 72 "minhaempresa.local") || exit 1
+  REALM=$(echo "$REALM" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+  if echo "$REALM" | grep -qE '^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$'; then break; fi
+  msg "Nome inválido. Use algo como 'empresa.local' (sem espaços, com um ponto)." 10 70
+done
+NBDEFAULT=$(echo "$REALM" | cut -d. -f1 | tr '[:lower:]' '[:upper:]' | cut -c1-15)
+NETBIOS=$(ask "Nome curto do domínio (NetBIOS).\nÉ o que aparece na tela de login do Windows.\nAté 15 letras, sem espaços." 11 70 "$NBDEFAULT") || exit 1
+NETBIOS=$(echo "$NETBIOS" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9-' | cut -c1-15)
+
+# ── Senha do Administrator ──
+while true; do
+  P1=$(pass "Crie a SENHA do Administrador do domínio.\n\nMínimo 8 caracteres, com maiúscula, minúscula e número.\nGuarde bem: é a chave-mestra da sua rede.") || exit 1
+  P2=$(pass "Repita a senha do Administrador.") || exit 1
+  if [ "$P1" != "$P2" ]; then msg "As senhas não conferem. Vamos de novo." 9 60; continue; fi
+  if ! echo "$P1" | grep -qE '.{8,}'; then msg "Senha curta demais (mínimo 8)." 9 60; continue; fi
+  if ! { echo "$P1" | grep -q '[A-Z]' && echo "$P1" | grep -q '[a-z]' && echo "$P1" | grep -q '[0-9]'; }; then
+    msg "A senha precisa de maiúscula, minúscula e número." 9 64; continue; fi
+  break
+done
+ADMINPASS="$P1"
+
+# ── Rede ──
+IFACE=$(ip -o -4 route show to default 2>/dev/null | awk '{print $5}' | head -1)
+[ -z "$IFACE" ] && IFACE=$(ip -o link | awk -F': ' '$2!="lo"{print $2; exit}')
+CURIP=$(ip -o -4 addr show dev "$IFACE" 2>/dev/null | awk '{print $4}' | head -1)
+CURGW=$(ip -o -4 route show to default 2>/dev/null | awk '{print $3}' | head -1)
+msg "Um servidor de domínio precisa de IP FIXO.\n\nPlaca de rede detectada: $IFACE\nIP atual: ${CURIP:-nenhum}\nGateway atual: ${CURGW:-nenhum}\n\nNa próxima tela confirme/ajuste o IP fixo." 14 70
+IPCIDR=$(ask "IP fixo deste servidor (com máscara /24, /16...):\nEx: 192.168.1.10/24" 10 70 "${CURIP:-192.168.1.10/24}") || exit 1
+IPONLY="${IPCIDR%/*}"
+GW=$(ask "Gateway (roteador) da rede:\nEx: 192.168.1.1" 10 70 "${CURGW:-192.168.1.1}") || exit 1
+FWD=$(ask "DNS para sites da internet (encaminhador).\nO Guatá ID cuida dos nomes internos; a internet ele\nrepassa para este DNS.\nEx: 1.1.1.1  ou  8.8.8.8" 12 70 "1.1.1.1") || exit 1
+HOST=$(ask "Nome deste servidor (hostname):\nEx: dc01" 10 70 "dc01") || exit 1
+HOST=$(echo "$HOST" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')
+
+# ── Confirmação ──
+if ! whiptail --title "$TITLE" --yesno \
+"Confirme a criação do domínio:\n\n  Domínio .......: $REALM\n  Nome curto ....: $NETBIOS\n  Servidor (DC) .: $HOST.$REALM\n  Placa .........: $IFACE\n  IP fixo .......: $IPCIDR\n  Gateway .......: $GW\n  DNS internet ..: $FWD\n\nIsto vai configurar a rede e criar o domínio.\nPosso continuar?" 20 72; then
+  msg "Cancelado. Nada foi alterado." 8 50; exit 1
+fi
+
+# salva respostas (sem senha)
+cat > "$ETC/dominio.conf" <<EOF
+REALM=$REALM
+NETBIOS=$NETBIOS
+HOST=$HOST
+IFACE=$IFACE
+IPCIDR=$IPCIDR
+GW=$GW
+FWD=$FWD
+EOF
+
+# ── Execução ──
+{
+echo "10"; echo "# Preparando o sistema..."
+hostnamectl set-hostname "$HOST" 2>/dev/null || hostname "$HOST"
+IPONLY=${IPCIDR%/*}
+# /etc/hosts
+grep -q "$HOST.$REALM" /etc/hosts || sed -i "/127.0.1.1/d" /etc/hosts
+echo "$IPONLY   $HOST.$REALM $HOST" >> /etc/hosts
+
+echo "25"; echo "# Configurando a rede (IP fixo)..."
+# NetworkManager por nome de conexão
+if command -v nmcli >/dev/null 2>&1 && systemctl is-active NetworkManager >/dev/null 2>&1; then
+  CON=$(nmcli -t -f NAME,DEVICE connection show --active | awk -F: -v d="$IFACE" '$2==d{print $1; exit}')
+  [ -z "$CON" ] && CON="guata-id"
+  nmcli connection modify "$CON" ipv4.method manual ipv4.addresses "$IPCIDR" ipv4.gateway "$GW" ipv4.dns "127.0.0.1" ipv4.dns-search "$REALM" 2>/dev/null \
+    || nmcli connection add type ethernet ifname "$IFACE" con-name "$CON" ipv4.method manual ipv4.addresses "$IPCIDR" ipv4.gateway "$GW" ipv4.dns "127.0.0.1" 2>/dev/null || true
+else
+  mkdir -p /etc/systemd/network
+  cat > /etc/systemd/network/10-guata-id.network <<EOF
+[Match]
+Name=$IFACE
+[Network]
+Address=$IPCIDR
+Gateway=$GW
+DNS=127.0.0.1
+Domains=$REALM
+EOF
+  systemctl enable systemd-networkd >/dev/null 2>&1 || true
+fi
+
+echo "40"; echo "# Liberando a porta de DNS (53)..."
+systemctl disable --now systemd-resolved >/dev/null 2>&1 || true
+rm -f /etc/resolv.conf
+cat > /etc/resolv.conf <<EOF
+search $REALM
+nameserver 127.0.0.1
+EOF
+# não deixa NM/resolved sobrescrever
+chattr +i /etc/resolv.conf 2>/dev/null || true
+
+echo "55"; echo "# Parando serviços conflitantes..."
+systemctl disable --now smbd nmbd winbind >/dev/null 2>&1 || true
+systemctl mask smbd nmbd winbind >/dev/null 2>&1 || true
+
+echo "65"; echo "# Criando o domínio (pode levar 1 minuto)..."
+mv -f /etc/samba/smb.conf /etc/samba/smb.conf.original 2>/dev/null || true
+samba-tool domain provision \
+  --use-rfc2307 \
+  --realm="$(echo "$REALM" | tr '[:lower:]' '[:upper:]')" \
+  --domain="$NETBIOS" \
+  --server-role=dc \
+  --dns-backend=SAMBA_INTERNAL \
+  --adminpass="$ADMINPASS" \
+  --host-name="$HOST" \
+  >>/var/log/guata-id-provision.log 2>&1
+
+echo "82"; echo "# Configurando Kerberos e DNS..."
+cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
+# encaminhador de DNS
+if grep -q "dns forwarder" /etc/samba/smb.conf; then
+  sed -i "s|.*dns forwarder.*|\tdns forwarder = $FWD|" /etc/samba/smb.conf
+else
+  sed -i "/\[global\]/a \\\tdns forwarder = $FWD" /etc/samba/smb.conf
+fi
+
+echo "90"; echo "# Ajustando o relógio (Kerberos exige hora certa)..."
+systemctl enable --now chrony >/dev/null 2>&1 || true
+
+echo "95"; echo "# Ligando o controlador de domínio..."
+systemctl unmask samba-ad-dc >/dev/null 2>&1 || true
+systemctl enable samba-ad-dc >/dev/null 2>&1 || true
+systemctl restart samba-ad-dc >/dev/null 2>&1 || systemctl start samba-ad-dc >/dev/null 2>&1 || true
+
+echo "98"; echo "# Abrindo o painel web..."
+systemctl enable --now guata-id-web >/dev/null 2>&1 || true
+
+echo "100"; echo "# Pronto!"
+date > "$ETC/provisionado"
+} | whiptail --title "$TITLE" --gauge "Criando seu domínio..." 10 70 0
+
+# ── Administrador pessoal (opcional) ──
+if whiptail --title "$TITLE" --yesno "O domínio já tem o administrador padrão \"Administrator\"\n(com a senha que você criou).\n\nQuer criar também um ADMINISTRADOR PESSOAL\n(com o seu nome), para o dia a dia?" 13 68; then
+  AU=$(ask "Login do seu administrador (ex: wellington.admin):" 10 66) || AU=""
+  AU=$(echo "$AU" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9._-')
+  if [ -n "$AU" ]; then
+    while true; do
+      AP=$(pass "Senha para $AU (mín. 8, com Maiúscula, minúscula e número):") || break
+      if echo "$AP" | grep -qE '.{8,}' && echo "$AP" | grep -q '[A-Z]' && echo "$AP" | grep -q '[a-z]' && echo "$AP" | grep -q '[0-9]'; then break; fi
+      msg "Senha fraca. Tente de novo." 8 50
+    done
+    if [ -n "${AP:-}" ]; then
+      samba-tool user create "$AU" "$AP" >/dev/null 2>&1 && \
+      samba-tool group addmembers "Domain Admins" "$AU" >/dev/null 2>&1 && \
+      samba-tool group addmembers "Administrators" "$AU" >/dev/null 2>&1
+      msg "Administrador pessoal '$AU' criado e com poderes de admin." 9 64
+    fi
+  fi
+fi
+
+sleep 1
+IP_WEB="${IPONLY:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
+whiptail --title "$TITLE" --msgbox \
+"Domínio criado com sucesso!\n\n  Domínio .......: $REALM\n  Servidor (DC) .: $HOST.$REALM  ($IPONLY)\n  Entrar como ...: Administrator  (a senha que você criou)\n\n  >> PAINEL BONITO NO NAVEGADOR:  http://$IP_WEB\n\nCOMO LIGAR UM COMPUTADOR WINDOWS:\n  1) No PC, use este servidor como DNS:  $IPONLY\n  2) Acessar domínio:  $REALM\n  3) Reinicie e faça login com um usuário do domínio." 20 74
+clear
+echo "Guatá ID provisionado. Painel: guata-id painel"

@@ -1,0 +1,43 @@
+# GUATÁ — desktop GNOME polido (base para o visual estilo Deepin)
+# GNOME enxuto (gnome-core, não o task completo) + ferramentas de tema/extensão
+# que nos deixam esculpir a cara do Guatá sem inventar um DE do zero.
+gnome-core
+gdm3
+gnome-tweaks
+gnome-shell-extensions
+gnome-shell-extension-manager
+gnome-shell-extension-dashtodock
+gnome-shell-extension-appindicator
+papirus-icon-theme
+fonts-cantarell
+fonts-noto
+firefox-esr
+file-roller
+gnome-system-monitor
+network-manager-gnome
+# idioma pt-BR
+locales
+libcanberra-gtk3-module
+sound-theme-freedesktop
+pulseaudio-utils
+flatpak
+gnome-software-plugin-flatpak
+libsqlcipher1
+gnome-keyring
+libsecret-1-0
+libnotify4
+gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good
+calamares
+gnome-mines
+gnome-sudoku
+gnome-2048
+aisleriot
+plymouth
+plymouth-label
+plymouth-themes
+efibootmgr
+grub-efi-amd64-signed
+shim-signed
+gir1.2-webkit2-4.1
+librsvg2-bin

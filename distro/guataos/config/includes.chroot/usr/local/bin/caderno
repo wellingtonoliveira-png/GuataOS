@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Meu Caderno — editor acolhedor do guataOS (p/ o Cantinho / crianças).
+Cara de folha de caderno, botões grandes e claros, zero cara de terminal.
+Salva em ~/Meus Escritos.
+"""
+import gi, os, datetime, re
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+
+HOME = os.path.expanduser("~")
+PASTA = os.path.join(HOME, "Meus Escritos")
+os.makedirs(PASTA, exist_ok=True)
+
+CSS = """
+window { background: #efe6d6; }
+headerbar { background: #e7dcc6; border: none; box-shadow: none; min-height: 48px; }
+.tbtn { font-size: 16px; font-weight: 800; padding: 10px 18px; border-radius: 14px;
+        background: #fff; border: 2px solid #e0d4bd; color: #4a4031; }
+.tbtn:hover { background: #fffdf8; }
+.tbtn.save { background: #7db37d; color: #fff; border-color: transparent; }
+.tbtn.save:hover { background: #6aa06a; }
+.titulo-entry { font-size: 22px; font-weight: 800; color: #3b3326; background: transparent;
+                border: none; box-shadow: none; padding: 14px 26px 2px 70px; }
+.titulo-entry > text { background: transparent; }
+/* a "folha" com linhas de caderno + margem vermelha */
+.folha { background:
+    repeating-linear-gradient(#fcf8ef, #fcf8ef 37px, #d7e4ef 37px, #d7e4ef 39px);
+    border-left: 3px solid #e6b9b0; }
+textview, textview text { background: transparent; color: #2e2a22;
+    font-family: 'Noto Serif','DejaVu Serif',serif; font-size: 18px; }
+textview { padding: 8px 26px 26px 70px; }
+.aviso { color: #8a7d68; font-size: 13px; padding: 4px 26px; }
+"""
+
+class Caderno(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="br.com.guataos.Caderno")
+        self.arquivo = None
+
+    def do_activate(self):
+        css = Gtk.CssProvider(); css.load_from_data(CSS.encode("utf-8"))
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        self.win = Adw.ApplicationWindow(application=self)
+        self.win.set_title("Meu Caderno"); self.win.add_css_class("janela")
+        self.win.set_default_size(820, 680)
+
+        tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar(); hb.set_show_end_title_buttons(True)
+        t = Gtk.Label(label="📓 Meu Caderno"); t.add_css_class("title"); hb.set_title_widget(t)
+        # botões grandes
+        bnova = Gtk.Button(label="📄 Nova");  bnova.add_css_class("tbtn");  bnova.connect("clicked", self.nova)
+        babrir= Gtk.Button(label="📂 Abrir"); babrir.add_css_class("tbtn"); babrir.connect("clicked", self.abrir)
+        bsalv = Gtk.Button(label="💾 Salvar");bsalv.add_css_class("tbtn");  bsalv.add_css_class("save"); bsalv.connect("clicked", self.salvar)
+        hb.pack_start(bnova); hb.pack_start(babrir); hb.pack_end(bsalv)
+        tv.add_top_bar(hb)
+        self.win.set_content(tv)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        tv.set_content(box)
+
+        self.titulo = Gtk.Entry(); self.titulo.add_css_class("titulo-entry")
+        self.titulo.set_placeholder_text("Título da sua história…")
+        box.append(self.titulo)
+
+        sc = Gtk.ScrolledWindow(hexpand=True, vexpand=True); sc.add_css_class("folha")
+        self.texto = Gtk.TextView(); self.texto.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.texto.add_css_class("folha")
+        sc.set_child(self.texto)
+        box.append(sc)
+
+        self.status = Gtk.Label(label="Tudo é salvo em “Meus Escritos”.", xalign=0); self.status.add_css_class("aviso")
+        box.append(self.status)
+
+        # abre arquivo passado por argumento (se houver)
+        self.win.present()
+
+    # ---------- ações ----------
+    def _buffer_text(self):
+        b = self.texto.get_buffer()
+        return b.get_text(b.get_start_iter(), b.get_end_iter(), True)
+
+    def nova(self, *_):
+        self.texto.get_buffer().set_text(""); self.titulo.set_text(""); self.arquivo = None
+        self.status.set_label("Folha nova. Escreva à vontade ✍️")
+
+    def salvar(self, *_):
+        titulo = self.titulo.get_text().strip()
+        corpo = self._buffer_text()
+        if not titulo:
+            # usa a 1ª linha como título, ou a data
+            prim = corpo.strip().splitlines()[0] if corpo.strip() else ""
+            titulo = prim[:40] if prim else "história " + datetime.datetime.now().strftime("%d-%m %H%M")
+            self.titulo.set_text(titulo)
+        nome = re.sub(r'[^\w\sÀ-ÿ-]', '', titulo).strip() or "historia"
+        self.arquivo = os.path.join(PASTA, nome + ".txt")
+        try:
+            with open(self.arquivo, "w", encoding="utf-8") as f:
+                f.write(corpo)
+            self.status.set_label(f"Salvo! 💛  ({nome}.txt)")
+        except Exception as e:
+            self.status.set_label("Ops, não consegui salvar. Tenta outro título?")
+
+    def abrir(self, *_):
+        arqs = sorted([x for x in os.listdir(PASTA) if x.endswith(".txt")]) if os.path.isdir(PASTA) else []
+        dlg = Adw.MessageDialog(transient_for=self.win, heading="Abrir uma história",
+            body=("Escolha o que quer ler ou continuar:" if arqs else "Você ainda não salvou nenhuma história."))
+        if arqs:
+            lst = Gtk.ListBox(); lst.add_css_class("boxed-list")
+            for a in arqs[:40]:
+                r = Gtk.Label(label=a[:-4], xalign=0, margin_top=8, margin_bottom=8, margin_start=12, margin_end=12)
+                lst.append(r)
+            sc = Gtk.ScrolledWindow(); sc.set_min_content_height(240); sc.set_child(lst)
+            dlg.set_extra_child(sc)
+            lst.connect("row-activated", lambda _l, row: (self._carregar(arqs[row.get_index()]), dlg.close()))
+        dlg.add_response("x", "Fechar"); dlg.present()
+
+    def _carregar(self, nome):
+        p = os.path.join(PASTA, nome)
+        try:
+            with open(p, encoding="utf-8") as f:
+                self.texto.get_buffer().set_text(f.read())
+            self.titulo.set_text(nome[:-4]); self.arquivo = p
+            self.status.set_label(f"Abri “{nome[:-4]}”. Boa leitura/escrita! 📖")
+        except Exception:
+            self.status.set_label("Não consegui abrir essa história.")
+
+if __name__ == "__main__":
+    Caderno().run(None)

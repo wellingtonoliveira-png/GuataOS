@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Guatá ID — Painel
+Comment=Identidade e domínio (Active Directory)
+Exec=xdg-open http://localhost/
+Icon=guata-id
+Terminal=false
+Categories=System;Settings;Network;
+Keywords=guata;servidor;painel;
+StartupNotify=true

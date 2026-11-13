@@ -1,0 +1,96 @@
+#!/bin/bash
+# Guatá Files — reconstrói shares.conf a partir do registro + aplica ACLs POSIX.
+# Uso: guata-files-regen            → regenera tudo e recarrega o Samba
+#      guata-files-regen grupos     → lista grupos disponíveis conforme o modo
+set -u
+ETC=/etc/guata-files; BASE=/srv/guata-files; SHCONF=$ETC/shares.conf; SHDIR=$ETC/shares
+mkdir -p "$SHDIR" "$BASE"
+. "$ETC/config" 2>/dev/null; MODO=${MODO:-simples}
+
+gref(){ if [ "$MODO" = empresa ] || [ "$MODO" = dc ]; then echo "@\"$1\""; else echo "@$1"; fi; }
+
+grupos(){
+  case "$MODO" in
+    dc)      samba-tool group list 2>/dev/null | sort ;;
+    empresa) wbinfo -g 2>/dev/null | sort ;;
+    *)       getent group | awk -F: '$3>=1000 && $1!="nogroup"{print $1}' | sort ;;
+  esac
+}
+
+regen(){
+  grep -q "include = $SHCONF" /etc/samba/smb.conf 2>/dev/null || echo "   include = $SHCONF" >> /etc/samba/smb.conf
+  : > "$SHCONF"
+  for f in "$SHDIR"/*; do
+    [ -f "$f" ] || continue
+    local sh path valid rlist wlist alist g lvl ref
+    sh=$(basename "$f")
+    path=$(sed -n 's/^#path=//p' "$f" | head -1)
+    [ -z "$path" ] && path="$BASE/$sh"
+    mkdir -p "$path"
+    audit=$(sed -n 's/^#audit=//p' "$f" | head -1)
+    valid=""; rlist=""; wlist=""; alist=""; guest=no
+    local tru lvl tipo todosg
+    while IFS='|' read -r tru lvl tipo; do
+      [ -z "$tru" ] && continue
+      case "$tru" in \#*) continue;; esac
+      tipo=${tipo:-grupo}
+      # resolve referência (ref) e alvo de ACL (facl) conforme o tipo
+      if [ "$tipo" = todos ]; then
+        if [ "$MODO" = empresa ] || [ "$MODO" = dc ]; then todosg="Domain Users"; ref=$(gref "$todosg"); facl="g:$todosg";
+        else guest=yes; ref=""; facl=""; fi
+      elif [ "$tipo" = usuario ]; then
+        ref="$tru"; facl="u:$tru"
+      else
+        ref=$(gref "$tru"); facl="g:$tru"
+      fi
+      [ -n "$ref" ] && valid="$valid $ref"
+      perm=rX; [ "$lvl" = edicao ] && perm=rwX; [ "$lvl" = total ] && perm=rwX
+      [ -n "$facl" ] && { setfacl -R -m "$facl:$perm" "$path" 2>/dev/null; setfacl -R -d -m "$facl:$perm" "$path" 2>/dev/null; }
+      case "$lvl" in
+        leitura) [ -n "$ref" ] && rlist="$rlist $ref";;
+        edicao)  [ -n "$ref" ] && wlist="$wlist $ref";;
+        total)   [ -n "$ref" ] && { wlist="$wlist $ref"; alist="$alist $ref"; };;
+      esac
+    done < "$f"
+    {
+      echo "[$sh]"
+      echo "   path = $path"
+      echo "   read only = no"
+      echo "   browseable = yes"
+      if [ "$audit" = "1" ]; then
+        echo "   vfs objects = acl_xattr shadow_copy2 full_audit"
+        echo "   full_audit:prefix = %u|%I|%S"
+        echo "   full_audit:success = mkdir rmdir rename unlink open"
+        echo "   full_audit:failure = none"
+        echo "   full_audit:facility = user"
+        echo "   full_audit:priority = notice"
+      else
+        echo "   vfs objects = acl_xattr shadow_copy2"
+      fi
+      echo "   shadow:snapdir = .snapshots"
+      echo "   shadow:format = @GMT-%Y.%m.%d-%H.%M.%S"
+      echo "   shadow:localtime = yes"
+      echo "   shadow:snapdirseverywhere = no"
+      echo "   veto files = /.snapshots/"
+      echo "   delete veto files = no"
+      [ "$guest" = yes ] && { echo "   guest ok = yes"; echo "   force user = root"; }
+      [ -n "$valid" ] && echo "   valid users =$valid"
+      [ -n "$rlist" ] && echo "   read list =$rlist"
+      [ -n "$wlist" ] && echo "   write list =$wlist"
+      [ -n "$alist" ] && echo "   admin users =$alist"
+      echo ""
+    } >> "$SHCONF"
+  done
+  # recarrega o serviço Samba CERTO: num controlador de domínio (modo tudo-junto),
+  # quem serve é o samba-ad-dc e o smbd fica mascarado — então recarrega o samba-ad-dc.
+  if systemctl is-active --quiet samba-ad-dc; then
+    smbcontrol all reload-config >/dev/null 2>&1 || systemctl restart samba-ad-dc >/dev/null 2>&1 || true
+  else
+    smbcontrol smbd reload-config >/dev/null 2>&1 || systemctl reload smbd 2>/dev/null || systemctl restart smbd 2>/dev/null || true
+  fi
+}
+
+case "${1:-regen}" in
+  grupos) grupos ;;
+  *)      regen ;;
+esac

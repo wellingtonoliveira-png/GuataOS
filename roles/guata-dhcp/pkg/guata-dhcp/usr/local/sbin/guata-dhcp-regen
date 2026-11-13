@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+# Guatá DHCP — gera /etc/kea/kea-dhcp4.conf a partir do registro e aplica (Kea).
+# Uso: guata-dhcp-regen [apply|dump|test]
+import json, os, sys, subprocess, ipaddress
+
+ETC="/etc/guata-dhcp"; REG=ETC+"/config.json"
+KEACONF="/etc/kea/kea-dhcp4.conf"
+LEASES="/var/lib/kea/kea-leases4.csv"
+
+PADRAO={"interface":"","escopos":[],"reservas":[],"ddns":False}
+
+def carregar():
+    try:
+        d=json.load(open(REG))
+        for k,v in PADRAO.items(): d.setdefault(k,v)
+        return d
+    except Exception:
+        return dict(PADRAO)
+
+def _net(e):
+    try: return ipaddress.ip_network("%s/%s"%(e["rede"],e["mascara"]),strict=False)
+    except Exception: return None
+
+def gerar(d):
+    iface=d.get("interface") or ""
+    subnets=[]
+    for i,e in enumerate(d.get("escopos",[]),start=1):
+        net=_net(e)
+        if not net: continue
+        opt=[]
+        if e.get("gateway"): opt.append({"name":"routers","data":str(e["gateway"])})
+        dns=[x for x in (e.get("dns") or []) if x]
+        if dns: opt.append({"name":"domain-name-servers","data":", ".join(dns)})
+        if e.get("dominio"): opt.append({"name":"domain-name","data":str(e["dominio"])})
+        # reservas que caem nesta sub-rede
+        res=[]
+        for r in d.get("reservas",[]):
+            try: ip=ipaddress.ip_address(r.get("ip",""))
+            except Exception: continue
+            if ip in net and r.get("mac"):
+                item={"hw-address":r["mac"].lower(),"ip-address":r["ip"]}
+                if r.get("nome"): item["hostname"]=r["nome"]
+                res.append(item)
+        sub={"id":i,"subnet":str(net),
+             "pools":[{"pool":"%s - %s"%(e.get("ini"),e.get("fim"))}] if e.get("ini") and e.get("fim") else [],
+             "option-data":opt,
+             "valid-lifetime":int(e.get("lease") or 3600)}
+        if res: sub["reservations"]=res
+        subnets.append(sub)
+    cfg={"Dhcp4":{
+        "interfaces-config":{"interfaces":[iface] if iface else []},
+        "control-socket":{"socket-type":"unix","socket-name":"/run/kea/kea4-ctrl-socket"},
+        "lease-database":{"type":"memfile","persist":True,"name":LEASES},
+        "valid-lifetime":3600,
+        "loggers":[{"name":"kea-dhcp4","severity":"INFO",
+                    "output_options":[{"output":"/var/log/kea-dhcp4.log"}]}],
+        "subnet4":subnets}}
+    return json.dumps(cfg,indent=2)+"\n"
+
+def main():
+    acao=sys.argv[1] if len(sys.argv)>1 else "apply"
+    d=carregar(); txt=gerar(d)
+    if acao=="dump":
+        sys.stdout.write(txt); return 0
+    os.makedirs("/etc/kea",exist_ok=True)
+    open(KEACONF,"w").write(txt); os.chmod(KEACONF,0o644)
+    # valida a config antes de aplicar
+    r=subprocess.run(["kea-dhcp4","-t",KEACONF],capture_output=True,text=True)
+    if r.returncode!=0:
+        sys.stderr.write(r.stderr or r.stdout); return 2
+    if acao=="test": print("OK config válida"); return 0
+    # só sobe o serviço se houver escopo (Kea falha sem subnet/interface)
+    if d.get("escopos") and d.get("interface"):
+        subprocess.run(["systemctl","enable","--now","kea-dhcp4-server"],capture_output=True,text=True)
+        subprocess.run(["systemctl","restart","kea-dhcp4-server"],capture_output=True,text=True)
+    print("OK"); return 0
+
+if __name__=="__main__":
+    sys.exit(main())

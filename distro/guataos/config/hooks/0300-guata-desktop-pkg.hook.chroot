@@ -1,0 +1,14 @@
+#!/bin/sh
+# ─────────────────────────────────────────────────────────────────────────────
+# Registra o guata-desktop NO DPKG durante o build.
+# Sem isto, a ISO fica só com os arquivos soltos (includes.chroot) e o
+# 'apt upgrade' não acha o Guatá → "tudo atualizado" (falso). Instalar o .deb
+# faz o sistema nascer sabendo se atualizar, e já traz a versão mais nova do repo.
+# ─────────────────────────────────────────────────────────────────────────────
+# (guata.sources + keyring já vieram pelo includes.chroot, copiado antes dos hooks)
+apt-get update 2>/dev/null || true
+if apt-get install -y guata-desktop; then
+  echo "Guatá: guata-desktop registrado no dpkg (OTA vai funcionar nesta ISO)."
+else
+  echo "Guatá: AVISO — não instalou guata-desktop do repo; seguindo com arquivos do includes."
+fi

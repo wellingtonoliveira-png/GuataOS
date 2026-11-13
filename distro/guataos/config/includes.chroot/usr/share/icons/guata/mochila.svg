@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="corpo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3fa06f"/><stop offset="1" stop-color="#1f7a55"/>
+    </linearGradient>
+    <linearGradient id="bolso" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4fb286"/><stop offset="1" stop-color="#2f8f66"/>
+    </linearGradient>
+    <linearGradient id="folha" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9ee7bf"/><stop offset="1" stop-color="#3fa06f"/>
+    </linearGradient>
+  </defs>
+  <!-- saco de dormir em cima -->
+  <rect x="150" y="70" width="212" height="52" rx="26" fill="#2f8f66"/>
+  <rect x="150" y="70" width="212" height="52" rx="26" fill="none" stroke="#1f7a55" stroke-width="6"/>
+  <circle cx="176" cy="96" r="11" fill="#1f7a55"/><circle cx="336" cy="96" r="11" fill="#1f7a55"/>
+  <!-- alças -->
+  <path d="M196 150 C 150 180, 150 300, 190 360" fill="none" stroke="#176045" stroke-width="26" stroke-linecap="round"/>
+  <path d="M316 150 C 362 180, 362 300, 322 360" fill="none" stroke="#176045" stroke-width="26" stroke-linecap="round"/>
+  <!-- corpo da mochila -->
+  <rect x="120" y="130" width="272" height="320" rx="58" fill="url(#corpo)"/>
+  <!-- tampa superior -->
+  <path d="M120 200 C 120 150, 160 128, 200 128 L 312 128 C 352 128, 392 150, 392 200 L 392 230 C 392 250, 372 262, 352 262 L 160 262 C 140 262, 120 250, 120 230 Z" fill="#2f8f66"/>
+  <rect x="236" y="196" width="40" height="86" rx="12" fill="#176045"/>
+  <rect x="226" y="236" width="60" height="26" rx="8" fill="#e0a24a"/>
+  <!-- bolso frontal com folha -->
+  <path d="M158 300 L 354 300 C 366 300, 376 310, 376 322 L 376 420 C 376 434, 364 446, 350 446 L 162 446 C 148 446, 136 434, 136 420 L 136 322 C 136 310, 146 300, 158 300 Z" fill="url(#bolso)"/>
+  <path d="M136 322 C 136 310, 146 300, 158 300 L 354 300 C 366 300, 376 310, 376 322 L 376 336 L 136 336 Z" fill="#176045" opacity="0.25"/>
+  <!-- folha no bolso -->
+  <g transform="translate(222,338) scale(1.4)">
+    <path d="M44 6 C 20 6, 6 22, 6 46 C 10 46, 14 45.4, 18 44.2 C 17 36, 20 27, 27 20 C 24 29, 23 37, 23.6 42 C 33 37, 44 27, 44 6 Z" fill="url(#folha)"/>
+  </g>
+  <!-- fivelas -->
+  <rect x="150" y="286" width="30" height="20" rx="5" fill="#e0a24a"/>
+  <rect x="332" y="286" width="30" height="20" rx="5" fill="#e0a24a"/>
+</svg>

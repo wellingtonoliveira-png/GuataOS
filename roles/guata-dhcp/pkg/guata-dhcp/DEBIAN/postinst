@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e
+chmod 755 /usr/local/sbin/guata-dhcp-* 2>/dev/null || true
+mkdir -p /etc/guata-dhcp /var/lib/kea
+chmod 700 /etc/guata-dhcp 2>/dev/null || true
+# registro inicial vazio
+[ -f /etc/guata-dhcp/config.json ] || echo '{"interface":"","escopos":[],"reservas":[],"ddns":false}' > /etc/guata-dhcp/config.json
+# certificado TLS self-signed (painel cifrado; nada de senha em claro)
+if [ ! -f /etc/guata-dhcp/web-cert.pem ] && command -v openssl >/dev/null 2>&1; then
+  CN=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo guata-dhcp)
+  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+    -keyout /etc/guata-dhcp/web-key.pem -out /etc/guata-dhcp/web-cert.pem \
+    -subj "/CN=${CN}" -addext "subjectAltName=DNS:${CN},DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1 || true
+  chmod 600 /etc/guata-dhcp/web-key.pem 2>/dev/null || true
+fi
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl enable guata-dhcp-web >/dev/null 2>&1 || true
+systemctl restart guata-dhcp-web >/dev/null 2>&1 || true
+if [ ! -f /etc/guata-dhcp/configurado ]; then
+cat <<'MSG'
+
+  Guata DHCP instalado!
+  1) Configure no proprio servidor:  https://localhost:8082
+     (escolha a placa de rede e crie o primeiro escopo)
+  (certificado proprio - aceite o aviso do navegador na 1a vez)
+
+MSG
+fi
+# atualiza menu e cache de ícones (lançador do painel)
+update-desktop-database >/dev/null 2>&1 || true
+gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+exit 0

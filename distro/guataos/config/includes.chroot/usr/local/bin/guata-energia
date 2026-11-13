@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Energia — perfis de energia com alma: Folha, Equilíbrio, Potência.
+Honesto: mostra o que sabemos (kWh estimado), nunca inventa CO2."""
+import gi, subprocess, shutil, os
+gi.require_version("Gtk","4.0"); gi.require_version("Adw","1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+ICON="/usr/share/icons/guata"
+
+CSS="""
+.janela{background:#eef3ea}.janela{background:#f6f3ec}
+headerbar{background:#efe7d7;border:none;box-shadow:none}headerbar .title{font-weight:850;color:#5a4f3c}
+.titulo{font-size:24px;font-weight:850;color:#13231c}.sub{color:#7f8c7e;font-size:14px}
+.perfil{background:#fff;border:2px solid #e6ded0;border-radius:20px;padding:22px 18px;min-width:180px}
+.perfil:hover{border-color:#9ed4b7;background:#fbfdfb}
+.perfil.on{border-color:#2f8f66;background:linear-gradient(140deg,#e4f2ea,#fff)}
+.perfil .ic{font-size:46px}.perfil .n{font-size:19px;font-weight:850;color:#13231c;margin-top:6px}
+.perfil .d{font-size:13px;color:#7f8c7e}.perfil .tag{font-size:11px;font-weight:800;color:#1f9d63;margin-top:6px}
+.bat{background:#fff;border:1px solid #e6ded0;border-radius:16px;padding:16px 18px}
+.bat .big{font-size:30px;font-weight:850;color:#13231c}.bat .l{font-size:12px;font-weight:800;color:#7f8c7e;letter-spacing:.05em}
+.bar{height:10px;border-radius:6px;background:#e6ded0;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#2f8f66,#7fd3a3)}
+.nota{background:#e4f2ea;border-radius:12px;padding:12px 15px;color:#26332a;font-size:13px}
+@media(prefers-color-scheme:dark){.janela{background:#0a120d}.janela{background:#0e1712}headerbar{background:#152219}
+ .titulo{color:#fff}.sub,.perfil .d,.bat .l{color:#8ea89c}.perfil,.bat{background:#14201a;border-color:#233029}
+ .perfil .n,.bat .big{color:#e7f1ec}.perfil.on{background:linear-gradient(140deg,#16271e,#14201a)}.nota{background:#16271e;color:#cfe}}
+"""
+PERFIS=[("power-saver","🍃","Folha","Máxima economia. Silencioso, bateria dura mais.","Ideal pro dia a dia"),
+        ("balanced","🌿","Equilíbrio","Para o trabalho normal. O melhor dos dois.","Recomendado"),
+        ("performance","⚡","Potência","Para CAD, compilar, renderizar.","Gasta mais energia")]
+
+def sh(c,t=5):
+    try:return subprocess.run(c,capture_output=True,text=True,timeout=t)
+    except Exception:return None
+
+class Energia(Adw.Application):
+    def __init__(self):super().__init__(application_id="br.com.guataos.Energia")
+    def do_activate(self):
+        css=Gtk.CssProvider();css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(),css,1000)
+        self.win=Adw.ApplicationWindow(application=self);self.win.set_title("Energia");self.win.set_default_size(680,620);self.win.add_css_class("janela")
+        tv=Adw.ToolbarView();hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True);hb.set_title_widget(Gtk.Label(label="⚡ Energia"));tv.add_top_bar(hb);self.win.set_content(tv)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin_top=18,margin_start=24,margin_end=24,margin_bottom=20);tv.set_content(root)
+        t=Gtk.Label(label="Como o Guatá deve usar a energia?",xalign=0);t.add_css_class("titulo");root.append(t)
+        s=Gtk.Label(label="A TI pode definir o padrão da empresa. Você ajusta quando precisar.",xalign=0);s.add_css_class("sub");s.set_wrap(True);root.append(s)
+        self.has_ppd=bool(shutil.which("powerprofilesctl"))
+        atual=""
+        if self.has_ppd:
+            r=sh(["powerprofilesctl","get"]); atual=r.stdout.strip() if r else ""
+        self.cards={}
+        grid=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=12,homogeneous=True,margin_top=10)
+        for pid,ic,nome,desc,tag in PERFIS:
+            b=Gtk.Button();b.add_css_class("perfil")
+            if pid==atual:b.add_css_class("on")
+            b.connect("clicked",self._set,pid)
+            bx=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=2)
+            for cls,txt in [("ic",ic),("n",nome),("d",desc),("tag",tag)]:
+                l=Gtk.Label(label=txt,xalign=0 if cls in("d",) else 0.5);l.add_css_class(cls);l.set_wrap(True);l.set_justify(Gtk.Justification.CENTER);bx.append(l)
+            b.set_child(bx);grid.append(b);self.cards[pid]=b
+        root.append(grid)
+        if not self.has_ppd:
+            w=Gtk.Label(label="(perfis de energia não disponíveis neste equipamento)",xalign=0);w.add_css_class("sub");root.append(w)
+        # bateria
+        bat=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=2,margin_top=14);bat.add_css_class("bat")
+        self.bl=Gtk.Label(label="BATERIA",xalign=0);self.bl.add_css_class("l");bat.append(self.bl)
+        self.bv=Gtk.Label(label="…",xalign=0);self.bv.add_css_class("big");bat.append(self.bv)
+        self.barbox=Gtk.Box();self.barbox.add_css_class("bar");self.barfill=Gtk.Box();self.barfill.add_css_class("fill");self.barbox.append(self.barfill);bat.append(self.barbox)
+        self.bd=Gtk.Label(label="",xalign=0);self.bd.add_css_class("sub");bat.append(self.bd)
+        root.append(bat);self._bateria()
+        nota=Gtk.Label(xalign=0);nota.add_css_class("nota");nota.set_wrap(True)
+        nota.set_markup("🌱 <b>Honestidade Guatá:</b> mostramos o consumo em <b>kWh estimado</b> (não inventamos CO₂). Se a empresa fornecer o fator de emissão, aí sim calculamos — e explicamos como.")
+        nota.set_margin_top(12);root.append(nota)
+        self.win.present()
+    def _set(self,_b,pid):
+        if not self.has_ppd:return
+        sh(["powerprofilesctl","set",pid])
+        for k,c in self.cards.items():
+            c.remove_css_class("on")
+            if k==pid:c.add_css_class("on")
+    def _bateria(self):
+        cap=sh(["sh","-c","cat /sys/class/power_supply/BAT*/capacity 2>/dev/null|head -1"])
+        stt=sh(["sh","-c","cat /sys/class/power_supply/BAT*/status 2>/dev/null|head -1"])
+        if cap and cap.stdout.strip():
+            p=cap.stdout.strip();self.bv.set_label(f"{p}%")
+            self.barfill.set_size_request(int(600*int(p)/100),10)
+            est={"Charging":"carregando","Discharging":"na bateria","Full":"cheia"}.get(stt.stdout.strip() if stt else "","")
+            self.bd.set_label(f"{est} · estimativa, não medição exata" if est else "")
+        else:
+            self.bv.set_label("—");self.bl.set_label("SEM BATERIA (desktop?)");self.bd.set_label("")
+if __name__=="__main__":Energia().run(None)

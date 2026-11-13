@@ -1,0 +1,358 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Ocara — a loja do guataOS. Curada, bonita, instala em 1 clique (zero comando).
+# "Ocara" = o pátio da aldeia, onde a comunidade se encontra.
+# Frontend WebKit (cara de loja Guatá, laranja) + motor real (apt/flatpak/IA).
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("WebKit2", "4.1")
+from gi.repository import Gtk, WebKit2, GLib, Gdk, Gio
+import subprocess, threading, shutil, os, json, urllib.request, urllib.error
+
+os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+THEME = "/usr/share/ocara-web/index.html"
+
+# ───────────────────────── IA (mesma config do Assistente Guatá) ─────────────
+IA_CFG = os.path.expanduser("~/.config/guata/ia.json")
+IA_PRESETS = {
+    "claude":     {"tipo": "claude", "base": "https://api.anthropic.com/v1",                      "modelo": "claude-sonnet-5"},
+    "openai":     {"tipo": "openai", "base": "https://api.openai.com/v1",                          "modelo": "gpt-4o-mini"},
+    "gemini":     {"tipo": "openai", "base": "https://generativelanguage.googleapis.com/v1beta/openai", "modelo": "gemini-2.0-flash"},
+    "openrouter": {"tipo": "openai", "base": "https://openrouter.ai/api/v1",                       "modelo": "openai/gpt-4o-mini"},
+    "groq":       {"tipo": "openai", "base": "https://api.groq.com/openai/v1",                     "modelo": "llama-3.3-70b-versatile"},
+    "local":      {"tipo": "openai", "base": "http://localhost:11434/v1",                          "modelo": "llama3.1"},
+    "outro":      {"tipo": "openai", "base": "",                                                   "modelo": ""},
+}
+
+
+def ia_perfil():
+    try:
+        with open(IA_CFG) as f: cfg = json.load(f)
+    except Exception:
+        cfg = {}
+    prov = cfg.get("provedor", "claude")
+    preset = IA_PRESETS.get(prov, IA_PRESETS["claude"])
+    p = cfg.get("perfis", {}).get(prov, {})
+    return {"tipo": preset["tipo"], "base": (p.get("base") or preset["base"]).rstrip("/"),
+            "modelo": p.get("modelo") or preset["modelo"], "api_key": p.get("api_key", "")}
+
+
+def ia_perguntar(perfil, sistema, texto):
+    try:
+        mdl = perfil["modelo"] if not perfil["modelo"].startswith("gemini-1.5") else "gemini-2.0-flash"
+        if perfil["tipo"] == "claude":
+            corpo = json.dumps({"model": mdl, "max_tokens": 700, "system": sistema,
+                                "messages": [{"role": "user", "content": texto}]}).encode()
+            req = urllib.request.Request(perfil["base"] + "/messages", data=corpo, method="POST")
+            req.add_header("x-api-key", perfil["api_key"]); req.add_header("anthropic-version", "2023-06-01")
+            req.add_header("content-type", "application/json")
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read().decode())
+            return ("".join(b.get("text", "") for b in d.get("content", []) if b.get("type") == "text").strip(), None)
+        else:
+            msgs = [{"role": "system", "content": sistema}, {"role": "user", "content": texto}]
+            corpo = json.dumps({"model": mdl, "max_tokens": 700, "messages": msgs}).encode()
+            base = perfil["base"].rstrip("/")
+            if "generativelanguage.googleapis.com" in base and not base.endswith("/openai"):
+                base = "https://generativelanguage.googleapis.com/v1beta/openai"
+            req = urllib.request.Request(base + "/chat/completions", data=corpo, method="POST")
+            req.add_header("content-type", "application/json")
+            if perfil["api_key"]: req.add_header("Authorization", "Bearer " + perfil["api_key"])
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read().decode())
+            return (d["choices"][0]["message"]["content"].strip(), None)
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403): return (None, "Chave de API inválida. Configure no app Assistente Guatá.")
+        return (None, "Erro da API (%s)." % e.code)
+    except urllib.error.URLError:
+        return (None, "Sem conexão com o provedor de IA.")
+    except Exception as e:
+        return (None, "Falha: %s" % e)
+
+
+def ia_extrair_json(txt):
+    try:
+        i = txt.index("{"); j = txt.rindex("}") + 1
+        return json.loads(txt[i:j])
+    except Exception:
+        return None
+
+
+# ───────────────────────── curadoria ─────────────────────────
+CATS = [
+    ("ia", "Pergunte à IA"), ("destaque", "Destaques"), ("essenciais", "Essenciais"),
+    ("trabalho", "Trabalho"), ("midia", "Mídia"), ("criar", "Criar"),
+    ("diversao", "Diversão"), ("kids", "Crianças"), ("ti", "TI"),
+    ("servidores", "Servidores"), ("nossos", "Nossos"),
+]
+APPS = [
+    {"cat":"servidores","feat":1,"nome":"Guatá ID — Domínio (AD)","desc":"Transforma este PC num controlador de domínio: login único, usuários, grupos, GPO e DNS. Tela de configuração guiada.","metodo":"apt","id":"guata-id","web_url":"http://localhost/"},
+    {"cat":"servidores","feat":1,"nome":"Guatá Arquivos (File Server)","desc":"Servidor de arquivos com pastas, níveis de acesso (tiers), snapshots \u201cvoltar no tempo\u201d e proteção. Painel seguro (HTTPS).","metodo":"apt","id":"guata-files","web_url":"https://localhost:8080/"},
+    {"cat":"servidores","feat":1,"nome":"Guatá DHCP","desc":"Entrega IPs na rede: escopos, concessões ao vivo, reservas por MAC e DNS dinâmico. Detecta a placa e sugere a faixa.","metodo":"apt","id":"guata-dhcp","web_url":"https://localhost:8082/"},
+    {"cat":"servidores","nome":"Guatá Firewall","desc":"Controle de portas e encaminhamentos (NAT) numa tela fácil, sobre nftables. Em breve.","metodo":"soon"},
+    {"cat":"servidores","nome":"Guatá Impressão (Print)","desc":"Compartilha impressoras na rede com bilhetagem e cotas (CUPS). Em breve.","metodo":"soon"},
+    {"cat":"nossos","feat":1,"nome":"Bíblia","desc":"Leitor de Bíblia premium: planos de leitura, devocional, mapas, oração e um guia que responde onde está escrito.","metodo":"run","cmd":"biblia","bin":"biblia"},
+    {"cat":"criar","feat":1,"nome":"ArtCraft — Suíte Criar","desc":"Instala de uma vez os melhores apps livres de criação: GIMP, Krita, Inkscape e Kdenlive.","metodo":"suite","pkgs":"gimp krita inkscape kdenlive","bin":"gimp"},
+    {"cat":"essenciais","feat":1,"nome":"Chromium","desc":"Navegador rápido e livre.","metodo":"apt","id":"chromium","bin":"chromium"},
+    {"cat":"nossos","feat":1,"nome":"BEACON","desc":"Seu painel de TI (web-app). Abra e conecte ao seu BEACON.","metodo":"web","url":"https://wellsystem.beacon.tec.br"},
+    {"cat":"essenciais","nome":"Firefox","desc":"Navegador livre (já vem no guataOS).","metodo":"apt","id":"firefox-esr","bin":"firefox-esr"},
+    {"cat":"essenciais","nome":"Thunderbird","desc":"E-mail livre e completo.","metodo":"apt","id":"thunderbird","bin":"thunderbird"},
+    {"cat":"essenciais","nome":"Zoom","desc":"Reuniões por vídeo.","metodo":"flatpak","id":"us.zoom.Zoom"},
+    {"cat":"trabalho","nome":"Microsoft Teams","desc":"Reuniões, chat e chamadas do Teams (edição Linux da comunidade).","metodo":"flatpak","id":"com.github.IsmaelMartinez.teams_for_linux"},
+    {"cat":"trabalho","nome":"Evolution — E-mail tipo Outlook","desc":"E-mail, agenda e contatos numa tela só, bem parecido com o Outlook. Conecta no Microsoft 365 / Exchange.","metodo":"suite","pkgs":"evolution evolution-ews","bin":"evolution"},
+    {"cat":"trabalho","nome":"LibreOffice","desc":"Textos, planilhas e apresentações.","metodo":"apt","id":"libreoffice","bin":"libreoffice"},
+    {"cat":"trabalho","nome":"VS Code","desc":"Editor de código da Microsoft.","metodo":"flatpak","id":"com.visualstudio.code"},
+    {"cat":"trabalho","nome":"Okular","desc":"Leitor de PDF poderoso.","metodo":"apt","id":"okular","bin":"okular"},
+    {"cat":"trabalho","nome":"DBeaver","desc":"Gerenciador de bancos — PostgreSQL, MariaDB/MySQL e SQL Server.","metodo":"run","cmd":"dbeaver","bin":"dbeaver"},
+    {"cat":"trabalho","nome":"OnlyOffice","desc":"Office completo e parecido com o Microsoft. Abre .docx/.xlsx/.pptx.","metodo":"flatpak","id":"org.onlyoffice.desktopeditors"},
+    {"cat":"trabalho","nome":"OneDrive","desc":"Sincroniza seus arquivos do OneDrive (pessoal e corporativo).","metodo":"apt","id":"onedrive","bin":"onedrive"},
+    {"cat":"midia","nome":"VLC","desc":"Toca qualquer vídeo e áudio.","metodo":"apt","id":"vlc","bin":"vlc"},
+    {"cat":"midia","nome":"Spotify","desc":"Música em streaming.","metodo":"flatpak","id":"com.spotify.Client"},
+    {"cat":"midia","nome":"OBS Studio","desc":"Gravar tela e transmitir ao vivo.","metodo":"apt","id":"obs-studio","bin":"obs"},
+    {"cat":"criar","nome":"GIMP","desc":"Edição de imagens profissional.","metodo":"apt","id":"gimp","bin":"gimp"},
+    {"cat":"criar","nome":"Krita","desc":"Pintura e arte digital.","metodo":"apt","id":"krita","bin":"krita"},
+    {"cat":"criar","nome":"Inkscape","desc":"Ilustração vetorial.","metodo":"apt","id":"inkscape","bin":"inkscape"},
+    {"cat":"criar","nome":"Blender","desc":"Modelagem e animação 3D.","metodo":"apt","id":"blender","bin":"blender"},
+    {"cat":"diversao","nome":"Steam","desc":"A maior loja de jogos.","metodo":"apt","id":"steam-installer","bin":"steam","i386":1},
+    {"cat":"diversao","nome":"SuperTuxKart","desc":"Corrida divertida (e livre).","metodo":"apt","id":"supertuxkart","bin":"supertuxkart"},
+    {"cat":"diversao","nome":"0 A.D.","desc":"Estratégia histórica livre.","metodo":"apt","id":"0ad","bin":"0ad"},
+    {"cat":"diversao","nome":"RetroArch","desc":"Central de emuladores — todos os clássicos (você põe suas ROMs).","metodo":"flatpak","id":"org.libretro.RetroArch"},
+    {"cat":"diversao","nome":"Minetest","desc":"Mundo de blocos tipo Minecraft, livre e sem anúncios.","metodo":"apt","id":"minetest","bin":"minetest"},
+    {"cat":"kids","feat":1,"nome":"Expedições Guatá","desc":"Aprenda explorando o Brasil com a Capivara — os 5 Rs. Educativo, offline, nosso.","metodo":"run","cmd":"expedicoes","bin":"expedicoes"},
+    {"cat":"kids","feat":1,"nome":"GCompris","desc":"Dezenas de atividades educativas (letras, números, lógica).","metodo":"apt","id":"gcompris-qt","bin":"gcompris-qt"},
+    {"cat":"kids","nome":"Tux Paint","desc":"Desenhar e pintar — fácil e divertido.","metodo":"apt","id":"tuxpaint","bin":"tuxpaint"},
+    {"cat":"kids","nome":"Blockly Games","desc":"Joguinhos que ensinam a programar brincando (no navegador).","metodo":"web","url":"https://blockly.games/?lang=pt-br"},
+    {"cat":"ti","nome":"Remmina","desc":"Acesso remoto (RDP/VNC/SSH).","metodo":"apt","id":"remmina","bin":"remmina"},
+    {"cat":"ti","nome":"Wireshark","desc":"Análise de rede.","metodo":"apt","id":"wireshark","bin":"wireshark"},
+    {"cat":"ti","nome":"FileZilla","desc":"Transferência FTP/SFTP.","metodo":"apt","id":"filezilla","bin":"filezilla"},
+    {"cat":"ti","nome":"ClamTk (Antivírus)","desc":"Antivírus livre (ClamAV). Ótimo pra checar pendrives e não repassar vírus de Windows — no Linux não é obrigatório.","metodo":"apt","id":"clamtk","bin":"clamtk"},
+    {"cat":"trabalho","feat":1,"nome":"Claude","desc":"Converse com a IA da Anthropic (Claude). Entre com a sua conta — janela própria.","metodo":"run","cmd":"guata-claude","bin":"guata-webapp"},
+    {"cat":"trabalho","feat":1,"nome":"ChatGPT","desc":"Converse com a IA da OpenAI (ChatGPT). Entre com a sua conta — janela própria.","metodo":"run","cmd":"guata-chatgpt","bin":"guata-webapp"},
+    {"cat":"nossos","feat":1,"nome":"BEACON Projetos","desc":"Quadro de tarefas Kanban (estilo Jira): projetos, prioridades, prazos, checklist. Grátis — vitrine do BEACON.","metodo":"run","cmd":"guata-projetos","bin":"guata-webapp"},
+    {"cat":"nossos","feat":1,"nome":"Agente BEACON","desc":"Conecte este computador ao seu BEACON: inventário e saúde (mão única, só reporta — nunca recebe comando). Pede domínio + token.","metodo":"run","cmd":"beacon-agente-instalar","bin":"beacon-agente-instalar"},
+    {"cat":"nossos","nome":"A Mochila","desc":"Seu painel: ferramentas e módulos do Guatá num lugar só.","metodo":"run","cmd":"guata-central","bin":"guata-central"},
+    {"cat":"nossos","nome":"Caderno da Mãe","desc":"As receitas da família, com modo cozinha e timer. Offline.","metodo":"run","cmd":"receitas","bin":"receitas"},
+    {"cat":"nossos","nome":"NIDUS — Central Multimídia","desc":"TV ao vivo, seus vídeos, fotos e música num lugar só.","metodo":"run","cmd":"nidus","bin":"nidus"},
+    {"cat":"nossos","nome":"Kurumim","desc":"Suas finanças, offline e no seu controle.","metodo":"run","cmd":"kurumim","bin":"kurumim"},
+    {"cat":"nossos","nome":"Apps do Celular","desc":"Use apps de Android (WhatsApp, jogos) no computador.","metodo":"run","cmd":"apps-celular","bin":"apps-celular"},
+]
+
+
+# ícones premium (Material Symbols) + cor de marca por app
+ICON_MAP = {
+    "Guatá ID": ("dns", "#4F46E5"), "Arquivos (File": ("folder_shared", "#4F46E5"),
+    "Guatá DHCP": ("router", "#0D9488"), "Guatá Firewall": ("local_fire_department", "#E8590C"),
+    "Impressão (Print": ("print", "#6E5F50"),
+    "Bíblia": ("auto_stories", "#B88716"),
+    "ArtCraft": ("palette", "#8B5CF6"), "Chromium": ("public", "#2563EB"), "BEACON": ("sensors", "#0D9488"),
+    "Firefox": ("public", "#E66000"), "Thunderbird": ("mail", "#1D6FE0"), "Zoom": ("videocam", "#2D8CFF"),
+    "Teams": ("groups", "#5059C9"), "Evolution": ("mail", "#2563EB"), "LibreOffice": ("description", "#18A303"),
+    "VS Code": ("code", "#0078D4"), "Okular": ("picture_as_pdf", "#C0392B"), "DBeaver": ("database", "#7A5C3E"),
+    "OnlyOffice": ("table_chart", "#FF6F3D"), "OneDrive": ("cloud", "#0A64BC"), "VLC": ("play_circle", "#E8590C"),
+    "Spotify": ("graphic_eq", "#1DB954"), "OBS": ("videocam", "#1F2937"), "GIMP": ("brush", "#6B5B4B"),
+    "Krita": ("palette", "#7C3AED"), "Inkscape": ("draw", "#1F2937"), "Blender": ("view_in_ar", "#E87D0D"),
+    "Steam": ("sports_esports", "#1B2838"), "SuperTuxKart": ("sports_score", "#2563EB"), "0 A.D.": ("account_balance", "#B45309"),
+    "RetroArch": ("videogame_asset", "#6D28D9"), "Minetest": ("grid_view", "#4D7C0F"), "Expedições": ("explore", "#00884F"),
+    "GCompris": ("school", "#D97706"), "Tux Paint": ("brush", "#2563EB"), "Blockly": ("extension", "#16A34A"),
+    "Remmina": ("desktop_windows", "#2563EB"), "Wireshark": ("lan", "#1E40AF"), "FileZilla": ("swap_vert", "#C01919"),
+    "Mochila": ("backpack", "#00884F"), "Caderno": ("restaurant", "#FF6B00"), "NIDUS": ("live_tv", "#DC2626"),
+    "Kurumim": ("savings", "#D97706"), "Apps do Celular": ("smartphone", "#00884F"),
+}
+
+
+def icone_de(nome):
+    for k, v in ICON_MAP.items():
+        if k in nome:
+            return v
+    return ("apps", "#6E5F50")
+
+
+def installed(app):
+    m = app.get("metodo")
+    if m == "run":
+        return bool(shutil.which(app.get("bin", "")))
+    if m == "apt":
+        if app.get("bin") and shutil.which(app["bin"]):
+            return True
+        try:
+            out = subprocess.run(["dpkg-query", "-W", "-f=${Status}", app["id"]], capture_output=True, text=True, timeout=5)
+            return "install ok installed" in out.stdout
+        except Exception:
+            return False
+    if m == "flatpak":
+        if not shutil.which("flatpak"):
+            return False
+        try:
+            return subprocess.run(["flatpak", "info", app["id"]], capture_output=True, timeout=8).returncode == 0
+        except Exception:
+            return False
+    if m == "suite":
+        for p in app.get("pkgs", "").split():
+            try:
+                out = subprocess.run(["dpkg-query", "-W", "-f=${Status}", p], capture_output=True, text=True, timeout=5)
+                if "install ok installed" not in out.stdout:
+                    return False
+            except Exception:
+                return False
+        return bool(app.get("pkgs"))
+    if m == "web":
+        return True
+    return False
+
+
+def estado_de(app):
+    m = app.get("metodo")
+    if m == "soon": return "breve"
+    if m == "web":  return "abrir"
+    if m == "run":  return "abrir" if installed(app) else "instalar"
+    return "abrir" if installed(app) else "instalar"
+
+
+def run_install(app, on_line, on_done):
+    m = app["metodo"]
+    try:
+        if m == "apt":
+            if app.get("i386"):
+                cmd = ["pkexec", "sh", "-c",
+                       "dpkg --add-architecture i386 && apt-get update && "
+                       "apt-get install -y " + app["id"]]
+            else:
+                cmd = ["pkexec", "apt-get", "install", "-y", app["id"]]
+        elif m == "flatpak":
+            subprocess.run(["flatpak", "remote-add", "--user", "--if-not-exists", "flathub",
+                            "https://flathub.org/repo/flathub.flatpakrepo"], capture_output=True)
+            cmd = ["flatpak", "install", "--user", "-y", "--noninteractive", "flathub", app["id"]]
+        elif m == "suite":
+            cmd = ["pkexec", "apt-get", "install", "-y"] + app.get("pkgs", "").split()
+        else:
+            on_done(False); return
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        for line in p.stdout:
+            on_line(line.rstrip())
+        p.wait()
+        ok = (p.returncode == 0)
+        if ok and m == "suite":
+            for pkg in app.get("pkgs", "").split():
+                r = subprocess.run(["dpkg-query", "-W", "-f=${Status}", pkg], capture_output=True, text=True)
+                if "install ok installed" not in r.stdout:
+                    ok = False
+        on_done(ok)
+    except Exception as e:
+        on_line(str(e)); on_done(False)
+
+
+class Ocara:
+    def __init__(self):
+        self.win = Gtk.Window()
+        self.win.set_default_size(1120, 720)
+        self.win.set_title("Ocara — a loja do GuatáOS")
+        try: self.win.set_icon_name("ocara")
+        except Exception: pass
+        ucm = WebKit2.UserContentManager()
+        ucm.register_script_message_handler("guata")
+        ucm.connect("script-message-received::guata", self.on_msg)
+        self.web = WebKit2.WebView.new_with_user_content_manager(ucm)
+        self.web.get_settings().set_enable_developer_extras(False)
+        self.web.set_background_color(Gdk.RGBA(0.973, 0.980, 0.988, 1))
+        self.web.load_uri("file://" + THEME)
+        self.win.add(self.web)
+        self.win.connect("destroy", Gtk.main_quit)
+        self.win.show_all()
+
+    def js(self, code):
+        try: self.web.run_javascript(code, None, None, None)
+        except Exception as e: print("ocara js:", e)
+
+    # ---- catálogo ----
+    def enviar_catalogo(self):
+        def bg():
+            apps = []
+            for i, a in enumerate(APPS):
+                ic, cor = icone_de(a["nome"])
+                apps.append({"i": i, "nome": a["nome"], "icon": ic, "cor": cor,
+                             "desc": a.get("desc", ""), "cat": a["cat"],
+                             "feat": bool(a.get("feat")), "estado": estado_de(a)})
+            payload = {"cats": CATS, "apps": apps}
+            GLib.idle_add(lambda: self.js("window.guataCatalogo && window.guataCatalogo(%s)" % json.dumps(payload, ensure_ascii=False)))
+        threading.Thread(target=bg, daemon=True).start()
+
+    # ---- mensagens do HTML ----
+    def on_msg(self, ucm, message):
+        try:
+            data = json.loads(message.get_js_value().to_string())
+        except Exception:
+            return
+        action = data.get("action")
+        if action == "pronto":
+            self.enviar_catalogo()
+        elif action == "install":
+            self.instalar(data.get("i"))
+        elif action == "open":
+            self.abrir(data.get("i"))
+        elif action == "ia":
+            self.ia(data.get("texto", ""))
+
+    def instalar(self, i):
+        try: app = APPS[int(i)]
+        except Exception: return
+
+        def line(_l): pass
+        def done(ok):
+            est = "abrir" if ok else "instalar"
+            msg = (app["nome"] + " instalado!") if ok else ("Não deu pra instalar " + app["nome"] + ".")
+            GLib.idle_add(lambda: self.js("window.guataEstado && window.guataEstado(%d,%s)" % (i, json.dumps(est))))
+            GLib.idle_add(lambda: self.js("window.guataToast && window.guataToast(%s)" % json.dumps(msg)))
+        threading.Thread(target=run_install, args=(app, line, done), daemon=True).start()
+
+    def abrir(self, i):
+        try: app = APPS[int(i)]
+        except Exception: return
+        m = app.get("metodo")
+        try:
+            if app.get("web_url"):
+                Gio.AppInfo.launch_default_for_uri(app["web_url"], None)
+            elif m == "web":
+                Gio.AppInfo.launch_default_for_uri(app["url"], None)
+            elif m == "run":
+                subprocess.Popen([app["cmd"]])
+            elif app.get("bin"):
+                subprocess.Popen([app["bin"]])
+            elif m == "flatpak":
+                subprocess.Popen(["flatpak", "run", app["id"]])
+            elif m == "apt" and app.get("id"):
+                subprocess.Popen([app["id"]])
+        except Exception as e:
+            print("ocara abrir:", e)
+
+    def ia(self, texto):
+        texto = (texto or "").strip()
+        if not texto:
+            return
+        perfil = ia_perfil()
+        if not perfil["api_key"] and "localhost" not in perfil["base"]:
+            self.js("window.guataIA && window.guataIA(%s)" % json.dumps(
+                {"erro": "Configure a IA primeiro: app Assistente Guatá → engrenagem → provedor + chave."}))
+            return
+
+        def bg():
+            catalogo = [{"i": i, "nome": a["nome"], "cat": a["cat"], "desc": a.get("desc", "")[:90]}
+                        for i, a in enumerate(APPS)]
+            sistema = ("Você é o curador da loja Ocara do Guatá OS (Linux brasileiro). "
+                       "Dado o pedido e o catálogo em JSON, escolha de 1 a 3 apps que melhor atendem. "
+                       "Responda SOMENTE um JSON válido: {\"indices\":[ints], \"resposta\":\"frase curta pt-BR\"}. "
+                       "Use só índices que existem. Se nada servir, indices:[].")
+            resp, erro = ia_perguntar(perfil, sistema, "Pedido: %s\n\nCatálogo:\n%s"
+                                      % (texto, json.dumps(catalogo, ensure_ascii=False)))
+            if erro:
+                out = {"erro": erro}
+            else:
+                data = ia_extrair_json(resp or "") or {}
+                idx = [i for i in data.get("indices", []) if isinstance(i, int) and 0 <= i < len(APPS)]
+                out = {"frase": data.get("resposta", ""), "indices": idx}
+            GLib.idle_add(lambda: self.js("window.guataIA && window.guataIA(%s)" % json.dumps(out, ensure_ascii=False)))
+        threading.Thread(target=bg, daemon=True).start()
+
+
+if __name__ == "__main__":
+    Ocara()
+    Gtk.main()

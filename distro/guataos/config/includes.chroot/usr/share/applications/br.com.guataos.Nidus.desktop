@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=NIDUS — Central Multimídia
+Name[pt_BR]=NIDUS — Central Multimídia
+Comment=TV ao vivo, vídeos, imagens e música — a sua central de entretenimento
+Comment[pt_BR]=TV ao vivo, vídeos, imagens e música — a sua central de entretenimento
+Exec=nidus
+Icon=/usr/share/icons/guata/nidus.png
+Terminal=false
+Categories=AudioVideo;Player;GTK;
+Keywords=tv;video;filme;musica;foto;imagem;entretenimento;nidus;
+StartupNotify=true

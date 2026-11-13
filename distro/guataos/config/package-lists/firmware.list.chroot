@@ -1,0 +1,27 @@
+# GUATÁ — firmware (REGRESSÃO corrigida: 0.17 tinha, 0.18 perdeu → sem WiFi/rede).
+# trixie moveu firmware p/ non-free-firmware (habilitado no lb config). Habilitar a
+# área NÃO instala nada: precisa listar. Base = o que a 0.17 instalava (cache) + WiFi ampliado.
+# -- base --
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+wireless-regdb
+# -- WiFi (0.17 só tinha ath/mediatek; aqui cobre Intel/Realtek/Broadcom tb) --
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-ath9k-htc
+firmware-carl9170
+firmware-brcm80211
+firmware-mediatek
+# -- áudio --
+firmware-sof-signed
+firmware-intel-sound
+firmware-intel-misc
+# -- GPU --
+firmware-amd-graphics
+firmware-intel-graphics
+firmware-nvidia-graphics
+# -- microcode CPU --
+intel-microcode
+amd64-microcode

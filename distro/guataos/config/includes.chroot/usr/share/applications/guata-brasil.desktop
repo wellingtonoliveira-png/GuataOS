@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Brasil
+Comment=Descubra os biomas do Brasil
+Exec=guata-brasil
+Icon=/usr/share/icons/guata/app-brasil.png
+Terminal=false
+Categories=Education;
+StartupWMClass=br.com.guataos.Brasil

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=A Mochila
+GenericName=Central do Guatá
+Comment=Suas ferramentas e módulos do Guatá, num lugar só
+Exec=guata-central
+Icon=/usr/share/icons/guata/mochila-icone-256.png
+Terminal=false
+Categories=System;Settings;
+Keywords=central;mochila;ferramentas;painel;guata;
+StartupWMClass=br.com.guataos.Central

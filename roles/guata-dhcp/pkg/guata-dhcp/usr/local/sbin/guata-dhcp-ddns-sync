@@ -1,0 +1,42 @@
+#!/bin/bash
+# Guatá DHCP — registra no DNS do Guatá AD os hosts que pegaram IP (DDNS).
+# Só funciona no próprio controlador de domínio; usa a conta de máquina (kinit -k).
+set -u
+LEASES=/var/lib/kea/kea-leases4.csv
+STATE=/run/guata-dhcp-ddns.state; touch "$STATE" 2>/dev/null
+[ -f "$LEASES" ] || exit 0
+command -v samba-tool >/dev/null 2>&1 || exit 0
+# zona DNS = realm (minúsculo)
+ZONE=$(awk -F= '/default_realm/{gsub(/ /,"",$2);print tolower($2)}' /etc/krb5.conf 2>/dev/null | head -1)
+[ -z "$ZONE" ] && ZONE=$(hostname -d 2>/dev/null)
+[ -z "$ZONE" ] && exit 0
+# ticket da conta de máquina (GSS) — se falhar, não faz nada (não inventa)
+kinit -k >/dev/null 2>&1 || exit 0
+agora=$(date +%s)
+# cabeçalho CSV -> índices
+IFS=',' read -r -a H < <(head -1 "$LEASES")
+idx(){ local n="$1" i=0; for c in "${H[@]}"; do [ "$c" = "$n" ] && { echo $i; return; }; i=$((i+1)); done; echo -1; }
+IA=$(idx address); IM=$(idx hwaddr); IE=$(idx expire); IS=$(idx state); IH=$(idx hostname)
+declare -A seen
+tail -n +2 "$LEASES" | while IFS=',' read -r -a F; do
+  ip="${F[$IA]:-}"; host="${F[$IH]:-}"; exp="${F[$IE]:-0}"; st="${F[$IS]:-0}"
+  [ -z "$ip" ] || [ -z "$host" ] && continue
+  [ "$st" != "0" ] && continue
+  [ "$exp" -gt 0 ] 2>/dev/null && [ "$exp" -lt "$agora" ] && continue
+  host=$(echo "$host" | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9-')
+  [ -z "$host" ] && continue
+  key="$host=$ip"
+  grep -qxF "$key" "$STATE" && continue
+  # já existe com outro IP? tenta update; senão add
+  if samba-tool dns query 127.0.0.1 "$ZONE" "$host" A -k yes >/dev/null 2>&1; then
+    old=$(samba-tool dns query 127.0.0.1 "$ZONE" "$host" A -k yes 2>/dev/null | awk '/A:/{print $2;exit}')
+    [ -n "$old" ] && [ "$old" != "$ip" ] && samba-tool dns update 127.0.0.1 "$ZONE" "$host" A "$old" "$ip" -k yes >/dev/null 2>&1
+  else
+    samba-tool dns add 127.0.0.1 "$ZONE" "$host" A "$ip" -k yes >/dev/null 2>&1
+  fi
+  if [ $? -eq 0 ]; then
+    grep -v "^$host=" "$STATE" > "$STATE.t" 2>/dev/null; mv "$STATE.t" "$STATE" 2>/dev/null
+    echo "$key" >> "$STATE"
+  fi
+done
+exit 0

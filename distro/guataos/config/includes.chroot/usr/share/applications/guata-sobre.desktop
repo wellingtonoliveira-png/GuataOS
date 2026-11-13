@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sobre o Guatá
+GenericName=Versão do sistema
+Comment=Veja qual versão do Guatá OS você está usando
+Exec=guata-sobre
+Icon=/usr/share/icons/guata/guata-icone-256.png
+Terminal=false
+Categories=System;

@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Guatá OS
+Description=Boot do Guatá OS — pegada que enche de verde
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/guata
+ScriptFile=/usr/share/plymouth/themes/guata/guata.script

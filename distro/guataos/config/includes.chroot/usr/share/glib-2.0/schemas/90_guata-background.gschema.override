@@ -1,0 +1,11 @@
+[org.gnome.desktop.background]
+picture-uri='file:///usr/share/backgrounds/guata/abstratos/onda-folha-copilot.png'
+picture-uri-dark='file:///usr/share/backgrounds/guata/abstratos/onda-folha-copilot.png'
+picture-options='zoom'
+primary-color='#0f2a1c'
+secondary-color='#0f2a1c'
+
+[org.gnome.desktop.screensaver]
+picture-uri='file:///usr/share/backgrounds/guata/abstratos/onda-folha-copilot.png'
+picture-options='zoom'
+primary-color='#0f2a1c'

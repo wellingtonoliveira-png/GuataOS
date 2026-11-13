@@ -1,0 +1,43 @@
+# ===== Guatá OS — boot (capivara) =====
+Window.SetBackgroundTopColor(0.047, 0.137, 0.094);
+Window.SetBackgroundBottomColor(0.027, 0.063, 0.035);
+
+sw = Window.GetWidth();
+sh = Window.GetHeight();
+
+# poster da capivara, ajustado a ~80% da altura, centralizado
+poster = Image("capivara.png");
+ph = Math.Int(sh * 0.80);
+sc = ph / poster.GetHeight();
+pw = Math.Int(poster.GetWidth() * sc);
+poster_s = poster.Scale(pw, ph);
+ps = Sprite(poster_s);
+ps.SetX(Window.GetX() + (sw - pw) / 2);
+ps.SetY(Window.GetY() + (sh - ph) / 2 - 24);
+ps.SetZ(1);
+
+# spinner discreto no rodapé (reusa as frames da pegada, pequeno)
+num_frames = 30;
+for (i = 0; i < num_frames; i++)
+    frames[i] = Image("frame-" + i + ".png").Scale(64, 64);
+
+spin = Sprite();
+spin.SetX(sw / 2 - 32);
+spin.SetY(sh - 86);
+spin.SetZ(5);
+
+progress = 0;
+fun refresh_callback () {
+    idx = Math.Int(progress) % num_frames;
+    spin.SetImage(frames[idx]);
+    progress = progress + 0.6;
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# mensagens (senha disco cript./erros) discretas bem embaixo
+message_sprite = Sprite();
+message_sprite.SetPosition(sw / 2 - 200, sh - 40, 10000);
+fun message_callback (text) {
+    message_sprite.SetImage(Image.Text(text, 0.75, 0.92, 0.78));
+}
+Plymouth.SetMessageFunction(message_callback);

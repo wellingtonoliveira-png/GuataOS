@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# Clonar disco — Pajé. Copia um disco inteiro para OUTRO DISCO ou para um
+# ARQUIVO DE IMAGEM (.img). É DESTRUTIVO no destino: por isso pergunta tudo, em
+# português claro, e exige confirmação digitada. Nada acontece "sozinho".
+# ─────────────────────────────────────────────────────────────────────────────
+T="Pajé — Clonar disco"
+listar() { lsblk -dpno NAME,SIZE,MODEL | awk 'NF'; }
+
+# escolhe a ORIGEM
+origem=$(listar | yad --title="$T" --width=640 --height=320 --list \
+  --text="<b>1) Qual disco COPIAR (origem)?</b>\nTudo dele será lido." \
+  --column="Disco" --column="Tamanho" --column="Modelo" --print-column=1 --separator="") || exit 0
+[ -z "$origem" ] && exit 0
+
+# destino: outro disco ou arquivo?
+tipo=$(yad --title="$T" --width=460 --list --radiolist --print-column=2 --separator="" \
+  --text="<b>2) Copiar a origem ($origem) PARA onde?</b>" \
+  --column=" " --column="Destino" --column="Detalhe" \
+  TRUE  "Outro disco"            "Grava direto noutro HD/SSD (apaga o destino)" \
+  FALSE "Arquivo de imagem (.img)" "Salva a cópia num arquivo que você guarda" \
+  --button="Cancelar:1" --button="Continuar:0") || exit 0
+
+if [ "$tipo" = "Outro disco" ]; then
+  destino=$(listar | grep -v "^$origem " | yad --title="$T" --width=640 --height=320 --list \
+    --text="<b>3) Disco de DESTINO</b>\n<span color='red'><b>ATENÇÃO: todo o conteúdo do destino será APAGADO.</b></span>" \
+    --column="Disco" --column="Tamanho" --column="Modelo" --print-column=1 --separator="") || exit 0
+  [ -z "$destino" ] && exit 0
+  [ "$destino" = "$origem" ] && { yad --title="$T" --text="Origem e destino não podem ser o mesmo disco." --button=OK:0; exit 1; }
+
+  conf=$(yad --title="$T" --entry --width=520 \
+    --text="<b>Vou copiar</b> $origem  →  $destino\n\n<span color='red'>Isto APAGA o $destino por completo.</span>\n\nPara confirmar, digite:  <b>APAGAR</b>")
+  [ "$conf" != "APAGAR" ] && { yad --title="$T" --text="Cancelado — nada foi alterado." --button=OK:0; exit 0; }
+
+  term="pkexec bash -c \"echo 'Clonando $origem -> $destino ...'; dd if=$origem of=$destino bs=4M status=progress conv=fsync && sync && echo 'CONCLUÍDO.'\""
+else
+  arq=$(yad --title="$T" --file --save --width=720 --height=480 --filename="imagem-disco.img" \
+    --text="3) Onde salvar a imagem (.img)?") || exit 0
+  [ -z "$arq" ] && exit 0
+  term="pkexec bash -c \"echo 'Gerando imagem de $origem ...'; dd if=$origem of='$arq' bs=4M status=progress conv=fsync && sync && echo 'CONCLUÍDO: $arq'\""
+fi
+
+# executa num terminal para mostrar o progresso
+if command -v gnome-terminal >/dev/null; then gnome-terminal -- bash -c "$term; echo; read -n1 -r -p 'Pressione uma tecla para fechar...'"
+else x-terminal-emulator -e bash -c "$term; echo; read -n1 -r -p 'Pressione uma tecla...'"; fi

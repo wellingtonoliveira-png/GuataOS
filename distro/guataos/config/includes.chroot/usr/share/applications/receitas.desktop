@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=O Caderno da Mãe
+GenericName=Receitas
+Comment=As receitas da família, com modo cozinha e timer
+Exec=receitas
+Icon=/usr/share/icons/guata/receitas-icone-256.png
+Terminal=false
+Categories=Utility;Office;
+Keywords=receita;receitas;cozinha;comida;mãe;
+StartupWMClass=receitas

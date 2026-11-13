@@ -1,0 +1,7 @@
+[Unit]
+Description=Guatá Files — snapshot (voltar no tempo) de todas as pastas
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/guata-files-snapshot criar
+Nice=10
+IOSchedulingClass=idle

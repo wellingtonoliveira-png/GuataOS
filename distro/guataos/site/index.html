@@ -1,0 +1,378 @@
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2050%2050%27%3E%3Cpath%20d=%27M44%206%20C%2020%206%2C%206%2022%2C%206%2046%20C%2010%2046%2C%2014%2045.4%2C%2018%2044.2%20C%2017%2036%2C%2020%2027%2C%2027%2020%20C%2024%2029%2C%2023%2037%2C%2023.6%2042%20C%2033%2037%2C%2044%2027%2C%2044%206%20Z%27%20fill=%27%232f8f66%27/%3E%3C/svg%3E">
+<title>Guatá OS — o Linux brasileiro que nasce da natureza</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Guatá OS: um sistema operacional livre, brasileiro, fácil pra todos. Baixe grátis.">
+<style>
+  :root{
+    --bg:#f4f7f3; --card:#ffffff; --card2:#f0f4f0; --linha:#e2e9e2;
+    --ink:#1b271f; --suave:#6f8277; --forte:#10201a;
+    --jade:#2f8f66; --jade-d:#1f7a55; --jade-s:#e6f3ec; --musgo:#0f6b4c; --folha:#7fd3a3;
+    --sol:#e08a3c; --sol-s:#fbeeDF;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --sombra:0 24px 60px -30px rgba(15,70,45,.45);
+    --sombra-s:0 8px 24px -14px rgba(15,70,45,.4);
+    --raio:18px;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --bg:#0b120e; --card:#111c16; --card2:#162219; --linha:#223029;
+    --ink:#e7f1ec; --suave:#8ea89c; --forte:#ffffff;
+    --jade:#4fb286; --jade-d:#3f9d74; --jade-s:#152a20; --musgo:#2f8f66; --folha:#7fd3a3;
+    --sol:#f0a65c; --sol-s:#2a1f12;
+    --sombra:0 24px 60px -30px rgba(0,0,0,.7); --sombra-s:0 10px 28px -16px rgba(0,0,0,.7);
+  }}
+  :root[data-theme=light]{--bg:#f4f7f3;--card:#fff;--card2:#f0f4f0;--linha:#e2e9e2;--ink:#1b271f;--suave:#6f8277;--forte:#10201a;--jade:#2f8f66;--jade-s:#e6f3ec;--musgo:#0f6b4c;--sol:#e08a3c}
+  :root[data-theme=dark]{--bg:#0b120e;--card:#111c16;--card2:#162219;--linha:#223029;--ink:#e7f1ec;--suave:#8ea89c;--forte:#fff;--jade:#4fb286;--jade-s:#152a20;--musgo:#2f8f66;--sol:#f0a65c}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:17px;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 clamp(16px,4vw,28px)}
+  svg.ic{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
+
+  /* ===== header ===== */
+  header{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--linha)}
+  .nav{display:flex;align-items:center;gap:18px;height:62px}
+  .brand{display:inline-flex;align-items:center;gap:.5em;font-weight:850;font-size:20px;letter-spacing:-.02em;color:var(--forte)}
+  .brand .leaf{width:1.25em;height:1.25em;flex:none}
+  .brand .os{color:var(--jade);font-weight:650;margin-left:.08em}
+  .nav .sp{margin-left:auto}
+  .nav .lk{color:var(--suave);font-weight:650;font-size:14.5px;padding:8px 10px;border-radius:10px}
+  .nav .lk:hover{color:var(--forte);background:var(--card2)}
+  @media(max-width:720px){.nav .lk{display:none}}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:14.5px;border-radius:12px;padding:10px 18px;border:1.5px solid var(--linha);background:var(--card);color:var(--forte);cursor:pointer}
+  .btn.pri{background:var(--jade);border-color:transparent;color:#fff;box-shadow:0 12px 26px -14px var(--jade)}
+  .btn.pri:hover{background:var(--jade-d)}
+  .btn.big{padding:15px 26px;font-size:16.5px;border-radius:14px}
+
+  /* ===== hero carrossel ===== */
+  .hero{position:relative;height:min(86vh,760px);min-height:460px;overflow:hidden;background:#07110c}
+  .slides{position:absolute;inset:0}
+  .slide{position:absolute;inset:0;opacity:0;transition:opacity 1.1s ease;background-size:cover;background-position:center}
+  .slide.on{opacity:1}
+  .hero .veil{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0) 48%,rgba(0,0,0,.18) 72%,rgba(0,0,0,.62) 100%)}
+  .hero .cta{position:absolute;left:0;right:0;bottom:clamp(64px,10vw,96px);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:0 16px;z-index:3}
+  .hero .cta .k{color:#fff;font-weight:800;letter-spacing:.02em;font-size:clamp(15px,2.6vw,19px);text-shadow:0 2px 14px rgba(0,0,0,.5)}
+  .hero .cta .k b{color:#d6ffe9}
+  .hero .cta .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  .hero .cta .ghost{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.35);color:#fff;backdrop-filter:blur(6px)}
+  /* nome do bioma */
+  .biome-name{position:absolute;top:clamp(74px,9vw,22px);left:50%;transform:translateX(-50%);z-index:3;color:#fff;font-weight:800;font-size:13px;letter-spacing:.22em;text-transform:uppercase;background:rgba(0,0,0,.28);backdrop-filter:blur(6px);padding:7px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.22);white-space:nowrap}
+  /* dots */
+  .dots{position:absolute;left:0;right:0;bottom:26px;display:flex;gap:9px;justify-content:center;z-index:4;flex-wrap:wrap;padding:0 16px}
+  .dots button{width:9px;height:9px;border-radius:50%;border:0;background:rgba(255,255,255,.45);cursor:pointer;padding:0;transition:all .3s}
+  .dots button.on{background:#fff;width:26px;border-radius:5px}
+  .arw{position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.25);color:#fff;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(6px);font-size:20px}
+  .arw:hover{background:rgba(0,0,0,.45)}
+  .arw.l{left:16px}.arw.r{right:16px}
+  @media(max-width:620px){.arw{display:none}}
+
+
+  /* ===== correção mobile do hero ===== */
+  .hero-cta-mob{display:none}
+  @media(max-width:640px){
+    .hero{height:auto;min-height:0;aspect-ratio:3/2}
+    .hero .veil,.hero .cta{display:none}
+    .biome-name{top:auto;bottom:34px;font-size:11px;padding:5px 12px;letter-spacing:.14em}
+    .dots{bottom:10px}
+    .hero-cta-mob{display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center;padding:24px 18px 2px}
+    .hero-cta-mob .k{font-weight:800;font-size:17px;color:var(--forte);max-width:22ch}
+    .hero-cta-mob .k b{color:var(--jade)}
+    .hero-cta-mob .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    section{padding:clamp(40px,9vw,88px) 0}
+    h2{max-width:none}
+  }
+
+  /* ===== seções ===== */
+  section{padding:clamp(52px,8vw,88px) 0}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--jade)}
+  h2{font-size:clamp(26px,4.6vw,40px);letter-spacing:-.02em;font-weight:850;color:var(--forte);margin:12px 0 10px;text-wrap:balance;max-width:16ch}
+  .lead{color:var(--suave);font-size:clamp(16px,2.2vw,19px);max-width:62ch;margin:0}
+  .center{text-align:center;display:flex;flex-direction:column;align-items:center}
+  .center h2,.center .lead{max-width:none}.center h2{max-width:20ch}
+
+
+  .keyart{margin:34px auto 0;max-width:620px;border-radius:22px;overflow:hidden;border:1px solid var(--linha);box-shadow:var(--sombra);background:var(--card2)}
+  .keyart img{width:100%;display:block}
+  .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:38px}
+  .feat{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);padding:24px;box-shadow:var(--sombra-s)}
+  .feat .ib{width:46px;height:46px;border-radius:13px;background:var(--jade-s);color:var(--jade);display:grid;place-items:center;margin-bottom:14px}
+  .feat .ib svg.ic{font-size:23px}
+  .feat h3{margin:0 0 6px;font-size:17.5px;color:var(--forte);font-weight:800}
+  .feat p{margin:0;color:var(--suave);font-size:14.5px}
+
+  /* mascote */
+  .mascote-wrap{background:var(--card2);border-top:1px solid var(--linha);border-bottom:1px solid var(--linha)}
+  .poses{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:36px}
+  @media(max-width:780px){.poses{grid-template-columns:repeat(2,1fr)}}
+  .pose{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:14px 10px 16px;text-align:center}
+  .pose img{height:120px;margin:0 auto 8px;object-fit:contain;filter:drop-shadow(0 10px 14px rgba(0,0,0,.14))}
+  .pose .t{font-weight:800;font-size:13px;color:var(--forte)}
+  .pose .d{font-size:11.5px;color:var(--suave)}
+
+  /* domínio destaque */
+  .ad{display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:center;background:linear-gradient(135deg,var(--jade-s),var(--card));border:1px solid var(--linha);border-radius:26px;padding:clamp(26px,4vw,44px);box-shadow:var(--sombra)}
+  @media(max-width:820px){.ad{grid-template-columns:1fr}}
+  .ad .tag{display:inline-flex;align-items:center;gap:7px;background:var(--sol-s);color:var(--sol);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
+  .ad h2{margin:12px 0 10px}
+  .ad .steps{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+  .ad .st{display:flex;gap:13px;align-items:flex-start}
+  .ad .st .n{flex:none;width:30px;height:30px;border-radius:9px;background:var(--jade);color:#fff;font-weight:850;font-size:14px;display:grid;place-items:center}
+  .ad .st b{color:var(--forte)}.ad .st span{color:var(--suave);font-size:14.5px}
+  .ad .pic{display:grid;place-items:center}
+  .ad .pic img{height:min(300px,52vw);filter:drop-shadow(0 20px 26px rgba(0,0,0,.18))}
+
+  /* download */
+  .dl{background:linear-gradient(160deg,var(--musgo),#07301f);color:#eafff4;border-radius:28px;padding:clamp(30px,5vw,54px);box-shadow:var(--sombra);position:relative;overflow:hidden}
+  .dl::after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;background:radial-gradient(circle,rgba(127,211,163,.25),transparent 70%)}
+  .dl h2{color:#fff;margin:10px 0 6px}
+  .dl .lead{color:#bfeeD4;color:#c8f0db}
+  .dl .card{position:relative;z-index:2;display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;margin-top:26px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:22px 24px}
+  @media(max-width:680px){.dl .card{grid-template-columns:1fr;text-align:center;justify-items:center}}
+  .dl .meta b{font-size:19px;color:#fff}
+  .dl .meta .ln{color:#bfead0;font-size:13.5px;margin-top:4px}
+  .dl .meta code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:rgba(0,0,0,.25);padding:2px 7px;border-radius:6px;color:#dfffee;word-break:break-all}
+  .dl .btn.pri{background:#fff;color:var(--musgo);box-shadow:0 14px 30px -14px rgba(0,0,0,.5)}
+  .dl .btn.pri:hover{background:#eafff4}
+  .howto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:26px;position:relative;z-index:2}
+  .howto .h{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:16px 18px}
+  .howto .h .s{font-weight:850;color:#9fe9c0;font-size:12px;letter-spacing:.08em}
+  .howto .h h4{margin:6px 0 4px;color:#fff;font-size:15px}
+  .howto .h p{margin:0;color:#bfead0;font-size:13px}
+
+  /* biomas galeria */
+  .gal{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:36px}
+  @media(max-width:900px){.gal{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:600px){.gal{grid-template-columns:repeat(2,1fr)}}
+  .gal figure{margin:0;border-radius:14px;overflow:hidden;border:1px solid var(--linha);position:relative;aspect-ratio:3/2;background:var(--card2)}
+  .gal img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .gal figure:hover img{transform:scale(1.05)}
+  .gal figcaption{position:absolute;left:0;bottom:0;right:0;padding:18px 12px 9px;color:#fff;font-weight:800;font-size:13px;letter-spacing:.02em;background:linear-gradient(transparent,rgba(0,0,0,.6))}
+
+  footer{border-top:1px solid var(--linha);padding:40px 0 60px;color:var(--suave);font-size:14px}
+  footer .brand{color:var(--forte);margin-bottom:10px}
+  footer .fine{margin-top:12px;font-size:12.5px;opacity:.85}
+  .flag{display:inline-block;width:16px;height:11px;border-radius:2px;background:linear-gradient(#2a8a3a,#2a8a3a);position:relative;vertical-align:-.05em;margin:0 2px}
+
+  /* leaf fill */
+  .leaf path{fill:url(#lg)}
+  .toggle{background:var(--card);border:1px solid var(--linha);width:38px;height:38px;border-radius:11px;display:grid;place-items:center;cursor:pointer;color:var(--suave)}
+  @media(prefers-reduced-motion:reduce){.slide{transition:none}.gal img{transition:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#48b07f"/><stop offset="1" stop-color="#0f6b4c"/></linearGradient>
+</defs></svg>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top"><svg class="leaf" viewBox="0 0 50 50"><path d="M44 6 C 20 6, 6 22, 6 46 C 10 46, 14 45.4, 18 44.2 C 17 36, 20 27, 27 20 C 24 29, 23 37, 23.6 42 C 33 37, 44 27, 44 6 Z"/></svg>Guatá<span class="os">OS</span></a>
+    <span class="sp"></span>
+    <a class="lk" href="#sobre">O que é</a>
+    <a class="lk" href="#dominio">Entra no domínio</a>
+    <a class="lk" href="#biomas">Biomas</a>
+    <div class="toggle" id="tg" title="Tema claro/escuro" aria-label="Alternar tema">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </div>
+    <a class="btn pri" href="#baixar">Baixar <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+  </div>
+</header>
+
+<div id="top"></div>
+<!-- ===================== HERO ===================== -->
+<div class="hero">
+  <div class="slides" id="slides"></div>
+  <div class="veil"></div>
+  <div class="biome-name" id="bname">Brasil</div>
+  <button class="arw l" id="prev" aria-label="Anterior">‹</button>
+  <button class="arw r" id="next" aria-label="Próximo">›</button>
+  <div class="cta">
+    <div class="k">Um Linux <b>brasileiro</b>, livre e fácil pra todo mundo.</div>
+    <div class="row">
+      <a class="btn pri big" href="#baixar">Baixar grátis <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+      <a class="btn big ghost" href="#sobre">Conhecer</a>
+    </div>
+  </div>
+  <div class="dots" id="dots"></div>
+</div>
+
+<!-- CTA mobile (aparece só no celular, embaixo da capa inteira) -->
+<div class="hero-cta-mob">
+  <div class="k">Um Linux <b>brasileiro</b>, livre e fácil pra todo mundo.</div>
+  <div class="row">
+    <a class="btn pri big" href="#baixar">Baixar grátis <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+    <a class="btn big" href="#sobre">Conhecer</a>
+  </div>
+</div>
+
+<!-- ===================== SOBRE ===================== -->
+<section id="sobre">
+  <div class="wrap">
+    <div class="eyebrow"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9"/><path d="M12 3a9 9 0 0 1 0 18"/></svg> o que é o Guatá OS</div>
+    <h2>Tecnologia que nasce da natureza.</h2>
+    <p class="lead">O Guatá OS é um sistema operacional livre e gratuito, feito no Brasil. Rápido num computador antigo, seguro por concepção e simples a ponto da sua mãe usar — sem precisar abrir um terminal nunca.</p>
+
+    <figure class="keyart"><img src="keyart-notebook.jpg" alt="Guatá OS — a capivara exploradora com o notebook: livre, brasileiro, acessível, para todos" loading="lazy"></figure>
+
+    <div class="feats">
+      <div class="feat"><div class="ib"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><h3>Simples pra todos</h3><p>Instala, abre, usa. Loja de aplicativos em português, zero comando, zero susto.</p></div>
+      <div class="feat"><div class="ib"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a7 7 0 0 1 14 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg></div><h3>Feito no Brasil</h3><p>Pensado pra nossa realidade — leve, em português, com apps que a gente usa de verdade.</p></div>
+      <div class="feat"><div class="ib"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>Seguro por concepção</h3><p>Privacidade e segurança desde a base. Seus dados são seus — nada de rastreio escondido.</p></div>
+      <div class="feat"><div class="ib"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2M4 7h16M4 7v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7M9 12h6"/></svg></div><h3>Entra no domínio AD</h3><p>Coloca o Linux na rede da empresa em 2 cliques — sem uma linha de comando. Único no Brasil.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MASCOTE ===================== -->
+<div class="mascote-wrap"><section style="padding-top:clamp(44px,7vw,72px);padding-bottom:clamp(44px,7vw,72px)">
+  <div class="wrap center">
+    <div class="eyebrow"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg> o guia da jornada</div>
+    <h2>Conheça o Guatá</h2>
+    <p class="lead">A capivara exploradora que te acompanha — do boot ao domínio. Calma, brasileira e sempre pronta pra ajudar.</p>
+    <div class="poses">
+      <div class="pose"><img src="icons/mascote-caminhando.png" alt="capivara caminhando"><div class="t">Caminhando</div><div class="d">na abertura</div></div>
+      <div class="pose"><img src="icons/mascote-acenando.png" alt="capivara acenando"><div class="t">Olá!</div><div class="d">boas-vindas</div></div>
+      <div class="pose"><img src="icons/mascote-sentada.png" alt="capivara sentada"><div class="t">Calma</div><div class="d">instalação</div></div>
+      <div class="pose"><img src="icons/mascote-pensando.png" alt="capivara pensando"><div class="t">Pensando</div><div class="d">ajuda</div></div>
+      <div class="pose"><img src="icons/mascote-dormindo.png" alt="capivara dormindo"><div class="t">Descanso</div><div class="d">bloqueio</div></div>
+    </div>
+  </div>
+</section></div>
+
+<!-- ===================== DOMÍNIO AD ===================== -->
+<section id="dominio">
+  <div class="wrap">
+    <div class="ad">
+      <div>
+        <span class="tag"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.3 7.2 17l.9-5.4L4.2 7.7l5.4-.8z"/></svg> diferencial de verdade</span>
+        <h2>Entra no domínio em 2 cliques.</h2>
+        <p class="lead">Todo mundo acha que colocar Linux numa rede Active Directory é um bicho de sete cabeças. No Guatá OS é um assistente: você digita o domínio, o usuário admin, e pronto.</p>
+        <div class="steps">
+          <div class="st"><div class="n">1</div><div><b>Qual é o domínio?</b><br><span>A gente testa a conexão (DC, DNS e hora) e avisa em português se algo estiver errado.</span></div></div>
+          <div class="st"><div class="n">2</div><div><b>Usuário administrador.</b><br><span>Uma vez só. O assistente faz o join, SSSD, home automático e Kerberos por baixo.</span></div></div>
+          <div class="st"><div class="n">✓</div><div><b>No domínio!</b><br><span>Logue com o usuário da empresa. Sem terminal, sem pegadinha.</span></div></div>
+        </div>
+      </div>
+      <div class="pic"><img src="icons/mascote-pensando.png" alt="capivara pensando"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== DOWNLOAD ===================== -->
+<section id="baixar">
+  <div class="wrap">
+    <div class="dl">
+      <div class="eyebrow" style="color:#9fe9c0"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg> baixar agora</div>
+      <h2>Leve o Guatá pra sua máquina.</h2>
+      <p class="lead">Grátis, sem cadastro. Baixe a imagem, grave num pen drive e teste sem instalar nada (modo live) — ou instale de vez.</p>
+
+      <div class="card">
+        <div class="meta">
+          <b>Guatá OS 0.20 · 64 bits</b>
+          <div class="ln">Imagem ISO · 2,1 GB · arranca em BIOS e UEFI</div>
+          <div class="ln">MD5 <code id="md5">14e30cb6efa544ed7e002bf48fcd2449</code></div>
+        </div>
+        <a class="btn pri big" href="guataOS-0.20-amd64.iso" download>Baixar ISO <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+      </div>
+
+      <div class="howto">
+        <div class="h"><div class="s">PASSO 1</div><h4>Baixe a ISO</h4><p>É o sistema inteiro num arquivo só.</p></div>
+        <div class="h"><div class="s">PASSO 2</div><h4>Grave no pen drive</h4><p>Use o Rufus, balenaEtcher ou "Gravador de imagem".</p></div>
+        <div class="h"><div class="s">PASSO 3</div><h4>Arranque pelo USB</h4><p>Ligue o PC pelo pen drive e escolha "Experimentar".</p></div>
+        <div class="h"><div class="s">PASSO 4</div><h4>Gostou? Instale</h4><p>Um instalador guiado em português, com a capivara junto.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MIMO: CADERNO DA MÃE ===================== -->
+<section id="caderno">
+  <div class="wrap">
+    <div class="dl">
+      <div class="eyebrow" style="color:#ffc78a">🎁 um presente grátis</div>
+      <h2>Caderno da Mãe — no seu celular.</h2>
+      <p class="lead">Guarde as receitas da família, cozinhe com um timer que acompanha os passos e digitalize as receitas escritas à mão. Funciona offline, instala direto na tela do celular — de graça, sem cadastro.</p>
+      <div class="card">
+        <div class="meta">
+          <b>📖 Caderno da Mãe · app grátis</b>
+          <div class="ln">Baixe o app Android (APK) — vira ícone no celular e funciona sem internet. (iPhone: use "Abrir no navegador".)</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn pri big" href="caderno/caderno-da-mae.apk" download>Baixar o app (Android) <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+          <a class="btn big" href="caderno/" target="_blank" rel="noopener" style="background:#ffffff1a;border:1px solid #ffffff40;color:#fff">Abrir no navegador</a>
+        </div>
+      </div>
+      <div class="howto">
+        <div class="h"><div class="s">PASSO 1</div><h4>Abra no celular</h4><p>Toque em "Abrir no celular" pelo navegador do seu telefone.</p></div>
+        <div class="h"><div class="s">PASSO 2</div><h4>Instale</h4><p>No menu do navegador, toque em "Adicionar à tela inicial".</p></div>
+        <div class="h"><div class="s">PASSO 3</div><h4>Guarde e cozinhe</h4><p>Receitas, Modo Cozinha com timer, favoritos e scanner — tudo offline.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== BIOMAS ===================== -->
+<section id="biomas" style="padding-top:clamp(40px,6vw,64px)">
+  <div class="wrap">
+    <div class="eyebrow"><svg class="ic" viewBox="0 0 24 24"><path d="M3 20h18M6 20V10l6-5 6 5v10M9 20v-5h6v5"/></svg> papéis de parede</div>
+    <h2>O Brasil inteiro na sua tela.</h2>
+    <p class="lead">Cada bioma vira um papel de parede. Da Amazônia ao Pampa, o Guatá leva a nossa natureza pra dentro do computador.</p>
+    <div class="gal" id="gal"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top"><svg class="leaf" viewBox="0 0 50 50"><path d="M44 6 C 20 6, 6 22, 6 46 C 10 46, 14 45.4, 18 44.2 C 17 36, 20 27, 27 20 C 24 29, 23 37, 23.6 42 C 33 37, 44 27, 44 6 Z"/></svg>Guatá<span class="os">OS</span></a>
+    <div>Linux brasileiro. Feito por pessoas, para pessoas. <span class="flag" title="Brasil"></span></div>
+    <div class="fine">Software livre · distribuído sem garantias · © 2026 projeto Guatá OS. Tecnologia que nasce da natureza. 🌿</div>
+  </div>
+</footer>
+
+<script>
+  // biomas (nome + arquivo). Adicione aqui conforme novos chegam.
+  const BIOMAS = [
+    ["Serra da Mantiqueira","banners/hero-mantiqueira-web.jpg"],
+    ["Amazônia","banners/hero-amazonia-web.jpg"],
+    ["Pantanal","banners/hero-pantanal-agua-web.jpg"],
+    ["Cerrado","banners/hero-cerrado-web.jpg"],
+    ["Foz do Iguaçu","banners/hero-iguacu-web.jpg"],
+    ["Costas e Manguezais","banners/hero-manguezais-web.jpg"],
+    ["Pampa","banners/hero-pampa-web.jpg"],
+    ["Pantanal · Brasil Livre","banners/hero-pantanal-web.jpg"],
+    ["Fernando de Noronha","banners/hero-noronha-web.jpg"],
+    ["Lençóis Maranhenses","banners/hero-lencois-web.jpg"],
+    ["Caatinga","banners/hero-caatinga-web.jpg"],
+  ];
+  const slides=document.getElementById('slides'), dots=document.getElementById('dots'),
+        bname=document.getElementById('bname'), gal=document.getElementById('gal');
+  BIOMAS.forEach((b,i)=>{
+    const s=document.createElement('div'); s.className='slide'+(i===0?' on':'');
+    s.style.backgroundImage=`url('${b[1]}')`; slides.appendChild(s);
+    const d=document.createElement('button'); d.className=i===0?'on':''; d.setAttribute('aria-label',b[0]);
+    d.onclick=()=>go(i); dots.appendChild(d);
+    const f=document.createElement('figure'); f.innerHTML=`<img loading="lazy" src="${b[1]}" alt="${b[0]}"><figcaption>${b[0]}</figcaption>`; gal.appendChild(f);
+  });
+  let cur=0, N=BIOMAS.length, timer;
+  const S=()=>slides.children, D=()=>dots.children;
+  function go(i){
+    S()[cur].classList.remove('on'); D()[cur].classList.remove('on');
+    cur=(i+N)%N;
+    S()[cur].classList.add('on'); D()[cur].classList.add('on');
+    bname.textContent=BIOMAS[cur][0];
+    restart();
+  }
+  function restart(){clearInterval(timer); timer=setInterval(()=>go(cur+1),6000);}
+  document.getElementById('next').onclick=()=>go(cur+1);
+  document.getElementById('prev').onclick=()=>go(cur-1);
+  bname.textContent=BIOMAS[0][0]; restart();
+
+  // tema
+  const tg=document.getElementById('tg');
+  tg.onclick=()=>{
+    const cur=document.documentElement.getAttribute('data-theme')
+      || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+    document.documentElement.setAttribute('data-theme', cur==='dark'?'light':'dark');
+  };
+</script>

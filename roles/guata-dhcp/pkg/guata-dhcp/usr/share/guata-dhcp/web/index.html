@@ -1,0 +1,618 @@
+<style>
+  :root{
+    --bg:#eef1f7; --card:#ffffff; --card2:#f4f6fb; --linha:#e2e6f0;
+    --ink:#1b2435; --suave:#5f6b85; --forte:#0f1626;
+    /* azul/indigo = AÇÃO (do mockup) */
+    --accent:#4f46e5; --accent2:#4338ca; --accent-s:#eef0fe;
+    /* verde = STATUS saudável */
+    --jade:#2f8f66; --jade2:#17694c; --jade-s:#e7f3ec;
+    --sol:#d98a2b; --sol-s:#f8eede; --ceu:#3f86c4; --ceu-s:#e6f0f9; --vermelho:#c0453a; --verm-s:#fbe9e7;
+    /* sidebar navy (sempre) */
+    --sb:#101c33; --sb2:#17243f; --sb-ink:#d4ddee; --sb-suave:#8293b2; --sb-linha:#233251;
+    --raio:16px; --sombra:0 18px 44px -26px rgba(20,30,60,.34); --sombra-s:0 8px 22px -16px rgba(20,30,60,.22);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;
+      --accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715;
+      --sombra:0 20px 50px -24px rgba(0,0,0,.6)}
+  }
+  :root[data-theme=dark]{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;--accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715}
+  :root[data-theme=light]{--bg:#eef1f7;--card:#fff;--card2:#f4f6fb;--linha:#e2e6f0;--ink:#1b2435;--suave:#5f6b85;--forte:#0f1626;--accent:#4f46e5;--accent2:#4338ca;--accent-s:#eef0fe;--jade:#2f8f66;--jade2:#17694c;--jade-s:#e7f3ec}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button,input,select{font-family:inherit}
+  h1,h2,h3{margin:0;color:var(--forte);line-height:1.2}
+  .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .leaf{fill:var(--jade);stroke:none}
+
+  /* ---------- LOGIN ---------- */
+  #login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1100px 480px at 50% -10%,color-mix(in srgb,var(--jade) 20%,transparent),transparent)}
+  .loginbox{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);padding:36px 32px;width:min(410px,100%);text-align:center}
+  .loginbox .masc{width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 2px;filter:drop-shadow(0 10px 18px rgba(16,50,33,.18))}
+  .loginbox h1{font-size:23px}
+  .loginbox p{margin:2px 0 20px;color:var(--suave);font-size:14px}
+  .field{text-align:left;margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--suave);margin-bottom:6px}
+  .field .muted{font-weight:500}
+  input,select{width:100%;padding:11px 13px;border:1.5px solid var(--linha);border-radius:11px;background:var(--card2);color:var(--ink);font-size:14.5px;outline:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-s)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14.5px;border-radius:11px;padding:11px 16px;border:1.5px solid var(--linha);background:var(--card);color:var(--forte);cursor:pointer}
+  .btn:hover{filter:brightness(.99)}
+  .btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff}
+  .btn.sm{padding:7px 11px;font-size:12.5px;border-radius:9px}
+  .btn.block{width:100%}
+  .btn.ghost{background:var(--card2)}
+  .btn.danger{color:var(--vermelho);border-color:color-mix(in srgb,var(--vermelho) 35%,var(--linha))}
+  .btn.ok{color:var(--jade2);border-color:color-mix(in srgb,var(--jade) 40%,var(--linha))}
+
+  /* ---------- CONFIGURADOR ---------- */
+  #config{min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(170deg,var(--accent-s),var(--card2))}
+  .cfgcard{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);width:min(480px,100%);padding:30px 30px 26px}
+  .cfghead{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .cfghead img{width:54px;height:54px;object-fit:contain}
+  .cfghead b{color:var(--forte);font-size:18px;display:block;line-height:1}
+  .cfghead span{color:var(--accent);font-size:12.5px;font-weight:700}
+  .dots{display:flex;gap:6px;margin:14px 0 20px}
+  .dots i{height:5px;flex:1;border-radius:999px;background:var(--linha)}
+  .dots i.on{background:var(--accent)}
+  .cfgstep{display:none} .cfgstep.on{display:block}
+  .cfgstep h2{font-size:21px;margin-bottom:6px}
+  .cfgstep p.sub{color:var(--suave);font-size:14px;margin-bottom:18px}
+  .cfgnav{display:flex;gap:10px;margin-top:8px}.cfgnav .btn{flex:1}
+  .optcard{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:15px;border:1.5px solid var(--linha);border-radius:14px;background:var(--card2);cursor:pointer;margin-bottom:10px}
+  .optcard:hover{border-color:var(--accent)} .optcard .oi{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+  .optcard b{color:var(--forte);font-size:15px} .optcard p{color:var(--suave);font-size:12.8px;margin:2px 0 0}
+  .resumo{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:14px 16px;font-size:14px;margin-bottom:6px}
+  .resumo div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+  .resumo b{color:var(--forte)}
+  .prog{height:10px;background:var(--card2);border-radius:999px;overflow:hidden;margin:16px 0 8px}
+  .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .4s}
+  .done-ic{width:70px;height:70px;border-radius:50%;background:var(--jade-s);color:var(--jade2);display:grid;place-items:center;margin:4px auto 10px}
+  .url-box{background:var(--accent-s);border:1px solid var(--linha);border-radius:12px;padding:12px;text-align:center;font-weight:800;color:var(--accent);font-size:16px;margin:10px 0}
+
+  /* ---------- SHELL ---------- */
+  #app{display:none;min-height:100vh}
+  .shell{display:grid;grid-template-columns:262px 1fr;min-height:100vh}
+  aside{background:var(--sb);color:var(--sb-ink);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--sb-linha)}
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 18px 14px}
+  .brand img{width:40px;height:40px;object-fit:contain;border-radius:10px}
+  .brand b{color:#fff;font-size:17px;font-weight:800;line-height:1}
+  .brand small{display:block;color:var(--sb-suave);font-size:11.5px;margin-top:3px}
+  nav.menu{display:flex;flex-direction:column;gap:2px;padding:8px 12px;flex:1;overflow:auto}
+  .migroup{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sb-suave);padding:10px 13px 4px;opacity:.75}
+  .migroup:first-child{padding-top:4px}
+  .mi{display:flex;align-items:center;gap:12px;padding:8.5px 13px;border-radius:11px;color:var(--sb-ink);text-decoration:none;font-weight:600;font-size:14.5px;cursor:pointer;border:none;background:none;text-align:left;width:100%}
+  .mi .ic{width:19px;height:19px;color:var(--sb-suave)}
+  .mi:hover{background:rgba(255,255,255,.055)}
+  .mi.on{background:color-mix(in srgb,var(--accent) 24%,transparent);color:#fff}
+  .mi.on .ic{color:#aeb6ff}
+  .mi .soon{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sb-suave);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:999px}
+  .sb-foot{padding:10px 14px;border-top:1px solid var(--sb-linha)}
+  .sb-foot .masc{width:54px;display:block;margin:0 auto 6px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4))}
+  .saude-sb{background:var(--sb2);border:1px solid var(--sb-linha);border-radius:12px;padding:8px 11px;font-size:11.5px;color:var(--sb-suave)}
+  .saude-sb b{display:flex;align-items:center;gap:7px;color:#bfe8cf;font-size:12.5px}
+  .saude-sb .dot{width:8px;height:8px;border-radius:50%;background:#49d08b}
+
+  main{min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:12px;padding:16px 26px;border-bottom:1px solid var(--linha);background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+  .topbar h2{font-size:21px}.topbar .sp{flex:1}
+  .burger{display:none;background:var(--card);border:1px solid var(--linha);width:40px;height:40px;border-radius:11px;color:var(--ink);cursor:pointer;place-items:center}
+  .content{padding:24px 32px 60px;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
+
+  .view{display:none} .view.on{display:block}
+
+  /* dashboard */
+  .dom-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .dom-head .nome{font-size:24px;font-weight:800;color:var(--forte)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px}
+  .pill.on{background:var(--jade-s);color:var(--jade2)} .pill.off{background:var(--verm-s);color:var(--vermelho)}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .dom-head .sp{flex:1}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .stat{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);padding:17px 18px;box-shadow:var(--sombra-s)}
+  .stat .l{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--suave)}
+  .stat .l .ic{width:16px;height:16px;color:var(--accent)}
+  .stat .v{font-size:30px;font-weight:800;color:var(--forte);margin:4px 0 2px;line-height:1}
+  .stat .s{font-size:12.5px;color:var(--suave)}
+  .stat.alerta{cursor:pointer} .stat.alerta .v{color:var(--sol)}
+  .stat.alerta.zero .v{color:var(--jade2)}
+  .jgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .jcard{text-align:left;background:var(--card);border:1px solid var(--linha);border-radius:14px;padding:16px;box-shadow:var(--sombra-s);cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:transform .12s,border-color .12s}
+  .jcard:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .jcard .ji{font-size:22px;margin-bottom:4px}
+  .jcard b{color:var(--forte);font-size:15px} .jcard small{color:var(--suave);font-size:12.5px}
+  .jcard.alerta:hover{border-color:var(--vermelho)}
+  /* grupos cards */
+  .gtabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .gtab{padding:8px 14px;border-radius:10px;border:1px solid var(--linha);background:var(--card);color:var(--suave);font-weight:700;font-size:13.5px;cursor:pointer}
+  .gtab.on{background:var(--accent);border-color:transparent;color:#fff}
+  .gcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .gcard{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:18px;box-shadow:var(--sombra-s);display:flex;flex-direction:column;gap:14px}
+  .gchead{display:flex;align-items:flex-start;gap:12px}
+  .gcicon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-s);color:var(--accent)}
+  .gcicon.admin{background:var(--verm-s);color:var(--vermelho)} .gcicon.sistema{background:var(--card2);color:var(--suave)}
+  .gcname{font-weight:800;color:var(--forte);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gcdesc{color:var(--suave);font-size:13px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .gcbadge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:999px;background:var(--accent-s);color:var(--accent);white-space:nowrap}
+  .gcbadge.admin{background:var(--verm-s);color:var(--vermelho)} .gcbadge.sistema{background:var(--card2);color:var(--suave)}
+  .gcmembers{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:10px 14px}
+  .gcmembers b{font-size:17px;color:var(--forte)}
+  .gctech{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .gctech .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--suave);background:var(--card2);border:1px solid var(--linha);padding:3px 8px;border-radius:7px}
+  /* transparência técnica (CLI) */
+  .cli{background:var(--sb);border:1px solid var(--sb-linha);border-radius:14px;padding:14px 16px;margin-top:18px;overflow:auto}
+  .cli .clihead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#aeb6ff;margin-bottom:10px}
+  .cli pre{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#cfe3d8;white-space:pre-wrap;word-break:break-word;line-height:1.75}
+
+  /* painel */
+  .panel{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);box-shadow:var(--sombra-s);overflow:hidden;margin-bottom:18px}
+  .ph{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--linha);flex-wrap:wrap}
+  .ph h3{font-size:16px}.ph .sp{flex:1}
+  .busca{width:auto;min-width:180px;max-width:240px;padding:8px 12px;font-size:13.5px;border-radius:10px}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--linha)}
+  .row:last-child{border-bottom:none}
+  .row .av{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;flex:0 0 auto}
+  .row .av.off{background:color-mix(in srgb,var(--suave) 20%,transparent);color:var(--suave)}
+  .row .nm{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .muted{color:var(--suave);font-size:12.7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .sp{flex:1;min-width:8px}
+  .empty{padding:34px 18px;text-align:center;color:var(--suave)}
+  .empty img{width:120px;opacity:.95;margin-bottom:6px}
+  .muted{color:var(--suave)} .small{font-size:12.5px}
+  .badge{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
+  .badge.off{background:var(--verm-s);color:var(--vermelho)}
+  .badge.alta{background:var(--verm-s);color:var(--vermelho)}
+  .badge.media{background:var(--sol-s);color:var(--sol)}
+  .badge.baixa{background:var(--ceu-s);color:var(--ceu)}
+  .badge.info{background:var(--jade-s);color:var(--jade2)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--accent-s);color:var(--accent);border:1px solid var(--linha);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+  .memrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--linha)}
+  .memrow:last-child{border:none}
+  /* ficha premium */
+  .modal.wide{width:min(560px,100%)}
+  .profhead{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+  .profphoto{width:84px;height:84px;border-radius:18px;background:var(--accent-s);display:grid;place-items:center;color:var(--accent);font-weight:800;font-size:30px;flex:0 0 auto;position:relative;overflow:hidden;cursor:pointer;border:1px solid var(--linha)}
+  .profphoto img{width:100%;height:100%;object-fit:cover}
+  .profphoto .cam{position:absolute;inset:auto 0 0 0;background:rgba(0,0,0,.58);color:#fff;font-size:9.5px;text-align:center;padding:3px 0;font-weight:700;letter-spacing:.03em}
+  .profhead h3{font-size:20px} .profhead .lg{color:var(--suave);font-size:13px;margin-top:2px}
+  .avimg{width:100%;height:100%;object-fit:cover;border-radius:10px}
+  .ptabs{display:flex;gap:2px;border-bottom:1px solid var(--linha);margin-bottom:16px}
+  .ptab{padding:9px 14px;font-weight:700;font-size:14px;color:var(--suave);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .ptab.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .ptabview{display:none} .ptabview.on{display:block}
+  .evbox{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:2px 14px;margin-top:16px}
+  .evbox summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px;padding:12px 0;list-style:none}
+  .evbox summary::-webkit-details-marker{display:none}
+  .evbox summary::before{content:"▾ ";font-size:11px}
+  .evbox .memrow{padding:7px 0}
+  /* organograma */
+  .org,.org ul{list-style:none;margin:0;padding:0}
+  .org ul{position:relative;padding-top:22px;display:flex;justify-content:center;gap:4px}
+  .org li{position:relative;padding:22px 10px 0;text-align:center}
+  .org li::before,.org li::after{content:'';position:absolute;top:0;right:50%;border-top:2px solid var(--linha);width:50%;height:22px}
+  .org li::after{right:auto;left:50%;border-left:2px solid var(--linha)}
+  .org li:only-child::before,.org li:only-child::after{display:none}
+  .org li:only-child{padding-top:0}
+  .org li:first-child::before,.org li:last-child::after{border:0 none}
+  .org li:last-child::before{border-right:2px solid var(--linha);border-radius:0 6px 0 0}
+  .org li:first-child::after{border-radius:6px 0 0 0}
+  .org ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--linha);height:22px}
+  .org>ul{padding-top:0} .org>ul>li{padding-top:0}
+  .org>ul>li::before,.org>ul>li::after{display:none}
+  .orgnode{display:inline-flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:8px 14px 8px 8px;cursor:pointer}
+  .orgnode:hover{border-color:var(--accent);box-shadow:var(--sombra-s)}
+  .orgav{width:36px;height:36px;border-radius:9px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 auto}
+  .orgav img{width:100%;height:100%;object-fit:cover}
+  .orgnm{font-weight:700;font-size:14px;white-space:nowrap} .orgcg{font-size:11px;color:var(--suave);white-space:nowrap}
+
+  /* form grid (segurança) */
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+  .fgrid .field{margin:0}
+  .switch{display:flex;align-items:center;gap:10px;padding:10px 0}
+  .switch input{width:auto}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha)}
+  .toggle-row:last-child{border:none}
+  .sw{position:relative;width:44px;height:25px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw .sl{position:absolute;inset:0;background:var(--linha);border-radius:999px;transition:.2s;cursor:pointer}
+  .sw .sl:before{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .sl{background:var(--accent)}
+  .sw input:checked + .sl:before{transform:translateX(19px)}
+
+  /* modal + toast */
+  .mask{display:none;position:fixed;inset:0;background:rgba(6,20,13,.55);z-index:50;place-items:center;padding:18px;overflow:auto}
+  .mask.open{display:grid}
+  .modal{background:var(--card);border:1px solid var(--linha);border-radius:18px;box-shadow:var(--sombra);width:min(460px,100%);padding:24px;max-height:92vh;overflow:auto}
+  .modal h3{font-size:19px;margin-bottom:3px}.modal .sub{color:var(--suave);font-size:13.5px;margin-bottom:16px}
+  .modal .acts{display:flex;gap:10px;margin-top:20px}.modal .acts .btn{flex:1}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(18px);opacity:0;transition:.25s;background:var(--forte);color:var(--bg);padding:12px 20px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)} #toast.erro{background:var(--vermelho);color:#fff}
+  .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media(max-width:860px){
+    .shell{grid-template-columns:1fr}
+    aside{position:fixed;left:0;top:0;width:262px;z-index:40;transform:translateX(-100%);transition:.25s}
+    aside.open{transform:none}
+    .burger{display:grid}
+    .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+    .backdrop.open{display:block}
+    .fgrid{grid-template-columns:1fr}
+  }
+  .invh{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--linha)}
+  @media print{
+    body{background:#fff}
+    body *{visibility:hidden}
+    .printavel,.printavel *{visibility:visible}
+    .printavel{position:absolute;left:0;top:0;width:100%;padding:10px 18px;color:#000}
+    .printavel .muted{color:#555}
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){.grid2{grid-template-columns:1fr}}
+</style>
+
+<!-- LOGIN -->
+<div id="login" style="display:none">
+  <form class="loginbox" id="loginForm">
+    <img class="masc" src="assets/mascote.png" alt="" onerror="this.style.display='none'">
+    <h1>Guatá DHCP</h1>
+    <p>Servidor de IPs — entre para gerenciar</p>
+    <div class="field"><label>Usuário</label><input type="text" id="usuario" value="Administrator" autocomplete="username"></div>
+    <div class="field"><label>Senha</label><input type="password" id="senha" autocomplete="current-password" autofocus></div>
+    <button class="btn pri block" type="submit" id="btnEntrar">Entrar</button>
+    <p class="muted small" id="loginDica" style="margin-top:10px"></p>
+  </form>
+</div>
+
+<!-- CONFIGURADOR -->
+<div id="config" style="display:none;min-height:100vh;place-items:center;padding:22px">
+  <div class="loginbox" id="cfgBox" style="max-width:560px"></div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="shell">
+  <aside id="aside">
+    <div class="brand"><img src="assets/logo.png" onerror="this.style.display='none'"><div><b>Guatá DHCP</b><small>IPs soberanos</small></div></div>
+    <nav class="menu">
+      <div class="migroup">Visão geral</div>
+      <button class="mi" data-v="painel"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg> Painel</button>
+      <div class="migroup">Rede</div>
+      <button class="mi" data-v="escopos"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg> Escopos</button>
+      <button class="mi" data-v="leases"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg> Concessões</button>
+      <button class="mi" data-v="reservas"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg> Reservas (MAC)</button>
+      <div class="migroup">Sistema</div>
+      <button class="mi" data-v="ddns"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg> DNS dinâmico</button>
+      <button class="mi" data-v="saude"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Saúde</button>
+    </nav>
+    <div class="sb-foot">
+      <div class="saude-sb"><b><span class="dot"></span> Servidor DHCP</b><span id="sbSaude">carregando…</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <h2 id="tituloView">Painel</h2><span class="sp"></span>
+      <button class="btn ghost" id="btnSair"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sair</button>
+    </header>
+    <div class="content">
+
+      <section class="view on" data-view="painel">
+        <div class="dom-head"><span class="nme nome" id="dHost">—</span><span class="pill on" id="dPill"><span class="dot"></span> no ar</span><span id="dServico" style="display:inline-flex;gap:8px;margin-left:10px"></span><span class="sp"></span>
+          <button class="btn pri" onclick="abrirEscopo()"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M12 5v14M5 12h14"/></svg> Novo escopo</button></div>
+        <div class="cards" id="painelCards"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin:26px 0 12px"><svg class="ic" viewBox="0 0 24 24" style="width:19px;height:19px;color:var(--jade)"><path d="M12 22V11M12 11C12 7 9 4 4 4c0 5 3 8 8 8z"/></svg><h3 style="font-size:16px">Tarefas rápidas</h3></div>
+        <div class="jgrid">
+          <button class="jcard" onclick="abrirEscopo()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg></span><b>Novo escopo</b><small>Faixa de IPs por sub-rede</small></button>
+          <button class="jcard" onclick="abrirReserva()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></span><b>Nova reserva</b><small>IP fixo por MAC</small></button>
+          <button class="jcard" onclick="irPara('leases')"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span><b>Ver concessões</b><small>Quem está com qual IP</small></button>
+        </div>
+      </section>
+
+      <section class="view" data-view="escopos">
+        <div class="panel"><div class="ph"><h3>Escopos (faixas de IP)</h3><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirEscopo()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Novo escopo</button></div>
+          <div id="listaEscopos"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="leases">
+        <div class="panel"><div class="ph"><h3>Concessões ativas (leases)</h3><input class="busca" placeholder="Buscar IP, MAC, nome…" oninput="filtrar('listaLeases',this.value)"><span class="sp"></span>
+          <button class="btn sm" onclick="carregarLeases()">Atualizar</button></div>
+          <div id="listaLeases"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="reservas">
+        <div class="panel"><div class="ph"><h3>Reservas (IP fixo por MAC)</h3><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirReserva()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Nova reserva</button></div>
+          <div id="listaReservas"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="ddns">
+        <div class="cards" id="ddnsCards"></div>
+        <div class="panel"><div class="ph"><h3>DNS dinâmico (DDNS)</h3><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" id="ddnsBtn" onclick="ddnsToggle()">Ligar</button></div>
+          <div id="ddnsBody" style="padding:12px 18px"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="saude">
+        <div class="cards" id="saudeCards"></div>
+        <div class="cli" id="saudeCli"></div>
+      </section>
+
+    </div>
+  </main>
+  </div>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function api(path,method="GET",body){
+  const o={method,headers:{}};
+  if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
+  const r=await fetch(path,o);let j={};try{j=await r.json();}catch(e){}
+  if(r.status===401&&path!=="/api/login"){mostrarLogin();throw new Error("sessao");}
+  return {ok:r.ok,status:r.status,data:j};
+}
+function toast(m,erro){const t=$("#toast");t.textContent=m;t.className=(erro?"erro ":"")+"show";setTimeout(()=>t.className=t.className.replace("show",""),3200);}
+function abrir(html){$("#modal").className="modal";$("#modal").innerHTML=html;$("#mask").classList.add("open");}
+function fechar(){$("#mask").classList.remove("open");$("#modal").className="modal";}
+$("#mask").addEventListener("click",e=>{if(e.target.id==="mask")fechar();});
+function filtrar(id,t){t=(t||"").toLowerCase().trim();document.querySelectorAll("#"+id+" .row").forEach(r=>{r.style.display=(!t||r.textContent.toLowerCase().includes(t))?"":"none";});}
+function vazio(msg,extra){return `<div class="empty"><img src="assets/mascote.png" onerror="this.style.display='none'"><div>${msg}</div>${extra?`<div class="muted small" style="margin-top:4px">${extra}</div>`:''}</div>`;}
+function quando(ts){ts=+ts||0;if(!ts)return "—";const d=new Date(ts*1000);const dif=Math.round((ts*1000-Date.now())/60000);
+  const h=d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  if(dif<=0)return "expirando";if(dif<60)return "expira em "+dif+" min";if(dif<1440)return "expira "+h;return "expira em "+Math.round(dif/1440)+"d";}
+
+function mostrarLogin(){$("#config").style.display="none";$("#app").style.display="none";$("#login").style.display="grid";setTimeout(()=>$("#senha").focus(),50);}
+function mostrarApp(){$("#login").style.display="none";$("#config").style.display="none";$("#app").style.display="block";irPara("painel");}
+
+let cfgIsDC=false,cfgHostSug="guata-dhcp",cfgIfaces=[],cfgModo="simples";
+async function mostrarConfig(){
+  $("#login").style.display="none";$("#app").style.display="none";$("#config").style.display="grid";
+  try{const {data}=await api("/api/estado-inicial");cfgIsDC=!!data.is_dc;cfgHostSug=data.host_sugerido||"guata-dhcp";cfgIfaces=data.interfaces||[];}catch(e){}
+  cfgModo=cfgIsDC?"dc":"simples";
+  cfgTela();
+}
+function cfgTela(){
+  const ifopts=cfgIfaces.map(i=>`<option value="${esc(i.nome)}">${esc(i.nome)}${i.ips&&i.ips.length?' — '+esc(i.ips[0]):''}</option>`).join("")||'<option value="">(nenhuma placa detectada)</option>';
+  const sug=cfgIfaces[0]||{};const ip=(sug.ips&&sug.ips[0])||"";
+  let base="",ini="",fim="",gw="";
+  if(ip){const p=ip.split(".");base=p[0]+"."+p[1]+"."+p[2]+".";ini=base+"100";fim=base+"200";gw=base+"1";}
+  const authDC=cfgIsDC?`<div class="field"><label>Entrar no painel com</label><select id="c_modo"><option value="dc">Login do Guatá AD (recomendado)</option><option value="simples">Senha local deste servidor</option></select></div>`:'';
+  $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote.png" onerror="this.style.display='none'">
+    <h1>Guatá DHCP</h1><p>Vamos entregar IPs na rede. Confirme a placa e o primeiro escopo.</p>
+    <div class="field"><label>Nome deste servidor</label><input id="c_host" value="${esc(cfgHostSug)}"></div>
+    <div class="field"><label>Placa de rede (onde servir DHCP)</label><select id="c_iface">${ifopts}</select></div>
+    ${authDC}
+    <div style="border-top:1px solid var(--linha);margin:14px 0 10px"></div>
+    <p class="sub" style="margin:0 0 8px">Primeiro escopo (faixa de IPs):</p>
+    <div class="grid2">
+      <div class="field"><label>Rede</label><input id="c_rede" value="${esc(base?base+'0':'')}" placeholder="192.168.0.0"></div>
+      <div class="field"><label>Máscara (/)</label><input id="c_masc" value="24" placeholder="24"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>IP inicial</label><input id="c_ini" value="${esc(ini)}" placeholder="192.168.0.100"></div>
+      <div class="field"><label>IP final</label><input id="c_fim" value="${esc(fim)}" placeholder="192.168.0.200"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Gateway</label><input id="c_gw" value="${esc(gw)}" placeholder="192.168.0.1"></div>
+      <div class="field"><label>DNS</label><input id="c_dns" value="${esc(gw)}" placeholder="192.168.0.1"></div>
+    </div>
+    <div class="cfgnav"><button class="btn pri block" onclick="cfgExecutar()">Configurar e ligar DHCP</button></div>
+    <p class="muted small" style="margin-top:8px">A configuração inicial é feita no próprio servidor, por segurança.</p>`;
+}
+async function cfgExecutar(){
+  const iface=$("#c_iface").value;
+  if(!iface)return toast("Escolha uma placa de rede",true);
+  const body={modo:(cfgIsDC&&$("#c_modo")?$("#c_modo").value:cfgModo),host:$("#c_host").value.trim()||cfgHostSug,interface:iface,
+    rede:$("#c_rede").value.trim(),mascara:$("#c_masc").value.trim(),ini:$("#c_ini").value.trim(),fim:$("#c_fim").value.trim(),
+    gateway:$("#c_gw").value.trim(),dns:[$("#c_dns").value.trim()].filter(Boolean),lease:86400};
+  if(!body.rede||!body.ini||!body.fim)return toast("Preencha rede e a faixa de IPs",true);
+  $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote.png" onerror="this.style.display='none'"><h1>Configurando…</h1><p class="sub" id="cfgMsg">Iniciando…</p>
+    <div style="height:14px;border-radius:99px;background:var(--linha);overflow:hidden;margin:14px 0"><div id="cfgBarra" style="height:100%;width:2%;background:var(--accent);border-radius:99px;transition:width .4s"></div></div>`;
+  await api("/api/configurar","POST",body);
+  const timer=setInterval(async()=>{try{const {data:s}=await api("/api/configurar-status");
+    const bar=$("#cfgBarra");if(bar)bar.style.width=Math.max(2,s.pct||0)+"%";
+    const msg=$("#cfgMsg");if(msg)msg.textContent=s.msg||"...";
+    if(s.pronto){clearInterval(timer);
+      $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote.png" onerror="this.style.display='none'"><h1>${s.erro?'Quase lá':'Pronto!'}</h1><p>${esc(s.msg||'')}</p><button class="btn pri block" onclick="location.reload()">Abrir o painel</button>`;
+    }
+  }catch(e){}},1500);
+}
+
+const titulos={painel:"Painel",escopos:"Escopos",leases:"Concessões",reservas:"Reservas (MAC)",ddns:"DNS dinâmico",saude:"Saúde"};
+function irPara(v){
+  document.querySelectorAll(".mi").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.dataset.view===v));
+  $("#tituloView").textContent=titulos[v]||"Painel";
+  if(v==="painel")carregarPainel();
+  if(v==="escopos")carregarEscopos();
+  if(v==="leases")carregarLeases();
+  if(v==="reservas")carregarReservas();
+  if(v==="ddns")carregarDDNS();
+  if(v==="saude")carregarSaude();
+}
+document.querySelectorAll(".mi").forEach(b=>b.onclick=()=>irPara(b.dataset.v));
+
+$("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("#btnEntrar");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  try{const r=await api("/api/login","POST",{usuario:$("#usuario").value.trim()||"Administrator",senha:$("#senha").value});
+    if(r.ok)mostrarApp();else toast(r.data.erro||"Falha",true);}catch(e){}b.disabled=false;b.textContent="Entrar";});
+$("#btnSair").addEventListener("click",async()=>{try{await api("/api/logout","POST",{});}catch(e){}mostrarLogin();});
+
+async function servico(acao){
+  const lbl={start:"Ligando",restart:"Reiniciando",stop:"Desligando"}[acao]||"Aplicando";
+  const sv=$("#dServico"); if(sv) sv.innerHTML='<span class="spin"></span> '+lbl+'\u2026';
+  try{
+    const {data}=await api("/api/servico","POST",{acao});
+    if(data&&data.ok){ toast(acao==="stop"?"DHCP desligado.":"DHCP no ar."); }
+    else { toast((data&&data.erro)||("Não consegui "+lbl.toLowerCase()+"."),true); }
+  }catch(e){ if(e.message!=="sessao") toast("Falha de conexão.",true); }
+  setTimeout(carregarPainel,1200);
+}
+async function carregarPainel(){
+  try{const {data:s}=await api("/api/saude");
+    $("#dHost").textContent=s.host||"servidor";
+    const on=(s.servico==="active");const pill=$("#dPill");pill.className="pill "+(on?"on":"off");
+    pill.innerHTML='<span class="dot"></span> '+(on?"no ar":(s.escopos?"parado":"sem escopo"));
+    $("#sbSaude").textContent=(s.escopos||0)+" escopo(s) · "+(s.leases||0)+" IPs ativos";
+    const RST='<svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>';
+    const PWR='<svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 3v9M6.6 6.6a8 8 0 1 0 10.8 0"/></svg>';
+    const sv=$("#dServico");
+    if(sv){
+      if(on){
+        sv.innerHTML='<button class="btn sm ghost" onclick="servico(\'restart\')">'+RST+' Reiniciar</button>'
+                    +'<button class="btn sm" style="color:var(--vermelho);border-color:var(--vermelho)" onclick="servico(\'stop\')">'+PWR+' Desligar</button>';
+      }else{
+        sv.innerHTML = s.escopos
+          ? '<button class="btn sm pri" onclick="servico(\'start\')">'+PWR+' Ligar DHCP</button>'
+          : '';
+      }
+    }
+    const ESC='<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg>';
+    const LS='<svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>';
+    const RS='<svg class="ic" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>';
+    const NC='<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h.01M10 11h4"/></svg>';
+    const st=(ic,l,v,sub,cor)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:19px${cor?';color:'+cor:''}">${v}</div><div class="s">${esc(sub)}</div></div>`;
+    $("#painelCards").innerHTML=
+      st(NC,"Serviço",on?"no ar":(s.escopos?"parado":"aguardando"),on?"Kea entregando IPs":"configure um escopo",on?'var(--jade2)':'var(--sol)')+
+      st(ESC,"Escopos",String(s.escopos||0),"faixas de IP")+
+      st(LS,"Concessões",String(s.leases||0),"IPs em uso agora")+
+      st(RS,"Reservas",String(s.reservas||0),"IP fixo por MAC");
+  }catch(e){}
+}
+
+let escCache=[];
+async function carregarEscopos(){
+  try{const {data}=await api("/api/escopos");escCache=data.itens||[];const el=$("#listaEscopos");
+    if(!escCache.length){el.innerHTML=vazio("Nenhum escopo ainda.","Clique em “Novo escopo” para definir a faixa de IPs.");return;}
+    el.innerHTML=escCache.map((e,i)=>`<div class="row" style="align-items:flex-start">
+      <div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg></div>
+      <div style="min-width:0;flex:1">
+        <div class="nm">${esc(e.rede)}/${esc(String(e.mascara))} <span class="badge info">${esc(e.ini)} – ${esc(e.fim)}</span></div>
+        <div class="muted small">Gateway: ${esc(e.gateway||'—')} · DNS: ${esc((e.dns||[]).join(', ')||'—')} · Concessão: ${esc(humanLease(e.lease))}${e.dominio?' · Domínio: '+esc(e.dominio):''}</div>
+      </div><span class="sp"></span>
+      <button class="btn sm" onclick="abrirEscopo(${i})">Editar</button>
+      <button class="btn sm danger" onclick="escopoApagar('${esc(e.rede)}','${esc(String(e.mascara))}')">Remover</button>
+    </div>`).join("");
+  }catch(e){}
+}
+function humanLease(s){s=+s||0;if(s%86400===0)return (s/86400)+"d";if(s%3600===0)return (s/3600)+"h";return Math.round(s/60)+"min";}
+function abrirEscopo(i){
+  const e=(i!=null&&escCache[i])?escCache[i]:{mascara:24,lease:86400,dns:[]};
+  abrir(`<h3>${i!=null?'Editar':'Novo'} escopo</h3><p class="sub">Faixa de IPs que o servidor vai entregar numa sub-rede.</p>
+    <div class="grid2"><div class="field"><label>Rede</label><input id="e_rede" value="${esc(e.rede||'')}" placeholder="192.168.0.0" ${i!=null?'readonly':'autofocus'}></div>
+      <div class="field"><label>Máscara (/)</label><input id="e_masc" value="${esc(String(e.mascara||24))}" placeholder="24"></div></div>
+    <div class="grid2"><div class="field"><label>IP inicial</label><input id="e_ini" value="${esc(e.ini||'')}" placeholder="192.168.0.100"></div>
+      <div class="field"><label>IP final</label><input id="e_fim" value="${esc(e.fim||'')}" placeholder="192.168.0.200"></div></div>
+    <div class="grid2"><div class="field"><label>Gateway</label><input id="e_gw" value="${esc(e.gateway||'')}" placeholder="192.168.0.1"></div>
+      <div class="field"><label>DNS (vírgula)</label><input id="e_dns" value="${esc((e.dns||[]).join(', '))}" placeholder="192.168.0.10"></div></div>
+    <div class="grid2"><div class="field"><label>Concessão</label><select id="e_lease">
+        <option value="3600">1 hora</option><option value="28800">8 horas</option><option value="86400">1 dia</option><option value="604800">7 dias</option></select></div>
+      <div class="field"><label>Domínio (opcional)</label><input id="e_dom" value="${esc(e.dominio||'')}" placeholder="empresa.local"></div></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="e_ok">Salvar</button></div>`);
+  if(e.lease)$("#e_lease").value=String(e.lease);
+  $("#e_ok").onclick=async()=>{const b=$("#e_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const body={rede:$("#e_rede").value.trim(),mascara:$("#e_masc").value.trim(),ini:$("#e_ini").value.trim(),fim:$("#e_fim").value.trim(),
+      gateway:$("#e_gw").value.trim(),dns:$("#e_dns").value.split(",").map(x=>x.trim()).filter(Boolean),lease:$("#e_lease").value,dominio:$("#e_dom").value.trim()};
+    const r=await api("/api/escopo-salvar","POST",body);b.disabled=false;b.textContent="Salvar";
+    if(r.ok){fechar();toast("Escopo salvo!");carregarEscopos();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function escopoApagar(rede,mascara){if(!confirm("Remover o escopo "+rede+"/"+mascara+"? O servidor para de entregar IPs nessa faixa."))return;
+  const r=await api("/api/escopo-apagar","POST",{rede,mascara});if(r.ok){toast("Escopo removido.");carregarEscopos();carregarPainel();}else toast("Erro",true);}
+
+async function carregarLeases(){
+  try{const {data}=await api("/api/leases");const its=data.itens||[];const el=$("#listaLeases");
+    if(!its.length){el.innerHTML=vazio("Nenhuma concessão ativa.","Quando um aparelho pegar IP, ele aparece aqui.");return;}
+    el.innerHTML=its.map(l=>`<div class="row">
+      <div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h.01"/></svg></div>
+      <div style="min-width:0;flex:1">
+        <div class="nm" style="font-family:ui-monospace">${esc(l.ip)} ${l.reservado?'<span class="badge baixa">reservado</span>':''}</div>
+        <div class="muted small">${esc(l.nome||'(sem nome)')} · <span style="font-family:ui-monospace">${esc(l.mac||'?')}</span></div>
+      </div><span class="sp"></span>
+      <span class="muted small">${esc(quando(l.expira))}</span>
+      ${!l.reservado?`<button class="btn sm" onclick="abrirReserva(null,'${esc(l.mac)}','${esc(l.ip)}','${esc(l.nome||'')}')">Reservar</button>`:''}
+    </div>`).join("");
+  }catch(e){}
+}
+
+let resCache=[];
+async function carregarReservas(){
+  try{const {data}=await api("/api/reservas");resCache=data.itens||[];const el=$("#listaReservas");
+    if(!resCache.length){el.innerHTML=vazio("Nenhuma reserva ainda.","Fixe um IP a um aparelho pelo endereço MAC.");return;}
+    el.innerHTML=resCache.map(r=>`<div class="row">
+      <div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div>
+      <div style="min-width:0;flex:1">
+        <div class="nm">${esc(r.nome||'(sem nome)')} <span class="badge info" style="font-family:ui-monospace">${esc(r.ip)}</span></div>
+        <div class="muted small" style="font-family:ui-monospace">${esc(r.mac)}</div>
+      </div><span class="sp"></span>
+      <button class="btn sm danger" onclick="reservaApagar('${esc(r.mac)}')">Remover</button>
+    </div>`).join("");
+  }catch(e){}
+}
+function abrirReserva(i,mac,ip,nome){
+  mac=mac||"";ip=ip||"";nome=nome||"";
+  abrir(`<h3>Nova reserva</h3><p class="sub">Entrega sempre o mesmo IP para um aparelho, pelo MAC.</p>
+    <div class="field"><label>Endereço MAC</label><input id="r_mac" value="${esc(mac)}" placeholder="aa:bb:cc:dd:ee:ff" ${mac?'':'autofocus'}></div>
+    <div class="field"><label>IP reservado</label><input id="r_ip" value="${esc(ip)}" placeholder="192.168.0.50"></div>
+    <div class="field"><label>Nome (opcional)</label><input id="r_nome" value="${esc(nome)}" placeholder="impressora-rh"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="r_ok">Salvar</button></div>`);
+  $("#r_ok").onclick=async()=>{const b=$("#r_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/reserva-salvar","POST",{mac:$("#r_mac").value.trim(),ip:$("#r_ip").value.trim(),nome:$("#r_nome").value.trim()});
+    b.disabled=false;b.textContent="Salvar";
+    if(r.ok){fechar();toast("Reserva salva!");carregarReservas();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function reservaApagar(mac){if(!confirm("Remover a reserva de "+mac+"?"))return;
+  const r=await api("/api/reserva-apagar","POST",{mac});if(r.ok){toast("Reserva removida.");carregarReservas();carregarPainel();}else toast("Erro",true);}
+
+async function carregarDDNS(){
+  try{const {data:s}=await api("/api/saude");const on=s.ddns;const dc=s.is_dc;
+    const G='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>';
+    const st=(ic,l,v,sub,cor)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:18px${cor?';color:'+cor:''}">${v}</div><div class="s">${esc(sub)}</div></div>`;
+    $("#ddnsCards").innerHTML=
+      st(G,"DNS dinâmico",on?"ligado":"desligado",on?"registrando no DNS":"manual",on?'var(--jade2)':'')+
+      st(G,"Guatá AD",dc?"neste servidor":"não detectado",dc?"pode registrar no DNS":"necessário p/ DDNS",dc?'var(--jade2)':'var(--sol)');
+    const btn=$("#ddnsBtn");btn.textContent=on?"Desligar":"Ligar";btn.classList.toggle("danger",on);btn.disabled=!dc&&!on;
+    $("#ddnsBody").innerHTML=dc
+      ? `<p class="muted" style="margin:0">Quando ligado, cada aparelho que pega IP é registrado como nome no <b>DNS do Guatá AD</b> (zona do domínio), a cada 2 minutos. Usa a conta de máquina deste controlador — nada de senha guardada.</p>`
+      : `<p class="muted" style="margin:0">O DDNS registra os nomes no DNS do <b>Guatá AD</b>. Ele fica disponível quando o DHCP roda no próprio controlador de domínio. Aqui, as concessões continuam funcionando normalmente — só o registro automático no DNS que depende do AD.</p>`;
+  }catch(e){}
+}
+async function ddnsToggle(){const {data:s}=await api("/api/saude");
+  const r=await api("/api/ddns","POST",{ligar:!s.ddns});
+  if(r.ok){toast(s.ddns?"DNS dinâmico desligado.":"DNS dinâmico ligado.");carregarDDNS();}else toast(r.data.erro||"Erro",true);}
+
+async function carregarSaude(){
+  try{const {data:s}=await api("/api/saude");const on=(s.servico==="active");
+    const c=(ic,l,v,ok)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:18px;color:${ok?'var(--jade2)':'var(--vermelho)'}">${v}</div></div>`;
+    const K='<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h.01"/></svg>';
+    const N='<svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>';
+    const G='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg>';
+    $("#saudeCards").innerHTML=
+      c(K,"Serviço (Kea)",on?"no ar":(s.escopos?"parado":"aguardando"),on||!s.escopos)+
+      c(N,"Placa de rede",s.interface||"—",!!s.interface)+
+      c(G,"DNS dinâmico",s.ddns?"ligado":"desligado",true);
+    $("#saudeCli").innerHTML=`<div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Transparência técnica — comandos reais</div>
+      <pre>kea-dhcp4 -t /etc/kea/kea-dhcp4.conf   # testa a configuração
+systemctl status kea-dhcp4-server         # estado do serviço
+cat /var/lib/kea/kea-leases4.csv          # concessões (leases)
+guata-dhcp-regen dump                     # ver a config gerada</pre>`;
+  }catch(e){}
+}
+
+/* início */
+(async()=>{try{const r=await api("/api/sessao");
+  if(!r.data.configurado)mostrarConfig();
+  else if(r.data.logado)mostrarApp();
+  else {mostrarLogin();if(r.data.modo==='simples')$("#loginDica").textContent="Modo simples: defina a senha do painel no próprio servidor (localhost), por segurança.";}
+}catch(e){mostrarLogin();}})();
+</script>

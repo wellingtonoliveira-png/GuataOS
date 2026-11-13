@@ -1,0 +1,598 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Guatá Print</title>
+<style>
+  :root{
+    --bg:#eef1f7; --card:#ffffff; --card2:#f4f6fb; --linha:#e2e6f0;
+    --ink:#1b2435; --suave:#5f6b85; --forte:#0f1626;
+    /* azul/indigo = AÇÃO (do mockup) */
+    --accent:#4f46e5; --accent2:#4338ca; --accent-s:#eef0fe;
+    /* verde = STATUS saudável */
+    --jade:#2f8f66; --jade2:#17694c; --jade-s:#e7f3ec;
+    --sol:#d98a2b; --sol-s:#f8eede; --ceu:#3f86c4; --ceu-s:#e6f0f9; --vermelho:#c0453a; --verm-s:#fbe9e7;
+    /* sidebar navy (sempre) */
+    --sb:#101c33; --sb2:#17243f; --sb-ink:#d4ddee; --sb-suave:#8293b2; --sb-linha:#233251;
+    --raio:16px; --sombra:0 18px 44px -26px rgba(20,30,60,.34); --sombra-s:0 8px 22px -16px rgba(20,30,60,.22);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;
+      --accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715;
+      --sombra:0 20px 50px -24px rgba(0,0,0,.6)}
+  }
+  :root[data-theme=dark]{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;--accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715}
+  :root[data-theme=light]{--bg:#eef1f7;--card:#fff;--card2:#f4f6fb;--linha:#e2e6f0;--ink:#1b2435;--suave:#5f6b85;--forte:#0f1626;--accent:#4f46e5;--accent2:#4338ca;--accent-s:#eef0fe;--jade:#2f8f66;--jade2:#17694c;--jade-s:#e7f3ec}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button,input,select{font-family:inherit}
+  h1,h2,h3{margin:0;color:var(--forte);line-height:1.2}
+  .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .leaf{fill:var(--jade);stroke:none}
+
+  /* ---------- LOGIN ---------- */
+  #login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1100px 480px at 50% -10%,color-mix(in srgb,var(--jade) 20%,transparent),transparent)}
+  .loginbox{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);padding:36px 32px;width:min(410px,100%);text-align:center}
+  .loginbox .masc{width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 2px;filter:drop-shadow(0 10px 18px rgba(16,50,33,.18))}
+  .loginbox h1{font-size:23px}
+  .loginbox p{margin:2px 0 20px;color:var(--suave);font-size:14px}
+  .field{text-align:left;margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--suave);margin-bottom:6px}
+  .field .muted{font-weight:500}
+  input,select{width:100%;padding:11px 13px;border:1.5px solid var(--linha);border-radius:11px;background:var(--card2);color:var(--ink);font-size:14.5px;outline:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-s)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14.5px;border-radius:11px;padding:11px 16px;border:1.5px solid var(--linha);background:var(--card);color:var(--forte);cursor:pointer}
+  .btn:hover{filter:brightness(.99)}
+  .btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff}
+  .btn.sm{padding:7px 11px;font-size:12.5px;border-radius:9px}
+  .btn.block{width:100%}
+  .btn.ghost{background:var(--card2)}
+  .btn.danger{color:var(--vermelho);border-color:color-mix(in srgb,var(--vermelho) 35%,var(--linha))}
+  .btn.ok{color:var(--jade2);border-color:color-mix(in srgb,var(--jade) 40%,var(--linha))}
+
+  /* ---------- CONFIGURADOR ---------- */
+  #config{min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(170deg,var(--accent-s),var(--card2))}
+  .cfgcard{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);width:min(480px,100%);padding:30px 30px 26px}
+  .cfghead{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .cfghead img{width:54px;height:54px;object-fit:contain}
+  .cfghead b{color:var(--forte);font-size:18px;display:block;line-height:1}
+  .cfghead span{color:var(--accent);font-size:12.5px;font-weight:700}
+  .dots{display:flex;gap:6px;margin:14px 0 20px}
+  .dots i{height:5px;flex:1;border-radius:999px;background:var(--linha)}
+  .dots i.on{background:var(--accent)}
+  .cfgstep{display:none} .cfgstep.on{display:block}
+  .cfgstep h2{font-size:21px;margin-bottom:6px}
+  .cfgstep p.sub{color:var(--suave);font-size:14px;margin-bottom:18px}
+  .cfgnav{display:flex;gap:10px;margin-top:8px}.cfgnav .btn{flex:1}
+  .optcard{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:15px;border:1.5px solid var(--linha);border-radius:14px;background:var(--card2);cursor:pointer;margin-bottom:10px}
+  .optcard:hover{border-color:var(--accent)} .optcard .oi{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+  .optcard b{color:var(--forte);font-size:15px} .optcard p{color:var(--suave);font-size:12.8px;margin:2px 0 0}
+  .resumo{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:14px 16px;font-size:14px;margin-bottom:6px}
+  .resumo div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+  .resumo b{color:var(--forte)}
+  .prog{height:10px;background:var(--card2);border-radius:999px;overflow:hidden;margin:16px 0 8px}
+  .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .4s}
+  .done-ic{width:70px;height:70px;border-radius:50%;background:var(--jade-s);color:var(--jade2);display:grid;place-items:center;margin:4px auto 10px}
+  .url-box{background:var(--accent-s);border:1px solid var(--linha);border-radius:12px;padding:12px;text-align:center;font-weight:800;color:var(--accent);font-size:16px;margin:10px 0}
+
+  /* ---------- SHELL ---------- */
+  #app{display:none;min-height:100vh}
+  .shell{display:grid;grid-template-columns:262px 1fr;min-height:100vh}
+  aside{background:var(--sb);color:var(--sb-ink);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--sb-linha)}
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 18px 14px}
+  .brand img{width:40px;height:40px;object-fit:contain;border-radius:10px}
+  .brand b{color:#fff;font-size:17px;font-weight:800;line-height:1}
+  .brand small{display:block;color:var(--sb-suave);font-size:11.5px;margin-top:3px}
+  nav.menu{display:flex;flex-direction:column;gap:2px;padding:8px 12px;flex:1;overflow:auto}
+  .migroup{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sb-suave);padding:10px 13px 4px;opacity:.75}
+  .migroup:first-child{padding-top:4px}
+  .mi{display:flex;align-items:center;gap:12px;padding:8.5px 13px;border-radius:11px;color:var(--sb-ink);text-decoration:none;font-weight:600;font-size:14.5px;cursor:pointer;border:none;background:none;text-align:left;width:100%}
+  .mi .ic{width:19px;height:19px;color:var(--sb-suave)}
+  .mi:hover{background:rgba(255,255,255,.055)}
+  .mi.on{background:color-mix(in srgb,var(--accent) 24%,transparent);color:#fff}
+  .mi.on .ic{color:#aeb6ff}
+  .mi .soon{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sb-suave);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:999px}
+  .sb-foot{padding:10px 14px;border-top:1px solid var(--sb-linha)}
+  .sb-foot .masc{width:54px;display:block;margin:0 auto 6px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4))}
+  .saude-sb{background:var(--sb2);border:1px solid var(--sb-linha);border-radius:12px;padding:8px 11px;font-size:11.5px;color:var(--sb-suave)}
+  .saude-sb b{display:flex;align-items:center;gap:7px;color:#bfe8cf;font-size:12.5px}
+  .saude-sb .dot{width:8px;height:8px;border-radius:50%;background:#49d08b}
+
+  main{min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:12px;padding:16px 26px;border-bottom:1px solid var(--linha);background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+  .topbar h2{font-size:21px}.topbar .sp{flex:1}
+  .burger{display:none;background:var(--card);border:1px solid var(--linha);width:40px;height:40px;border-radius:11px;color:var(--ink);cursor:pointer;place-items:center}
+  .content{padding:24px 32px 60px;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
+
+  .view{display:none} .view.on{display:block}
+
+  /* dashboard */
+  .dom-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .dom-head .nome{font-size:24px;font-weight:800;color:var(--forte)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px}
+  .pill.on{background:var(--jade-s);color:var(--jade2)} .pill.off{background:var(--verm-s);color:var(--vermelho)}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .dom-head .sp{flex:1}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .stat{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);padding:17px 18px;box-shadow:var(--sombra-s)}
+  .stat .l{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--suave)}
+  .stat .l .ic{width:16px;height:16px;color:var(--accent)}
+  .stat .v{font-size:30px;font-weight:800;color:var(--forte);margin:4px 0 2px;line-height:1}
+  .stat .s{font-size:12.5px;color:var(--suave)}
+  .stat.alerta{cursor:pointer} .stat.alerta .v{color:var(--sol)}
+  .stat.alerta.zero .v{color:var(--jade2)}
+  .jgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .jcard{text-align:left;background:var(--card);border:1px solid var(--linha);border-radius:14px;padding:16px;box-shadow:var(--sombra-s);cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:transform .12s,border-color .12s}
+  .jcard:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .jcard .ji{font-size:22px;margin-bottom:4px}
+  .jcard b{color:var(--forte);font-size:15px} .jcard small{color:var(--suave);font-size:12.5px}
+  .jcard.alerta:hover{border-color:var(--vermelho)}
+  /* grupos cards */
+  .gtabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .gtab{padding:8px 14px;border-radius:10px;border:1px solid var(--linha);background:var(--card);color:var(--suave);font-weight:700;font-size:13.5px;cursor:pointer}
+  .gtab.on{background:var(--accent);border-color:transparent;color:#fff}
+  .gcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .gcard{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:18px;box-shadow:var(--sombra-s);display:flex;flex-direction:column;gap:14px}
+  .gchead{display:flex;align-items:flex-start;gap:12px}
+  .gcicon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-s);color:var(--accent)}
+  .gcicon.admin{background:var(--verm-s);color:var(--vermelho)} .gcicon.sistema{background:var(--card2);color:var(--suave)}
+  .gcname{font-weight:800;color:var(--forte);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gcdesc{color:var(--suave);font-size:13px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .gcbadge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:999px;background:var(--accent-s);color:var(--accent);white-space:nowrap}
+  .gcbadge.admin{background:var(--verm-s);color:var(--vermelho)} .gcbadge.sistema{background:var(--card2);color:var(--suave)}
+  .gcmembers{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:10px 14px}
+  .gcmembers b{font-size:17px;color:var(--forte)}
+  .gctech{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .gctech .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--suave);background:var(--card2);border:1px solid var(--linha);padding:3px 8px;border-radius:7px}
+  /* transparência técnica (CLI) */
+  .cli{background:var(--sb);border:1px solid var(--sb-linha);border-radius:14px;padding:14px 16px;margin-top:18px;overflow:auto}
+  .cli .clihead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#aeb6ff;margin-bottom:10px}
+  .cli pre{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#cfe3d8;white-space:pre-wrap;word-break:break-word;line-height:1.75}
+
+  /* painel */
+  .panel{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);box-shadow:var(--sombra-s);overflow:hidden;margin-bottom:18px}
+  .ph{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--linha);flex-wrap:wrap}
+  .ph h3{font-size:16px}.ph .sp{flex:1}
+  .busca{width:auto;min-width:180px;max-width:240px;padding:8px 12px;font-size:13.5px;border-radius:10px}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--linha)}
+  .row:last-child{border-bottom:none}
+  .row .av{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;flex:0 0 auto}
+  .row .av.off{background:color-mix(in srgb,var(--suave) 20%,transparent);color:var(--suave)}
+  .row .nm{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .muted{color:var(--suave);font-size:12.7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .sp{flex:1;min-width:8px}
+  .empty{padding:34px 18px;text-align:center;color:var(--suave)}
+  .empty img{width:120px;opacity:.95;margin-bottom:6px}
+  .muted{color:var(--suave)} .small{font-size:12.5px}
+  .badge{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
+  .badge.off{background:var(--verm-s);color:var(--vermelho)}
+  .badge.alta{background:var(--verm-s);color:var(--vermelho)}
+  .badge.media{background:var(--sol-s);color:var(--sol)}
+  .badge.baixa{background:var(--ceu-s);color:var(--ceu)}
+  .badge.info{background:var(--jade-s);color:var(--jade2)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--accent-s);color:var(--accent);border:1px solid var(--linha);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+  .memrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--linha)}
+  .memrow:last-child{border:none}
+  /* ficha premium */
+  .modal.wide{width:min(560px,100%)}
+  .profhead{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+  .profphoto{width:84px;height:84px;border-radius:18px;background:var(--accent-s);display:grid;place-items:center;color:var(--accent);font-weight:800;font-size:30px;flex:0 0 auto;position:relative;overflow:hidden;cursor:pointer;border:1px solid var(--linha)}
+  .profphoto img{width:100%;height:100%;object-fit:cover}
+  .profphoto .cam{position:absolute;inset:auto 0 0 0;background:rgba(0,0,0,.58);color:#fff;font-size:9.5px;text-align:center;padding:3px 0;font-weight:700;letter-spacing:.03em}
+  .profhead h3{font-size:20px} .profhead .lg{color:var(--suave);font-size:13px;margin-top:2px}
+  .avimg{width:100%;height:100%;object-fit:cover;border-radius:10px}
+  .ptabs{display:flex;gap:2px;border-bottom:1px solid var(--linha);margin-bottom:16px}
+  .ptab{padding:9px 14px;font-weight:700;font-size:14px;color:var(--suave);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .ptab.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .ptabview{display:none} .ptabview.on{display:block}
+  .evbox{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:2px 14px;margin-top:16px}
+  .evbox summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px;padding:12px 0;list-style:none}
+  .evbox summary::-webkit-details-marker{display:none}
+  .evbox summary::before{content:"▾ ";font-size:11px}
+  .evbox .memrow{padding:7px 0}
+  /* organograma */
+  .org,.org ul{list-style:none;margin:0;padding:0}
+  .org ul{position:relative;padding-top:22px;display:flex;justify-content:center;gap:4px}
+  .org li{position:relative;padding:22px 10px 0;text-align:center}
+  .org li::before,.org li::after{content:'';position:absolute;top:0;right:50%;border-top:2px solid var(--linha);width:50%;height:22px}
+  .org li::after{right:auto;left:50%;border-left:2px solid var(--linha)}
+  .org li:only-child::before,.org li:only-child::after{display:none}
+  .org li:only-child{padding-top:0}
+  .org li:first-child::before,.org li:last-child::after{border:0 none}
+  .org li:last-child::before{border-right:2px solid var(--linha);border-radius:0 6px 0 0}
+  .org li:first-child::after{border-radius:6px 0 0 0}
+  .org ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--linha);height:22px}
+  .org>ul{padding-top:0} .org>ul>li{padding-top:0}
+  .org>ul>li::before,.org>ul>li::after{display:none}
+  .orgnode{display:inline-flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:8px 14px 8px 8px;cursor:pointer}
+  .orgnode:hover{border-color:var(--accent);box-shadow:var(--sombra-s)}
+  .orgav{width:36px;height:36px;border-radius:9px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 auto}
+  .orgav img{width:100%;height:100%;object-fit:cover}
+  .orgnm{font-weight:700;font-size:14px;white-space:nowrap} .orgcg{font-size:11px;color:var(--suave);white-space:nowrap}
+
+  /* form grid (segurança) */
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+  .fgrid .field{margin:0}
+  .switch{display:flex;align-items:center;gap:10px;padding:10px 0}
+  .switch input{width:auto}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha)}
+  .toggle-row:last-child{border:none}
+  .sw{position:relative;width:44px;height:25px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw .sl{position:absolute;inset:0;background:var(--linha);border-radius:999px;transition:.2s;cursor:pointer}
+  .sw .sl:before{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .sl{background:var(--accent)}
+  .sw input:checked + .sl:before{transform:translateX(19px)}
+
+  /* modal + toast */
+  .mask{display:none;position:fixed;inset:0;background:rgba(6,20,13,.55);z-index:50;place-items:center;padding:18px;overflow:auto}
+  .mask.open{display:grid}
+  .modal{background:var(--card);border:1px solid var(--linha);border-radius:18px;box-shadow:var(--sombra);width:min(460px,100%);padding:24px;max-height:92vh;overflow:auto}
+  .modal h3{font-size:19px;margin-bottom:3px}.modal .sub{color:var(--suave);font-size:13.5px;margin-bottom:16px}
+  .modal .acts{display:flex;gap:10px;margin-top:20px}.modal .acts .btn{flex:1}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(18px);opacity:0;transition:.25s;background:var(--forte);color:var(--bg);padding:12px 20px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)} #toast.erro{background:var(--vermelho);color:#fff}
+  .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media(max-width:860px){
+    .shell{grid-template-columns:1fr}
+    aside{position:fixed;left:0;top:0;width:262px;z-index:40;transform:translateX(-100%);transition:.25s}
+    aside.open{transform:none}
+    .burger{display:grid}
+    .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+    .backdrop.open{display:block}
+    .fgrid{grid-template-columns:1fr}
+  }
+  .invh{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--linha)}
+  @media print{
+    body{background:#fff}
+    body *{visibility:hidden}
+    .printavel,.printavel *{visibility:visible}
+    .printavel{position:absolute;left:0;top:0;width:100%;padding:10px 18px;color:#000}
+    .printavel .muted{color:#555}
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){.grid2{grid-template-columns:1fr}}
+</style>
+
+<style>
+  /* Print extras */
+  table.tb{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.tb th{text-align:left;color:var(--suave);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--linha)}
+  table.tb td{padding:9px 10px;border-bottom:1px solid var(--linha);color:var(--ink)}
+  table.tb tr:hover td{background:var(--card2)}
+  .bar{height:7px;border-radius:999px;background:var(--card2);overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .bar.over i{background:linear-gradient(90deg,var(--vermelho),#e3736a)}
+  .tag{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--accent-s);color:var(--accent)}
+  .tag.ok{background:var(--jade-s);color:var(--jade2)} .tag.off{background:var(--verm-s);color:var(--vermelho)} .tag.sol{background:var(--sol-s);color:var(--sol)}
+  .tbwrap{overflow-x:auto;background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);padding:4px 6px;box-shadow:var(--sombra-s)}
+</style>
+
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div id="login" style="display:none">
+  <form class="loginbox" id="loginForm">
+    <img class="masc" src="assets/mascote.png" onerror="this.style.display='none'">
+    <h1>Guatá Print</h1>
+    <p id="loginSub">Servidor de impressão — entre para gerenciar</p>
+    <div class="field" id="userField" style="display:none"><label>Usuário do domínio</label><input id="usuario" autocomplete="username" placeholder="Administrator"></div>
+    <div class="field"><label id="senhaLbl">Senha</label><input id="senha" type="password" autocomplete="current-password" placeholder="sua senha"></div>
+    <button class="btn pri block" id="btnEntrar" type="submit">Entrar</button>
+    <p id="loginErr" style="color:var(--vermelho);font-size:13px;margin:12px 0 0;min-height:16px"></p>
+  </form>
+</div>
+
+<!-- CONFIG INICIAL -->
+<div id="config" style="display:none">
+  <div class="cfgcard" id="cfgBox"></div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="shell">
+    <aside id="side">
+      <div class="brand"><img src="assets/logo.png" onerror="this.style.display='none'"><div><b>Guatá Print</b><small>Impressão soberana</small></div></div>
+      <nav class="menu">
+        <div class="migroup">Visão geral</div>
+        <button class="mi on" data-view="painel" onclick="irPara('painel')"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Painel</button>
+        <div class="migroup">Impressão</div>
+        <button class="mi" data-view="impressoras" onclick="irPara('impressoras')"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></svg> Impressoras</button>
+        <button class="mi" data-view="bilhetagem" onclick="irPara('bilhetagem')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg> Bilhetagem</button>
+        <button class="mi" data-view="cotas" onclick="irPara('cotas')"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Cotas</button>
+        <button class="mi" data-view="relatorios" onclick="irPara('relatorios')"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg> Relatórios</button>
+        <div class="migroup">Sistema</div>
+        <button class="mi" data-view="saude" onclick="irPara('saude')"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg> Saúde</button>
+      </nav>
+      <div class="sb-foot">
+        <div class="saude-sb"><b><span class="dot"></span> <span id="sbEstado">—</span></b><span id="sbInfo">carregando…</span></div>
+        <button class="mi" style="margin-top:8px" id="btnSair"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sair</button>
+      </div>
+    </aside>
+    <main>
+      <div class="topbar"><button class="burger" onclick="document.getElementById('side').classList.toggle('open')"><svg class="ic" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><h2 id="topTit">Painel</h2><span class="sp"></span><span class="pill on" id="topPill"><span class="dot"></span> no ar</span></div>
+      <div class="content" style="padding:24px 26px">
+
+        <section class="view on" data-view="painel">
+          <div class="cards" id="painelCards"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin:20px 0 12px"><h3 style="font-size:16px">Ações rápidas</h3></div>
+          <div class="jgrid">
+            <button class="jcard" onclick="abrirAdd()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M12 5v14M5 12h14"/></svg></span><b>Adicionar impressora</b><small>Rede, USB ou IP</small></button>
+            <button class="jcard" onclick="irPara('bilhetagem')"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span><b>Ver impressões</b><small>Quem imprimiu o quê</small></button>
+            <button class="jcard" onclick="irPara('relatorios')"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg></span><b>Relatório de custo</b><small>Por usuário e setor</small></button>
+          </div>
+        </section>
+
+        <section class="view" data-view="impressoras">
+          <div class="panel"><div class="ph"><h3>Impressoras</h3><span class="sp"></span>
+            <button class="btn sm ghost" style="width:auto" onclick="toggleCompart()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg> <span id="compartLbl">Compartilhar</span></button>
+            <button class="btn sm pri" style="width:auto" onclick="abrirAdd()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Adicionar</button></div>
+            <div id="listaImp"><div class="empty">carregando…</div></div>
+          </div>
+        </section>
+
+        <section class="view" data-view="bilhetagem">
+          <div class="panel"><div class="ph"><h3>Bilhetagem (impressões)</h3><span class="sp"></span><select id="bilMes" onchange="carregarBilhetagem()" style="width:auto"></select></div>
+            <div id="listaBil"><div class="empty">carregando…</div></div>
+          </div>
+        </section>
+
+        <section class="view" data-view="cotas">
+          <div class="panel"><div class="ph"><h3>Cotas de impressão</h3><span class="sp"></span>
+            <button class="btn sm pri" style="width:auto" onclick="abrirCota()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Nova cota</button></div>
+            <p style="color:var(--suave);font-size:13px;margin:0 2px 12px">Defina um limite de páginas por mês para um usuário, um grupo (ex.: <b>@Domain Users</b>) ou para todos (<b>@todos</b>). O painel avisa quem passar do limite. <span style="opacity:.8">O bloqueio automático na impressora é um recurso avançado (futuro) — hoje o controle é por acompanhamento e aviso.</span></p>
+            <div id="listaCotas"><div class="empty">carregando…</div></div>
+          </div>
+        </section>
+
+        <section class="view" data-view="relatorios">
+          <div class="panel"><div class="ph"><h3>Relatórios</h3><span class="sp"></span>
+            <select id="relMes" onchange="carregarRelatorio()" style="width:auto"></select>
+            <button class="btn sm ghost" style="width:auto" onclick="window.print()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></svg> Imprimir / PDF</button></div>
+            <div id="relBody"><div class="empty">carregando…</div></div>
+          </div>
+        </section>
+
+        <section class="view" data-view="saude">
+          <div class="cards" id="saudeCards"></div>
+          <div class="panel" style="margin-top:14px"><div class="ph"><h3>Transparência técnica</h3></div>
+            <div id="saudeCli" style="padding:4px 2px"></div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="mask" class="mask"><div id="modal" class="modal"></div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function api(path,method="GET",body){
+  const o={method,headers:{}};
+  if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
+  const r=await fetch(path,o);let j={};try{j=await r.json();}catch(e){}
+  if(r.status===401&&path!=="/api/login"){mostrarLogin();throw new Error("sessao");}
+  return {ok:r.ok,status:r.status,data:j};
+}
+function toast(m,erro){const t=$("#toast");t.textContent=m;t.className=(erro?"erro ":"")+"show";setTimeout(()=>t.className=t.className.replace("show",""),3200);}
+function abrir(html){$("#modal").innerHTML=html;$("#mask").classList.add("open");}
+function fechar(){$("#mask").classList.remove("open");}
+$("#mask").addEventListener("click",e=>{if(e.target.id==="mask")fechar();});
+function brl(v){return "R$ "+(Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function mostrarLogin(){$("#config").style.display="none";$("#app").style.display="none";$("#login").style.display="grid";setTimeout(()=>$("#senha").focus(),50);}
+function mostrarApp(){$("#login").style.display="none";$("#config").style.display="none";$("#app").style.display="block";irPara("painel");}
+
+async function boot(){
+  try{
+    const {data:s}=await api("/api/sessao");
+    if(s.modo==="dc"||s.modo==="empresa"){$("#userField").style.display="";$("#loginSub").textContent="Entre com um administrador do domínio";}
+    if(s.logado){ if(!s.configurado){return abrirConfig();} return mostrarApp(); }
+    if(!s.configurado){ return abrirConfig(); }
+    mostrarLogin();
+  }catch(e){mostrarLogin();}
+}
+
+/* ---------- CONFIG INICIAL ---------- */
+async function abrirConfig(){
+  $("#login").style.display="none";$("#app").style.display="none";$("#config").style.display="grid";
+  const {data:e}=await api("/api/estado-inicial");
+  const dc=e.is_dc;
+  $("#cfgBox").innerHTML=`<div class="cfghead"><img src="assets/mascote.png" onerror="this.style.display='none'"><div><b>Guatá Print</b><span>Configuração inicial</span></div></div>
+    <h2 style="font-size:20px;margin:6px 0 4px">Vamos preparar a impressão</h2>
+    <p class="sub" style="color:var(--suave);font-size:14px;margin-bottom:16px">${dc?'Este servidor é o Guatá AD. As impressoras serão compartilhadas para o domínio (Windows pegam automaticamente).':'Modo simples: as impressoras serão compartilhadas na rede local.'}</p>
+    <div class="resumo"><div><span>Servidor</span><b>${esc(e.host||'—')}</b></div><div><span>Modo</span><b>${dc?'Domínio (AD)':'Simples (rede)'}</b></div><div><span>Dispositivos detectados</span><b>${(e.dispositivos||[]).length}</b></div></div>
+    <button class="btn pri block" style="margin-top:14px" id="cfgGo">Preparar servidor de impressão</button>
+    <p id="cfgMsg" style="color:var(--suave);font-size:13px;text-align:center;margin-top:10px;min-height:16px"></p>`;
+  $("#cfgGo").onclick=async()=>{
+    $("#cfgGo").disabled=true;$("#cfgGo").innerHTML='<span class="spin"></span> Preparando…';
+    await api("/api/configurar","POST",{modo:dc?"dc":"simples"});
+    const t=setInterval(async()=>{
+      const {data:st}=await api("/api/configurar-status");
+      $("#cfgMsg").textContent=st.msg||"";
+      if(st.pronto){clearInterval(t); if(st.erro){$("#cfgGo").disabled=false;$("#cfgGo").textContent="Tentar de novo";} else {toast("Pronto! Servidor de impressão no ar"); setTimeout(()=>location.reload(),900);}}
+    },800);
+  };
+}
+
+/* ---------- LOGIN ---------- */
+$("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("#btnEntrar");b.disabled=true;b.innerHTML='<span class="spin"></span>';$("#loginErr").textContent="";
+  try{const {ok,data}=await api("/api/login","POST",{usuario:$("#usuario").value,senha:$("#senha").value});
+    if(ok){const {data:s}=await api("/api/sessao"); if(!s.configurado){abrirConfig();} else {mostrarApp();}}
+    else $("#loginErr").textContent=data.erro||"Falha ao entrar.";
+  }catch(err){$("#loginErr").textContent="Erro de conexão.";}
+  b.disabled=false;b.textContent="Entrar";});
+$("#btnSair").addEventListener("click",async()=>{try{await api("/api/logout","POST",{});}catch(e){}mostrarLogin();});
+
+/* ---------- NAV ---------- */
+function irPara(v){
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.dataset.view===v));
+  document.querySelectorAll(".mi").forEach(m=>m.classList.toggle("on",m.dataset.view===v));
+  $("#topTit").textContent={painel:"Painel",impressoras:"Impressoras",bilhetagem:"Bilhetagem",cotas:"Cotas",relatorios:"Relatórios",saude:"Saúde"}[v]||"";
+  $("#side").classList.remove("open");
+  if(v==="painel")carregarPainel();
+  if(v==="impressoras")carregarImpressoras();
+  if(v==="bilhetagem")carregarBilhetagem(true);
+  if(v==="cotas")carregarCotas();
+  if(v==="relatorios")carregarRelatorio(true);
+  if(v==="saude")carregarSaude();
+}
+
+/* ---------- PAINEL ---------- */
+const IC={imp:'<svg class="ic" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></svg>',
+  pag:'<svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  user:'<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  share:'<svg class="ic" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg>'};
+function st(ic,l,v,sub,cor){return `<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:19px${cor?';color:'+cor:''}">${v}</div><div class="s">${esc(sub)}</div></div>`;}
+async function carregarPainel(){
+  try{const {data:s}=await api("/api/saude");
+    const on=(s.servico==="active");
+    $("#topPill").className="pill "+(on?"on":"off");$("#topPill").innerHTML='<span class="dot"></span> '+(on?"no ar":"parado");
+    $("#sbEstado").textContent=on?"CUPS ativo":"CUPS parado";
+    $("#sbInfo").textContent=(s.impressoras||0)+" impressora(s) · "+(s.paginas_mes||0)+" págs no mês";
+    $("#painelCards").innerHTML=
+      st(IC.imp,"Impressoras",String(s.impressoras||0),s.compartilhar?"compartilhadas na rede":"sem compartilhar",on?'var(--jade2)':'var(--sol)')+
+      st(IC.pag,"Páginas no mês",String(s.paginas_mes||0),"total impresso")+
+      st(IC.user,"Usuários",String(s.usuarios_mes||0),"imprimiram este mês")+
+      st(IC.share,"Modo",s.is_dc?"Domínio (AD)":"Rede local",s.is_dc?"Windows pegam pelo domínio":"compartilhamento local");
+  }catch(e){}
+}
+
+/* ---------- IMPRESSORAS ---------- */
+let COMPART=true;
+async function carregarImpressoras(){
+  const el=$("#listaImp");el.innerHTML='<div class="empty">carregando…</div>';
+  try{const {data:s}=await api("/api/saude");COMPART=s.compartilhar;$("#compartLbl").textContent=COMPART?"Compartilhado":"Compartilhar";
+    const {data}=await api("/api/impressoras");const its=data.itens||[];
+    if(!its.length){el.innerHTML=vazio("Nenhuma impressora ainda.","Clique em Adicionar para incluir a primeira.");return;}
+    el.innerHTML='<div class="tbwrap"><table class="tb"><thead><tr><th>Impressora</th><th>Estado</th><th>Endereço</th><th></th></tr></thead><tbody>'+
+      its.map(p=>{const tg=p.estado==="pronta"?'<span class="tag ok">pronta</span>':p.estado==="imprimindo"?'<span class="tag">imprimindo</span>':p.estado==="desativada"?'<span class="tag off">pausada</span>':'<span class="tag sol">'+esc(p.estado)+'</span>';
+        return `<tr><td><b>${esc(p.nome)}</b>${p.default?' <span class="tag">padrão</span>':''}</td><td>${tg}</td><td style="color:var(--suave);font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis">${esc(p.uri||'—')}</td>
+        <td style="white-space:nowrap;text-align:right">
+          <button class="btn sm ghost" onclick="testar('${esc(p.nome)}')">Testar</button>
+          <button class="btn sm ghost" onclick="pausarImp('${esc(p.nome)}',${p.estado!=='desativada'})">${p.estado==='desativada'?'Ativar':'Pausar'}</button>
+          <button class="btn sm danger" onclick="rmImp('${esc(p.nome)}')">Remover</button></td></tr>`}).join('')+
+      '</tbody></table></div>';
+  }catch(e){el.innerHTML=vazio("Erro ao carregar.","");}
+}
+function vazio(m,x){return `<div class="empty"><img src="assets/mascote.png" onerror="this.style.display='none'"><div>${esc(m)}</div>${x?`<div class="muted small" style="margin-top:4px;color:var(--suave)">${esc(x)}</div>`:''}</div>`;}
+async function toggleCompart(){const {data}=await api("/api/compartilhar","POST",{ligar:!COMPART});toast(!COMPART?"Compartilhado na rede":"Compartilhamento desligado");carregarImpressoras();}
+async function testar(n){const {data}=await api("/api/impressora-teste","POST",{nome:n});toast(data.ok?"Página de teste enviada":(data.erro||"Falhou"),!data.ok);}
+async function pausarImp(n,parar){await api("/api/impressora-pausar","POST",{nome:n,parar});toast(parar?"Impressora pausada":"Impressora ativada");carregarImpressoras();}
+function rmImp(n){abrir(`<h3 style="font-size:18px;margin-bottom:8px">Remover impressora</h3><p style="color:var(--suave);font-size:14px">Remover <b>${esc(n)}</b> do servidor?</p><div class="cfgnav" style="margin-top:18px"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn danger" onclick="rmImpOk('${esc(n)}')">Remover</button></div>`);}
+async function rmImpOk(n){const {data}=await api("/api/impressora-rm","POST",{nome:n});fechar();toast(data.ok?"Removida":"Falhou",!data.ok);carregarImpressoras();}
+
+async function abrirAdd(){
+  abrir('<h3 style="font-size:18px;margin-bottom:4px">Adicionar impressora</h3><p style="color:var(--suave);font-size:13px;margin-bottom:14px">Detectando impressoras na rede…</p><div id="addBody"><div class="empty">procurando…</div></div>');
+  const {data:dv}=await api("/api/dispositivos");
+  const {data:dr}=await api("/api/drivers");
+  const devs=dv.itens||[];
+  const opts=devs.map((d,i)=>`<option value="${esc(d.uri)}">${esc((d.classe+': '+d.uri).slice(0,70))}</option>`).join('');
+  $("#addBody").innerHTML=`
+    <div class="field"><label>Impressora detectada</label><select id="aDet" onchange="document.getElementById('aUri').value=this.value">
+      <option value="">— escolher da lista —</option>${opts}</select></div>
+    <div class="field"><label>Ou endereço manual (URI)</label><input id="aUri" placeholder="ipp://192.168.0.50/ipp/print"></div>
+    <div class="grid2"><div class="field"><label>Nome (sem espaços)</label><input id="aNome" placeholder="HP_Recepcao"></div>
+    <div class="field"><label>Local (opcional)</label><input id="aLocal" placeholder="Recepção"></div></div>
+    <div class="field"><label>Driver</label><select id="aDrv">${(dr.itens||[]).slice(0,120).map(d=>`<option value="${esc(d.driver)}">${esc(d.nome)}</option>`).join('')}</select></div>
+    <div class="cfgnav" style="margin-top:6px"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="aOk">Adicionar</button></div>
+    <p id="aErr" style="color:var(--vermelho);font-size:13px;margin-top:8px;min-height:14px"></p>`;
+  $("#aOk").onclick=async()=>{const b=$("#aOk");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const body={nome:$("#aNome").value,uri:$("#aUri").value,driver:$("#aDrv").value,local:$("#aLocal").value};
+    const {data}=await api("/api/impressora-add","POST",body);
+    if(data.ok){fechar();toast("Impressora adicionada");carregarImpressoras();}else{$("#aErr").textContent=data.erro||"Falhou";b.disabled=false;b.textContent="Adicionar";}};
+}
+
+/* ---------- BILHETAGEM ---------- */
+async function carregarBilhetagem(first){
+  const el=$("#listaBil");
+  try{const mes=first?undefined:$("#bilMes").value;
+    const {data}=await api("/api/bilhetagem"+(mes?("?mes="+mes):""));
+    if(first){const sel=$("#bilMes");sel.innerHTML=(data.meses||[]).map(m=>`<option value="${m}">${mesLabel(m)}</option>`).join('');}
+    const its=data.itens||[];
+    if(!its.length){el.innerHTML=vazio("Nenhuma impressão neste mês.","Quando alguém imprimir, aparece aqui com usuário e páginas.");return;}
+    el.innerHTML='<div class="tbwrap"><table class="tb"><thead><tr><th>Quando</th><th>Usuário</th><th>Impressora</th><th>Páginas</th><th>Lado</th></tr></thead><tbody>'+
+      its.slice().reverse().map(r=>`<tr><td style="color:var(--suave);font-size:12px">${esc(r.quando)}</td><td><b>${esc(r.user)}</b></td><td>${esc(r.printer)}</td><td>${r.paginas}</td><td style="color:var(--suave)">${esc(r.lado||'—')}</td></tr>`).join('')+
+      '</tbody></table></div>';
+  }catch(e){}
+}
+function mesLabel(m){if(!m)return "";const [y,mo]=m.split("-");const N=["","Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];return (N[+mo]||mo)+"/"+y;}
+
+/* ---------- COTAS ---------- */
+let GRUPOS=[];
+async function carregarCotas(){
+  const el=$("#listaCotas");
+  try{const {data}=await api("/api/config");GRUPOS=data.grupos||[];
+    const {data:rel}=await api("/api/relatorio");
+    const uso={};(rel.usuarios||[]).forEach(u=>uso[u.usuario]=u.paginas);
+    const cotas=data.cotas||{};const ks=Object.keys(cotas);
+    if(!ks.length){el.innerHTML=vazio("Nenhuma cota definida.","Clique em Nova cota para limitar páginas por usuário ou grupo.");return;}
+    el.innerHTML='<div class="tbwrap"><table class="tb"><thead><tr><th>Alvo</th><th>Limite/mês</th><th>Usado</th><th></th><th></th></tr></thead><tbody>'+
+      ks.map(k=>{const lim=cotas[k];const u=uso[k]||0;const pct=Math.min(100,Math.round(u/lim*100));const over=u>lim;
+        return `<tr><td><b>${esc(k)}</b></td><td>${lim}</td><td>${u} ${over?'<span class="tag off">excedeu</span>':''}</td>
+        <td style="width:140px"><div class="bar ${over?'over':''}"><i style="width:${pct}%"></i></div></td>
+        <td style="text-align:right"><button class="btn sm danger" onclick="rmCota('${esc(k)}')">Remover</button></td></tr>`}).join('')+
+      '</tbody></table></div>';
+  }catch(e){}
+}
+function abrirCota(){
+  const gopt=GRUPOS.map(g=>`<option value="@${esc(g)}">@${esc(g)} (grupo)</option>`).join('');
+  abrir(`<h3 style="font-size:18px;margin-bottom:10px">Nova cota</h3>
+    <div class="field"><label>Aplicar a</label><input id="cAlvo" list="cList" placeholder="usuario, @Grupo ou @todos"><datalist id="cList"><option value="@todos">${gopt}</datalist></div>
+    <div class="field"><label>Limite de páginas por mês</label><input id="cPag" type="number" min="1" placeholder="500"></div>
+    <div class="cfgnav"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="cOk">Salvar</button></div>
+    <p id="cErr" style="color:var(--vermelho);font-size:13px;margin-top:8px;min-height:14px"></p>`);
+  $("#cOk").onclick=async()=>{const {data}=await api("/api/cota","POST",{alvo:$("#cAlvo").value,paginas:$("#cPag").value});
+    if(data.ok){fechar();toast("Cota salva");carregarCotas();}else $("#cErr").textContent=data.erro||"Falhou";};
+}
+async function rmCota(k){await api("/api/cota","POST",{alvo:k,paginas:0});toast("Cota removida");carregarCotas();}
+
+/* ---------- RELATÓRIOS ---------- */
+async function carregarRelatorio(first){
+  const el=$("#relBody");
+  try{const mes=first?undefined:$("#relMes").value;
+    const {data}=await api("/api/relatorio"+(mes?("?mes="+mes):""));
+    if(first){const sel=$("#relMes");sel.innerHTML=(data.meses||[]).map(m=>`<option value="${m}">${mesLabel(m)}</option>`).join('');}
+    const us=data.usuarios||[],im=data.impressoras||[];const cpb=data.custo_pb||0.10;
+    const totPag=us.reduce((a,u)=>a+u.paginas,0);const totCusto=totPag*cpb;
+    el.innerHTML=`<div class="cards" style="margin-bottom:16px">
+      ${st(IC.pag,"Total de páginas",String(totPag),"no período")}
+      ${st(IC.user,"Usuários",String(us.length),"imprimiram")}
+      ${st('<svg class="ic" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',"Custo estimado",brl(totCusto),"a "+brl(cpb)+"/página")}</div>
+      <h3 style="font-size:15px;margin:6px 2px 8px">Por usuário</h3>
+      <div class="tbwrap"><table class="tb"><thead><tr><th>Usuário</th><th>Páginas</th><th>Cota</th><th>Custo</th></tr></thead><tbody>${
+        us.map(u=>`<tr><td><b>${esc(u.usuario)}</b></td><td>${u.paginas} ${u.excedido?'<span class="tag off">excedeu</span>':''}</td><td style="color:var(--suave)">${u.cota||'—'}</td><td>${brl(u.custo)}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--suave)">Sem dados.</td></tr>'
+      }</tbody></table></div>
+      <h3 style="font-size:15px;margin:16px 2px 8px">Por impressora</h3>
+      <div class="tbwrap"><table class="tb"><thead><tr><th>Impressora</th><th>Páginas</th><th>Trabalhos</th></tr></thead><tbody>${
+        im.map(p=>`<tr><td><b>${esc(p.impressora)}</b></td><td>${p.paginas}</td><td style="color:var(--suave)">${p.jobs}</td></tr>`).join('')||'<tr><td colspan="3" style="color:var(--suave)">Sem dados.</td></tr>'
+      }</tbody></table></div>`;
+  }catch(e){}
+}
+
+/* ---------- SAÚDE ---------- */
+async function carregarSaude(){
+  try{const {data:s}=await api("/api/saude");const on=(s.servico==="active");
+    $("#saudeCards").innerHTML=
+      st('<svg class="ic" viewBox="0 0 24 24"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg>',"Serviço (CUPS)",on?"no ar":"parado","motor de impressão",on?'var(--jade2)':'var(--vermelho)')+
+      st(IC.imp,"Impressoras",String(s.impressoras||0),"configuradas")+
+      st(IC.share,"Compartilhamento",s.compartilhar?"ligado":"desligado",s.is_dc?"domínio (AD)":"rede local")+
+      st('<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3v4M8 3v4"/></svg>',"Servidor",esc(s.host||"—"),"hostname");
+    $("#saudeCli").innerHTML=`<div class="clihead" style="color:var(--suave);font-size:12.5px;margin-bottom:8px"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px;vertical-align:-2px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Comandos reais por baixo (transparência)</div>
+      <pre style="background:var(--card2);border:1px solid var(--linha);border-radius:10px;padding:12px 14px;font-size:12px;overflow:auto;color:var(--suave);margin:0">systemctl status cups            # estado do serviço
+lpstat -p -d                     # impressoras e padrão
+lpadmin -p NOME -E -v URI        # adicionar impressora
+cupsctl --share-printers         # compartilhar na rede
+/var/log/cups/page_log           # bilhetagem (quem imprimiu)</pre>`;
+  }catch(e){}
+}
+
+boot();
+</script>
+</body></html>

@@ -1,0 +1,53 @@
+#!/bin/bash
+# Guatá Files — snapshots "voltar no tempo" (rsync + hardlinks; funciona em qualquer disco).
+# Integra com "Versões Anteriores" do Windows via vfs shadow_copy2 (snapdir=.snapshots, format @GMT-...).
+# Uso:
+#   guata-files-snapshot criar [share]       # snapshot de 1 share (ou de todos se vazio)
+#   guata-files-snapshot listar <share>      # lista os pontos (um por linha: NOME|data_epoch)
+#   guata-files-snapshot restaurar <share> <NOME>   # copia a versão p/ "<share>/Restaurado em .../"
+#   guata-files-snapshot limpar <share>      # mantém só os 30 mais novos
+set -uo pipefail
+BASE=/srv/guata-files; SHDIR=/etc/guata-files/shares
+KEEP=30
+
+shares(){ ls "$SHDIR" 2>/dev/null; }
+
+criar_share(){
+  local sh="$1" src="$BASE/$1" snapdir
+  [ -d "$src" ] || return 0
+  snapdir="$src/.snapshots"; mkdir -p "$snapdir"
+  local ts dest last
+  ts=$(date +@GMT-%Y.%m.%d-%H.%M.%S); dest="$snapdir/$ts"
+  last=$(ls -1dt "$snapdir"/@GMT-* 2>/dev/null | head -1)
+  if [ -n "$last" ] && [ -d "$last" ]; then
+    rsync -a --delete --link-dest="$last" --exclude='/.snapshots' "$src/" "$dest/" 2>/dev/null
+  else
+    rsync -a --exclude='/.snapshots' "$src/" "$dest/" 2>/dev/null
+  fi
+  ls -1dt "$snapdir"/@GMT-* 2>/dev/null | tail -n +$((KEEP+1)) | xargs -r rm -rf
+}
+
+case "${1:-}" in
+  criar)
+    if [ -n "${2:-}" ]; then criar_share "$2"; else for s in $(shares); do criar_share "$s"; done; fi
+    ;;
+  listar)
+    sd="$BASE/${2:-}/.snapshots"
+    for d in $(ls -1dt "$sd"/@GMT-* 2>/dev/null); do
+      n=$(basename "$d"); ep=$(stat -c %Y "$d" 2>/dev/null); echo "$n|$ep"
+    done
+    ;;
+  restaurar)
+    sh="${2:-}"; snap="${3:-}"; src="$BASE/$sh/.snapshots/$snap"
+    [ -d "$src" ] || { echo "ERRO: versão não encontrada"; exit 1; }
+    stamp=$(echo "$snap" | sed 's/@GMT-//; s/\./-/g; s/-\([0-9][0-9]\)-\([0-9][0-9]\)-\([0-9][0-9]\)$/ \1:\2:\3/')
+    dest="$BASE/$sh/Restaurado em $stamp"
+    mkdir -p "$dest"; rsync -a "$src/" "$dest/" 2>/dev/null
+    echo "OK: restaurado em '$dest'"
+    ;;
+  limpar)
+    sd="$BASE/${2:-}/.snapshots"
+    ls -1dt "$sd"/@GMT-* 2>/dev/null | tail -n +$((KEEP+1)) | xargs -r rm -rf
+    ;;
+  *) echo "uso: guata-files-snapshot criar|listar|restaurar|limpar [share] [snap]"; exit 1;;
+esac

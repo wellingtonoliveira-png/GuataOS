@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Meu Caderno
+Comment=Escreva histórias e livros — fácil e acolhedor
+Exec=caderno
+Icon=/usr/share/icons/guata/app-caderno.png
+Terminal=false
+Categories=Office;WordProcessor;
+StartupWMClass=br.com.guataos.Caderno

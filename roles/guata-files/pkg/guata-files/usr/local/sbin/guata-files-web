@@ -1,0 +1,481 @@
+#!/usr/bin/env python3
+# Guatá Files — painel web (compartilhamentos + níveis de acesso por grupo do AD).
+import json, os, re, subprocess, secrets, time, hashlib, shutil, threading, sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+CONF_STATUS="/run/guata-files-config.status"
+
+ETC="/etc/guata-files"; BASE="/srv/guata-files"; SHDIR=ETC+"/shares"; CONF=ETC+"/config"
+PASSFILE=ETC+"/web.pass"; WEBDIR="/usr/share/guata-files/web"
+SESS={}; TTL=8*3600
+NIVEIS={"leitura","edicao","total"}
+import ssl as _ssl
+CERT=ETC+"/web-cert.pem"; KEY=ETC+"/web-key.pem"
+TLS_ON=False
+LOCAL={"127.0.0.1","::1","::ffff:127.0.0.1","localhost"}
+FAILS={}  # ip -> [tentativas, bloqueado_ate]
+def rate_ok(ip):
+    e=FAILS.get(ip)
+    return not (e and e[1]>time.time())
+def rate_fail(ip):
+    e=FAILS.get(ip,[0,0.0]); e[0]+=1
+    if e[0]>=5: e[1]=time.time()+min(300,20*(e[0]-4))
+    FAILS[ip]=e
+def rate_reset(ip): FAILS.pop(ip,None)
+def _hashpw(senha, salt=None):
+    if salt is None: salt=secrets.token_hex(8)
+    h=hashlib.pbkdf2_hmac("sha256",senha.encode(),bytes.fromhex(salt),120000).hex()
+    return "pbkdf2$%s$%s"%(salt,h)
+def _checkpw(senha, stored):
+    stored=(stored or "").strip()
+    try:
+        if stored.startswith("pbkdf2$"):
+            _,salt,_h=stored.split("$",2)
+            return secrets.compare_digest(_hashpw(senha,salt),stored)
+    except Exception: return False
+    return secrets.compare_digest(hashlib.sha256(senha.encode()).hexdigest(),stored)  # legado
+
+def run(args, inp=None, timeout=40):
+    try:
+        p=subprocess.run(args, input=inp, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout.strip(), p.stderr.strip()
+    except Exception as e:
+        return 1,"",str(e)
+
+def cfg():
+    d={}
+    try:
+        for ln in open(CONF):
+            ln=ln.strip()
+            if "=" in ln and not ln.startswith("#"):
+                k,v=ln.split("=",1); d[k.strip()]=v.strip().strip('"')
+    except Exception: pass
+    return d
+def modo(): return (cfg().get("MODO") or "simples")
+def configurado(): return os.path.exists(ETC+"/configurado")
+
+def realm():
+    d=cfg()
+    if d.get("REALM"): return d["REALM"].upper()
+    try:
+        for ln in open("/etc/krb5.conf"):
+            if "default_realm" in ln: return ln.split("=",1)[1].strip().upper()
+    except Exception: pass
+    rc,o,_=run(["wbinfo","--own-domain"])
+    return ""
+
+def check_login(usuario, senha, ip=""):
+    if not senha: return (False,"Informe a senha.")
+    m=modo()
+    if m in ("dc","empresa"):
+        r=realm()
+        if not r: return (False,"Domínio não detectado. Verifique o ingresso.")
+        usuario=(usuario or "Administrator").strip() or "Administrator"
+        if not re.match(r"^[A-Za-z0-9._@-]{1,64}$", usuario): return (False,"Usuário inválido.")
+        cc="/tmp/gfiles-%s"%secrets.token_hex(4)
+        env=dict(os.environ, KRB5CCNAME="FILE:"+cc)
+        rc,_,_=run(["kinit",usuario+"@"+r], inp=senha+"\n")
+        try: os.remove(cc)
+        except Exception: pass
+        return (True,"") if rc==0 else (False,"Usuário ou senha incorretos.")
+    # modo simples: a senha é definida no primeiro acesso — SOMENTE pelo próprio servidor (localhost)
+    if not os.path.exists(PASSFILE):
+        if ip not in LOCAL:
+            return (False,"Primeiro acesso deve ser feito no próprio servidor para definir a senha (segurança).")
+        if len(senha)<6: return (False,"Defina uma senha com ao menos 6 caracteres.")
+        os.makedirs(ETC,exist_ok=True); open(PASSFILE,"w").write(_hashpw(senha)); os.chmod(PASSFILE,0o600)
+        return (True,"")
+    stored=open(PASSFILE).read().strip()
+    if _checkpw(senha,stored):
+        if not stored.startswith("pbkdf2$"):  # migra hash legado
+            try: open(PASSFILE,"w").write(_hashpw(senha)); os.chmod(PASSFILE,0o600)
+            except Exception: pass
+        return (True,"")
+    return (False,"Senha incorreta.")
+
+def _san(n):
+    n=re.sub(r"[^A-Za-z0-9_ -]","",(n or "")).strip().replace(" ","_")
+    return n[:48]
+
+def shares_lista():
+    out=[]
+    try: nomes=sorted(os.listdir(SHDIR))
+    except Exception: nomes=[]
+    for sh in nomes:
+        f=os.path.join(SHDIR,sh)
+        if not os.path.isfile(f): continue
+        regras=[]; cpath=""; aud=False
+        try:
+            for ln in open(f):
+                ln=ln.strip()
+                if ln.startswith("#path="): cpath=ln[6:].strip()
+                elif ln.startswith("#audit="): aud=(ln[7:].strip()=="1")
+                elif "|" in ln:
+                    p=ln.split("|"); tru=p[0]; lvl=(p[1] if len(p)>1 else "").strip(); tipo=(p[2].strip() if len(p)>2 else "grupo")
+                    if tru: regras.append({"grupo":tru,"nivel":lvl,"tipo":tipo})
+        except Exception: pass
+        path=cpath or os.path.join(BASE,sh); tam=""
+        origem="padrao"
+        for _o in _origens_reg():
+            if path.startswith(_o["mount"]+os.sep): origem=_o["nome"]; break
+        try:
+            rc,o,_=run(["du","-sh",path]); tam=o.split("\t")[0] if o else ""
+        except Exception: pass
+        out.append({"nome":sh,"path":path,"regras":regras,"tamanho":tam,"origem":origem,"audit":aud})
+    return out
+
+def share_criar(nome, origem="padrao"):
+    nome=_san(nome)
+    if not nome: return (False,"Nome inválido.")
+    base=_origem_mount(origem)
+    if not base: return (False,"Origem de armazenamento não encontrada.")
+    path=os.path.join(base,nome)
+    try: os.makedirs(path,exist_ok=True)
+    except Exception as e: return (False,"Não consegui criar a pasta na origem: %s"%e)
+    f=os.path.join(SHDIR,nome)
+    if not os.path.exists(f):
+        if origem and origem!="padrao": open(f,"w").write("#path=%s\n"%path)
+        else: open(f,"a").close()
+    run(["guata-files-regen"]); return (True,nome)
+
+def share_apagar(nome):
+    nome=_san(nome)
+    f=os.path.join(SHDIR,nome)
+    if os.path.exists(f): os.remove(f)
+    run(["guata-files-regen"])
+    return (True,"")  # pasta em /srv é preservada (dados)
+
+def share_nivel(nome, grupo, nivel, tipo="grupo"):
+    nome=_san(nome); grupo=(grupo or "").strip(); nivel=(nivel or "").strip(); tipo=(tipo or "grupo").strip()
+    if grupo and not re.match(r"^[A-Za-z0-9 ._@\\-]{1,64}$", grupo): return (False,"Nome de grupo/usuário inválido.")
+    if tipo not in ("grupo","usuario","todos"): tipo="grupo"
+    f=os.path.join(SHDIR,nome)
+    if not os.path.exists(f): return (False,"Compartilhamento não existe.")
+    chave=grupo if tipo!="todos" else "(todos)"
+    if tipo!="todos" and not grupo: return (False,"Escolha um grupo ou usuário.")
+    if nivel not in NIVEIS and nivel!="remover": return (False,"Nível inválido.")
+    linhas=[]
+    try:
+        for ln in open(f):
+            ln=ln.rstrip("\n")
+            if not ln.strip(): continue
+            p=ln.split("|"); t0=p[0]; tp=(p[2] if len(p)>2 else "grupo")
+            if tipo=="todos" and tp=="todos": continue
+            if tipo!="todos" and t0==chave and tp==tipo: continue
+            linhas.append(ln)
+    except Exception: pass
+    if nivel!="remover": linhas.append("%s|%s|%s"%(chave,nivel,tipo))
+    open(f,"w").write("\n".join(linhas)+("\n" if linhas else ""))
+    run(["guata-files-regen"]); return (True,"")
+
+def camadas_criar():
+    for c in ["Publico","Interno","Confidencial","Restrito"]:
+        os.makedirs(os.path.join(BASE,c),exist_ok=True); open(os.path.join(SHDIR,c),"a").close()
+    run(["guata-files-regen"]); return True
+
+def grupos_lista():
+    rc,o,_=run(["guata-files-regen","grupos"])
+    return [g for g in (o or "").splitlines() if g.strip()]
+
+REGO=ETC+"/origens.conf"
+def _origens_reg():
+    out=[]
+    try:
+        for ln in open(REGO):
+            p=ln.strip().split("|")
+            if len(p)>=5: out.append({"nome":p[0],"tipo":p[1],"disp":p[2],"mount":p[3],"fs":p[4]})
+    except Exception: pass
+    return out
+def _origem_mount(nome):
+    if not nome or nome=="padrao": return BASE
+    for o in _origens_reg():
+        if o["nome"]==nome: return o["mount"]
+    return None
+def _du(mp):
+    try:
+        st=os.statvfs(mp); return st.f_blocks*st.f_frsize, st.f_bavail*st.f_frsize
+    except Exception: return 0,0
+def origens_lista():
+    tam,livre=_du(BASE)
+    itens=[{"nome":"padrao","rotulo":"Disco do servidor","tipo":"padrao","mount":BASE,
+            "fs":"","tam":tam,"livre":livre,"montado":True,"acl_fina":True}]
+    for o in _origens_reg():
+        tam,livre=_du(o["mount"])
+        o["rotulo"]=o["nome"]; o["tam"]=tam; o["livre"]=livre
+        o["montado"]=os.path.ismount(o["mount"])
+        o["acl_fina"]= o["fs"] not in ("ntfs","ntfs3","vfat","fat","msdos","exfat","cifs")
+        itens.append(o)
+    return itens
+def discos_lista():
+    rc,o,e=run(["guata-files-discos","listar"])
+    try: return json.loads(o or "[]")
+    except Exception: return []
+def _disco_resp(rc,o,e):
+    msg=(o or e or "").strip()
+    ok = rc==0 and msg.startswith("OK")
+    return (ok, "" if ok else (msg.replace("ERRO:","").strip() or "Falhou."))
+def disco_usar(dev,nome):
+    rc,o,e=run(["guata-files-discos","usar",dev,nome],timeout=60); return _disco_resp(rc,o,e)
+def disco_soltar(nome):
+    rc,o,e=run(["guata-files-discos","soltar",nome],timeout=60); return _disco_resp(rc,o,e)
+def nas_add(nome,rem,user,pwd):
+    rc,o,e=run(["guata-files-discos","nas",nome,rem,user,pwd],timeout=60); return _disco_resp(rc,o,e)
+
+AUDLOG="/var/log/guata-files-audit.log"
+def audit_toggle(nome, ligar):
+    nome=_san(nome); f=os.path.join(SHDIR,nome)
+    if not os.path.exists(f): return (False,"Compartilhamento não existe.")
+    linhas=[ln.rstrip("\n") for ln in open(f) if not ln.startswith("#audit=")]
+    if ligar: linhas.insert(0,"#audit=1")
+    open(f,"w").write("\n".join(linhas)+("\n" if linhas else ""))
+    run(["guata-files-regen"])
+    run(["systemctl","restart","rsyslog"])
+    return (True,"")
+def auditoria_lista(share="", n=250):
+    share=_san(share) if share else ""
+    try:
+        sz=os.path.getsize(AUDLOG)
+        with open(AUDLOG,"rb") as fp:
+            if sz>500000: fp.seek(sz-500000)
+            dados=fp.read().decode("utf-8","replace")
+    except Exception:
+        return {"disponivel":os.path.exists(AUDLOG),"itens":[]}
+    OPS={"open":"abriu","pwrite":"gravou","unlink":"apagou","rename":"renomeou",
+         "mkdir":"criou pasta","rmdir":"removeu pasta","create_file":"criou"}
+    itens=[]
+    for ln in dados.splitlines():
+        i=ln.find("smbd_audit:")
+        if i<0: continue
+        ts=ln[:15].strip()
+        corpo=ln[i+11:].strip()
+        p=corpo.split("|")
+        if len(p)<4: continue
+        usuario,ip,sh,op=p[0],p[1],p[2],p[3]
+        if share and sh!=share: continue
+        res=p[4] if len(p)>4 else ""
+        args=[x for x in p[5:] if x]
+        alvo=" → ".join(args[-2:]) if op=="rename" else (args[-1] if args else "")
+        itens.append({"quando":ts,"usuario":usuario,"ip":ip,"share":sh,
+                      "op":OPS.get(op,op),"opraw":op,"ok":(res=="ok"),"alvo":alvo})
+    itens.reverse()
+    return {"disponivel":True,"itens":itens[:n]}
+
+def is_dc():
+    if os.path.exists("/etc/guata-id/provisionado") or os.path.exists("/etc/guata-ad/provisionado"): return True
+    try:
+        if "active directory domain controller" in open("/etc/samba/smb.conf").read().lower(): return True
+    except Exception: pass
+    return False
+def estado_inicial():
+    return {"is_dc":is_dc(),"host_sugerido":(run(["hostname"])[1] or "guata-files"),
+            "configurado":configurado()}
+def conf_status():
+    try:
+        pct,msg=open(CONF_STATUS).read().strip().split("|",1)
+        return {"pct":int(pct),"msg":msg,"pronto":(int(pct)>=100),
+                "erro":("erro" in msg.lower() or "atenç" in msg.lower())}
+    except Exception:
+        return {"pct":0,"msg":"","pronto":False,"erro":False}
+def do_configurar(d):
+    try: open(CONF_STATUS,"w").write("1|Iniciando...")
+    except Exception: pass
+    env=dict(os.environ)
+    env["MODO"]=(d.get("modo") or "simples")
+    env["HOST"]=(d.get("host") or "guata-files")
+    env["REALM"]=(d.get("realm") or "")
+    env["ADIP"]=(d.get("adip") or "")
+    env["ADMIN"]=(d.get("admin") or "Administrator")
+    env["ADPASS"]=(d.get("adpass") or "")
+    try: subprocess.run(["guata-files-configurar-auto"], env=env, timeout=600)
+    except Exception as e:
+        try: open(CONF_STATUS,"w").write("100|ERRO: %s"%str(e)[:120])
+        except Exception: pass
+
+def protecao_status():
+    inst=bool(shutil.which("clamscan"))
+    daemon=run(["systemctl","is-active","clamav-daemon"])[1] or run(["systemctl","is-active","clamav-freshclam"])[1]
+    ts=0; inf=0; arqs=[]; erro=""
+    try:
+        for ln in open("/run/guata-files-scan.txt"):
+            ln=ln.rstrip("\n")
+            if ln.startswith("TS="): ts=int(ln[3:] or 0)
+            elif ln.startswith("INF="): inf=int(ln[4:] or 0)
+            elif ln.startswith("ERRO="): erro=ln[5:]
+            elif ln.strip(): arqs.append(ln.strip())
+    except Exception: pass
+    agenda=run(["systemctl","is-enabled","guata-files-scan.timer"])[1].strip()=="enabled"
+    base_def=0
+    try: base_def=int(os.path.getmtime("/var/lib/clamav/daily.cvd" if os.path.exists("/var/lib/clamav/daily.cvd") else "/var/lib/clamav/daily.cld"))
+    except Exception: pass
+    return {"instalado":inst,"daemon":daemon,"ultimo_scan":ts,"infectados":inf,"arquivos":arqs[:30],
+            "agenda":agenda,"erro":erro,"base_def":base_def}
+SCAN={"rodando":False}
+def do_scan():
+    global SCAN; SCAN["rodando"]=True
+    try: run(["guata-files-scan","scan"],timeout=3600)
+    except Exception: pass
+    SCAN["rodando"]=False
+def snap_fs():
+    rc,o,_=run(["stat","-f","-c","%T",BASE]); return o or "?"
+def snap_listar(share):
+    share=_san(share)
+    rc,o,_=run(["guata-files-snapshot","listar",share])
+    out=[]
+    for ln in (o or "").splitlines():
+        if "|" in ln:
+            n,ep=ln.split("|",1)
+            try: out.append({"nome":n,"ts":int(ep)})
+            except Exception: pass
+    return out
+def snap_agenda_estado():
+    return run(["systemctl","is-enabled","guata-files-snapshot.timer"])[1].strip()=="enabled"
+def saude():
+    svc=run(["systemctl","is-active","smbd"])[1]
+    disco={}
+    try:
+        st=os.statvfs(BASE); tot=st.f_blocks*st.f_frsize; livre=st.f_bavail*st.f_frsize
+        disco={"total_gb":round(tot/1073741824,1),"livre_gb":round(livre/1073741824,1),
+               "pct":int((tot-livre)*100/tot) if tot else 0}
+    except Exception: pass
+    clam=run(["systemctl","is-active","clamav-daemon"])[1]
+    return {"servico":svc,"modo":modo(),"disco":disco,"shares":len(shares_lista()),
+            "clamav":clam,"host":run(["hostname"])[1]}
+
+class H(BaseHTTPRequestHandler):
+    def log_message(self,*a): pass
+    def _send(self,code,body,ctype="application/json"):
+        b=body if isinstance(body,bytes) else str(body).encode()
+        self.send_response(code); self.send_header("Content-Type",ctype)
+        self.send_header("Content-Length",str(len(b)))
+        self.send_header("X-Content-Type-Options","nosniff")
+        self.send_header("X-Frame-Options","DENY")
+        self.send_header("Referrer-Policy","no-referrer")
+        self.send_header("Content-Security-Policy","default-src 'self' 'unsafe-inline' data:; frame-ancestors 'none'; base-uri 'none'")
+        if self.path.startswith("/api/"): self.send_header("Cache-Control","no-store")
+        self.end_headers(); self.wfile.write(b)
+    def _json(self,c,o): self._send(c,json.dumps(o,ensure_ascii=False))
+    def _tok(self):
+        m=re.search(r"gf_sess=([a-f0-9]+)", self.headers.get("Cookie","") or "")
+        if not m: return None
+        t=m.group(1); s=SESS.get(t)
+        if s and s["exp"]>time.time(): return t
+        SESS.pop(t,None); return None
+    def _body(self):
+        n=int(self.headers.get("Content-Length","0") or 0)
+        try: return json.loads(self.rfile.read(n) or b"{}")
+        except Exception: return {}
+    def do_GET(self):
+        if self.path in ("/","/index.html"):
+            try: return self._send(200, open(WEBDIR+"/index.html","rb").read(),"text/html; charset=utf-8")
+            except Exception: return self._send(500,"sem UI","text/plain")
+        if self.path.startswith("/assets/"):
+            import mimetypes
+            safe=os.path.normpath(os.path.join(WEBDIR,self.path.split("?")[0].lstrip("/")))
+            if safe.startswith(WEBDIR+os.sep) and os.path.isfile(safe):
+                return self._send(200, open(safe,"rb").read(), mimetypes.guess_type(safe)[0] or "application/octet-stream")
+            return self._send(404,"404","text/plain")
+        if self.path=="/api/sessao":
+            return self._json(200,{"logado":bool(self._tok()),"configurado":configurado(),"modo":modo()})
+        if self.path=="/api/estado-inicial":
+            return self._json(200, estado_inicial())
+        if self.path=="/api/configurar-status":
+            return self._json(200, conf_status())
+        if self.path.startswith("/api/"):
+            if not self._tok(): return self._json(401,{"erro":"faça login"})
+            if self.path=="/api/shares": return self._json(200,{"itens":shares_lista()})
+            if self.path=="/api/grupos": return self._json(200,{"itens":grupos_lista(),"modo":modo()})
+            if self.path=="/api/saude": return self._json(200,saude())
+            if self.path=="/api/origens": return self._json(200,{"itens":origens_lista()})
+            if self.path=="/api/discos": return self._json(200,{"itens":discos_lista()})
+            if self.path.startswith("/api/auditoria"):
+                from urllib.parse import parse_qs, urlparse
+                sh=(parse_qs(urlparse(self.path).query).get("share") or [""])[0]
+                return self._json(200, auditoria_lista(sh))
+            if self.path=="/api/protecao":
+                st=protecao_status(); st["rodando"]=SCAN["rodando"]; return self._json(200,st)
+            if self.path.startswith("/api/snapshots"):
+                from urllib.parse import parse_qs, urlparse
+                sh=(parse_qs(urlparse(self.path).query).get("share") or [""])[0]
+                return self._json(200,{"share":sh,"itens":snap_listar(sh),"fs":snap_fs(),"agenda":snap_agenda_estado()})
+        self._send(404,"não encontrado","text/plain")
+    def do_POST(self):
+        if self.path=="/api/login":
+            ip=self.client_address[0]
+            if not rate_ok(ip): return self._json(429,{"erro":"Muitas tentativas. Aguarde um instante."})
+            d=self._body(); u=(d.get("usuario") or "Administrator").strip() or "Administrator"
+            ok,err=check_login(u,d.get("senha",""),ip)
+            if ok:
+                rate_reset(ip)
+                t=secrets.token_hex(16); SESS[t]={"exp":time.time()+TTL,"usuario":u}
+                self.send_response(200); self.send_header("Content-Type","application/json")
+                sec="; Secure" if TLS_ON else ""
+                self.send_header("Set-Cookie", "gf_sess=%s; Path=/; HttpOnly; SameSite=Strict%s; Max-Age=%d"%(t,sec,TTL))
+                body=json.dumps({"ok":True}).encode(); self.send_header("Content-Length",str(len(body)))
+                self.end_headers(); self.wfile.write(body); return
+            rate_fail(ip)
+            return self._json(401,{"erro":err or "Falha."})
+        if self.path=="/api/configurar":
+            if configurado(): return self._json(403,{"erro":"Este servidor já foi configurado."})
+            if self.client_address[0] not in LOCAL:
+                return self._json(403,{"erro":"A configuração inicial deve ser feita no próprio servidor (localhost), por segurança."})
+            d=self._body()
+            st=conf_status()
+            if 0<st.get("pct",0)<100: return self._json(200,{"ok":True})  # já rodando
+            threading.Thread(target=do_configurar,args=(d,),daemon=True).start()
+            return self._json(200,{"ok":True})
+        if not self._tok(): return self._json(401,{"erro":"faça login"})
+        d=self._body()
+        if self.path=="/api/logout":
+            SESS.pop(self._tok(),None); return self._json(200,{"ok":True})
+        if self.path=="/api/share-criar":
+            ok,r=share_criar(d.get("nome",""),d.get("origem","padrao")); return self._json(200 if ok else 400,{"ok":ok,"erro":"" if ok else r,"nome":r if ok else ""})
+        if self.path=="/api/share-apagar":
+            ok,r=share_apagar(d.get("nome","")); return self._json(200,{"ok":ok})
+        if self.path=="/api/share-nivel":
+            ok,r=share_nivel(d.get("nome",""),d.get("grupo",""),d.get("nivel",""),d.get("tipo","grupo")); return self._json(200 if ok else 400,{"ok":ok,"erro":"" if ok else r})
+        if self.path=="/api/camadas":
+            camadas_criar(); return self._json(200,{"ok":True})
+        if self.path=="/api/snapshot-criar":
+            sh=_san(d.get("share",""))
+            if not sh: return self._json(400,{"erro":"informe o compartilhamento"})
+            rc,o,e=run(["guata-files-snapshot","criar",sh],timeout=1800)
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":(e or o) if rc else ""})
+        if self.path=="/api/snapshot-restaurar":
+            sh=_san(d.get("share","")); snap=(d.get("snap") or "").strip()
+            if not sh or not re.match(r"^@GMT-[0-9.\-]+$",snap): return self._json(400,{"erro":"dados inválidos"})
+            rc,o,e=run(["guata-files-snapshot","restaurar",sh,snap],timeout=1800)
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":(e or o) if rc else "","msg":o})
+        if self.path=="/api/snapshot-agenda":
+            acao="enable" if d.get("ligar") else "disable"
+            rc,o,e=run(["systemctl",acao,"--now","guata-files-snapshot.timer"])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"agenda":snap_agenda_estado()})
+        if self.path=="/api/protecao-scan":
+            if SCAN["rodando"]: return self._json(200,{"ok":True,"ja":True})
+            threading.Thread(target=do_scan,daemon=True).start()
+            return self._json(200,{"ok":True})
+        if self.path=="/api/protecao-agenda":
+            acao="enable" if d.get("ligar") else "disable"
+            rc,o,e=run(["systemctl",acao,"--now","guata-files-scan.timer"])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0})
+        if self.path=="/api/auditoria-toggle":
+            ok,err=audit_toggle(d.get("nome",""),bool(d.get("ligar"))); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/disco-usar":
+            ok,err=disco_usar(d.get("dev",""),d.get("nome","")); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/disco-soltar":
+            ok,err=disco_soltar(d.get("nome","")); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/nas":
+            ok,err=nas_add(d.get("nome",""),d.get("remoto",""),d.get("usuario",""),d.get("senha","")); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        return self._json(404,{"erro":"rota desconhecida"})
+
+if __name__=="__main__":
+    os.makedirs(SHDIR,exist_ok=True); os.makedirs(BASE,exist_ok=True)
+    srv=ThreadingHTTPServer(("0.0.0.0",int(os.environ.get("GUATA_FILES_WEB_PORT","8080"))), H)
+    if os.path.exists(CERT) and os.path.exists(KEY):
+        try:
+            ctx=_ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+            ctx.minimum_version=_ssl.TLSVersion.TLSv1_2
+            ctx.load_cert_chain(CERT,KEY)
+            srv.socket=ctx.wrap_socket(srv.socket,server_side=True)
+            globals()['TLS_ON']=True
+        except Exception as e:
+            sys.stderr.write("TLS desativado: %s\n"%e)
+    srv.serve_forever()

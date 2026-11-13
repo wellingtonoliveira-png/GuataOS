@@ -1,0 +1,143 @@
+#!/bin/bash
+# Guatá Files — Configuração inicial (entra no domínio Guatá AD OU modo simples)
+set -uo pipefail
+export NEWT_COLORS='root=,black
+window=,white
+border=green,white
+listbox=black,white
+actlistbox=white,green
+button=white,green
+entry=black,white
+title=green,white'
+T="Guatá Files  —  Servidor de Arquivos"
+ETC=/etc/guata-files
+mkdir -p "$ETC" /srv/guata-files
+[ "$(id -u)" = 0 ] || { echo "Rode como root (sudo)."; exit 1; }
+msg(){ whiptail --title "$T" --msgbox "$1" "${2:-14}" "${3:-72}"; }
+ask(){ whiptail --title "$T" --inputbox "$1" "${2:-10}" "${3:-70}" "${4:-}" 3>&1 1>&2 2>&3; }
+pass(){ whiptail --title "$T" --passwordbox "$1" 10 70 3>&1 1>&2 2>&3; }
+
+whiptail --title "$T" --msgbox "Bem-vindo ao Guatá Files.\n\nEste servidor vai guardar e compartilhar os arquivos da empresa\ncom segurança — pastas com níveis de acesso por grupo e a\ntranquilidade de voltar no tempo." 13 72
+
+# detecta se ESTE servidor já é o Guatá AD (controlador de domínio)
+IS_DC=no
+if [ -f /etc/guata-ad/provisionado ] || grep -qi "active directory domain controller" /etc/samba/smb.conf 2>/dev/null; then IS_DC=yes; fi
+
+if [ "$IS_DC" = yes ]; then
+  MODO=$(whiptail --title "$T" --menu "Este servidor JÁ é o Guatá AD.\nComo quer compartilhar os arquivos?" 16 74 3 \
+    "mesmo"   "Tudo junto: usar os grupos do AD deste próprio servidor" \
+    "empresa" "(avançado) ingressar em OUTRO domínio" \
+    "simples" "Usuários locais" 3>&1 1>&2 2>&3) || exit 1
+else
+  MODO=$(whiptail --title "$T" --menu "Como este servidor vai funcionar?" 15 72 2 \
+    "empresa" "Entrar no domínio Guatá AD (usa os usuários e grupos do AD)" \
+    "simples" "Usuários locais neste servidor (casa / rede pequena)" 3>&1 1>&2 2>&3) || exit 1
+fi
+
+HOST=$(ask "Nome deste servidor (hostname):" 10 60 "guata-files") || exit 1
+HOST=$(echo "$HOST"|tr 'A-Z' 'a-z'|tr -cd 'a-z0-9-')
+hostnamectl set-hostname "$HOST" 2>/dev/null || hostname "$HOST"
+
+if [ "$MODO" = empresa ]; then
+  REALM=$(ask "Nome do domínio Guatá AD (ex: empresa.local):" 10 66) || exit 1
+  REALM=$(echo "$REALM"|tr 'A-Z' 'a-z')
+  NB=$(echo "$REALM"|cut -d. -f1|tr 'a-z' 'A-Z')
+  ADIP=$(ask "IP do servidor Guatá AD (o controlador de domínio):\nEx: 192.168.1.10" 11 66) || exit 1
+  ADMIN=$(ask "Usuário administrador do domínio:" 10 60 "Administrator") || exit 1
+  ADPASS=$(pass "Senha do $ADMIN:") || exit 1
+
+  if ! whiptail --title "$T" --yesno "Entrar no domínio:\n\n  Domínio ..: $REALM ($NB)\n  AD (DNS) .: $ADIP\n  Servidor .: $HOST\n\nContinuar?" 14 66; then exit 1; fi
+
+  {
+  echo 15; echo "# Apontando DNS para o Guatá AD..."
+  systemctl disable --now systemd-resolved >/dev/null 2>&1 || true
+  chattr -i /etc/resolv.conf 2>/dev/null || true
+  printf "search %s\nnameserver %s\n" "$REALM" "$ADIP" > /etc/resolv.conf
+  grep -q "$HOST" /etc/hosts || echo "127.0.1.1 $HOST.$REALM $HOST" >> /etc/hosts
+
+  echo 35; echo "# Preparando o Samba (membro do domínio)..."
+  REALMU=$(echo "$REALM"|tr 'a-z' 'A-Z')
+  cat > /etc/samba/smb.conf <<EOF
+[global]
+   workgroup = $NB
+   realm = $REALMU
+   security = ADS
+   netbios name = $(echo "$HOST"|tr 'a-z' 'A-Z'|cut -c1-15)
+   winbind use default domain = yes
+   winbind refresh tickets = yes
+   winbind enum users = yes
+   winbind enum groups = yes
+   template shell = /bin/bash
+   template homedir = /home/%U
+   idmap config * : backend = tdb
+   idmap config * : range = 3000-7999
+   idmap config $NB : backend = rid
+   idmap config $NB : range = 10000-999999
+   vfs objects = acl_xattr
+   map acl inherit = yes
+   store dos attributes = yes
+   load printers = no
+   printing = bsd
+   printcap name = /dev/null
+EOF
+  cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf 2>/dev/null || \
+    printf "[libdefaults]\n default_realm = %s\n dns_lookup_realm = false\n dns_lookup_kdc = true\n" "$REALMU" > /etc/krb5.conf
+
+  echo 55; echo "# nsswitch (winbind)..."
+  sed -i -E 's/^(passwd:.*)/\1 winbind/; s/^(group:.*)/\1 winbind/' /etc/nsswitch.conf
+  grep -q winbind /etc/nsswitch.conf || { echo "passwd: files winbind" >> /etc/nsswitch.conf; echo "group: files winbind" >> /etc/nsswitch.conf; }
+
+  echo 70; echo "# Sincronizando o relógio..."
+  systemctl enable --now chrony >/dev/null 2>&1 || true
+
+  echo 80; echo "# Entrando no domínio..."
+  systemctl unmask smbd nmbd winbind >/dev/null 2>&1 || true
+  echo "$ADPASS" | net ads join -U "$ADMIN"%"$ADPASS" >>/var/log/guata-files.log 2>&1 || \
+    net ads join -U "$ADMIN"%"$ADPASS" >>/var/log/guata-files.log 2>&1
+
+  echo 92; echo "# Ligando os serviços..."
+  systemctl enable --now smbd nmbd winbind >>/var/log/guata-files.log 2>&1 || true
+  echo 100; echo "# Pronto!"
+  } | whiptail --title "$T" --gauge "Entrando no domínio..." 10 70 0
+
+  echo "MODO=empresa" > "$ETC/config"; echo "REALM=$REALM" >> "$ETC/config"; echo "NB=$NB" >> "$ETC/config"; echo "ADIP=$ADIP" >> "$ETC/config"
+  date > "$ETC/configurado"
+  if net ads testjoin >/dev/null 2>&1; then
+    msg "Entrou no domínio $REALM com sucesso!\n\nAgora crie pastas e níveis de acesso:\n   guata-files painel" 12 66
+  else
+    msg "O ingresso pode não ter concluído.\nVeja /var/log/guata-files.log e tente de novo.\n\nDica: confira IP do AD, hora do servidor e a senha." 13 70
+  fi
+elif [ "$MODO" = mesmo ]; then
+  # este servidor É o Guatá AD: compartilha usando os grupos do próprio domínio
+  # (não ingressa; o samba-ad-dc já serve os arquivos). Só prepara o include dos shares.
+  grep -q "include = /etc/guata-files/shares.conf" /etc/samba/smb.conf 2>/dev/null || \
+    echo "   include = /etc/guata-files/shares.conf" >> /etc/samba/smb.conf
+  touch /etc/guata-files/shares.conf
+  smbcontrol smbd reload-config >/dev/null 2>&1 || systemctl restart samba-ad-dc >/dev/null 2>&1 || true
+  echo "MODO=dc" > "$ETC/config"
+  REALM=$(grep -i "^\s*realm" /etc/samba/smb.conf | head -1 | awk -F= '{print tolower($2)}' | tr -d ' ')
+  echo "REALM=$REALM" >> "$ETC/config"
+  date > "$ETC/configurado"
+  msg "Tudo junto neste servidor!\n\nEste Guatá AD agora também serve arquivos.\nCrie pastas e níveis de acesso usando os grupos do domínio:\n   guata-files painel" 13 68
+  clear; exit 0
+else
+  # modo simples (standalone)
+  cat > /etc/samba/smb.conf <<EOF
+[global]
+   workgroup = WORKGROUP
+   security = user
+   map to guest = bad user
+   netbios name = $(echo "$HOST"|tr 'a-z' 'A-Z'|cut -c1-15)
+   vfs objects = acl_xattr
+   map acl inherit = yes
+   store dos attributes = yes
+   load printers = no
+   printing = bsd
+   printcap name = /dev/null
+EOF
+  systemctl unmask smbd nmbd >/dev/null 2>&1 || true
+  systemctl enable --now smbd nmbd >/dev/null 2>&1 || true
+  echo "MODO=simples" > "$ETC/config"; date > "$ETC/configurado"
+  msg "Modo simples pronto!\n\nCrie usuários e pastas pelo painel:\n   guata-files painel" 11 60
+fi
+clear

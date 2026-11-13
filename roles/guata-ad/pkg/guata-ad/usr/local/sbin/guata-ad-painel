@@ -1,0 +1,96 @@
+#!/bin/bash
+# Guatá AD — Painel de gestão do domínio (usuários, grupos, PCs) via samba-tool
+set -uo pipefail
+export NEWT_COLORS='root=,black
+window=,white
+border=green,white
+textbox=black,white
+listbox=black,white
+actlistbox=white,green
+button=white,green
+entry=black,white
+title=green,white'
+TITLE="Guatá AD  —  Painel do Domínio"
+if [ "$(id -u)" != "0" ]; then echo "Rode como root (sudo guata-ad painel)."; exit 1; fi
+if [ ! -f /etc/guata-ad/provisionado ]; then
+  whiptail --title "$TITLE" --yesno "Este servidor ainda NÃO tem domínio.\n\nQuer criar agora?" 10 60 && exec guata-ad-provisionar
+  exit 0
+fi
+msg(){ whiptail --title "$TITLE" --msgbox "$1" "${2:-16}" "${3:-72}"; }
+ask(){ whiptail --title "$TITLE" --inputbox "$1" "${2:-10}" "${3:-66}" "${4:-}" 3>&1 1>&2 2>&3; }
+pass(){ whiptail --title "$TITLE" --passwordbox "$1" 10 66 3>&1 1>&2 2>&3; }
+
+estado(){
+  local info; info=$(samba-tool domain info 127.0.0.1 2>/dev/null)
+  local nu ng np
+  nu=$(samba-tool user list 2>/dev/null | wc -l)
+  ng=$(samba-tool group list 2>/dev/null | wc -l)
+  np=$(samba-tool computer list 2>/dev/null | wc -l)
+  local svc; systemctl is-active samba-ad-dc >/dev/null 2>&1 && svc="LIGADO" || svc="PARADO"
+  msg "ESTADO DO DOMÍNIO\n\n$info\nServiço AD .....: $svc\nUsuários .......: $nu\nGrupos .........: $ng\nComputadores ...: $np" 20 72
+}
+listar_usuarios(){ msg "USUÁRIOS DO DOMÍNIO\n\n$(samba-tool user list 2>/dev/null | sort | sed 's/^/  • /')" 22 60; }
+criar_usuario(){
+  local u n s p
+  u=$(ask "Nome de login do novo usuário (ex: joao.silva):") || return
+  [ -z "$u" ] && return
+  n=$(ask "Nome completo (ex: João Silva):" 10 66 "$u") || return
+  while true; do
+    p=$(pass "Senha inicial para $u\n(mín. 8, com maiúscula, minúscula e número):") || return
+    echo "$p" | grep -qE '.{8,}' && echo "$p" | grep -q '[A-Z]' && echo "$p" | grep -q '[a-z]' && echo "$p" | grep -q '[0-9]' && break
+    msg "Senha fraca. Precisa de 8+, maiúscula, minúscula e número." 9 64
+  done
+  if samba-tool user create "$u" "$p" --given-name="${n%% *}" --surname="${n#* }" --full-name="$n" >/tmp/gad.out 2>&1; then
+    msg "Usuário '$u' criado!\n\nPeça para trocar a senha no primeiro acesso, se quiser:\n  guata-ad painel → resetar senha" 12 66
+  else msg "Não consegui criar:\n\n$(cat /tmp/gad.out)" 14 70; fi
+}
+resetar_senha(){
+  local u p
+  u=$(ask "Login do usuário para resetar a senha:") || return; [ -z "$u" ] && return
+  while true; do
+    p=$(pass "Nova senha para $u (8+, Aa0):") || return
+    echo "$p" | grep -qE '.{8,}' && echo "$p" | grep -q '[A-Z]' && echo "$p" | grep -q '[a-z]' && echo "$p" | grep -q '[0-9]' && break
+    msg "Senha fraca." 8 50
+  done
+  if samba-tool user setpassword "$u" --newpassword="$p" >/tmp/gad.out 2>&1; then
+    msg "Senha de '$u' alterada." 8 50; else msg "Erro:\n$(cat /tmp/gad.out)" 12 66; fi
+}
+desativar_usuario(){
+  local u; u=$(ask "Login do usuário para DESATIVAR (bloquear acesso):") || return; [ -z "$u" ] && return
+  samba-tool user disable "$u" >/tmp/gad.out 2>&1 && msg "'$u' desativado." 8 50 || msg "Erro:\n$(cat /tmp/gad.out)" 12 66
+}
+listar_grupos(){ msg "GRUPOS DO DOMÍNIO\n\n$(samba-tool group list 2>/dev/null | sort | sed 's/^/  • /')" 22 60; }
+criar_grupo(){
+  local g; g=$(ask "Nome do novo grupo (ex: Financeiro):") || return; [ -z "$g" ] && return
+  samba-tool group add "$g" >/tmp/gad.out 2>&1 && msg "Grupo '$g' criado." 8 50 || msg "Erro:\n$(cat /tmp/gad.out)" 12 66
+}
+add_membro(){
+  local g u; g=$(ask "Grupo:") || return; u=$(ask "Usuário a adicionar em '$g':") || return
+  samba-tool group addmembers "$g" "$u" >/tmp/gad.out 2>&1 && msg "'$u' agora faz parte de '$g'." 8 56 || msg "Erro:\n$(cat /tmp/gad.out)" 12 66
+}
+listar_pcs(){ msg "COMPUTADORES NO DOMÍNIO\n\n$(samba-tool computer list 2>/dev/null | sort | sed 's/^/  • /')" 22 60; }
+saude(){
+  local o; o=$(samba-tool dbcheck 2>&1 | tail -5)
+  local dns; dns=$(host -t A "$(hostname).$(grep REALM /etc/guata-ad/dominio.conf|cut -d= -f2)" 127.0.0.1 2>&1 | head -2)
+  msg "SAÚDE DO DOMÍNIO\n\nBanco (dbcheck):\n$o\n\nDNS interno:\n$dns" 20 72
+}
+
+while true; do
+  OPC=$(whiptail --title "$TITLE" --menu "O que você quer fazer?" 20 66 11 \
+    "1" "Estado do domínio" \
+    "2" "Listar usuários" \
+    "3" "Criar usuário" \
+    "4" "Resetar senha de usuário" \
+    "5" "Desativar usuário" \
+    "6" "Listar grupos" \
+    "7" "Criar grupo" \
+    "8" "Adicionar usuário a um grupo" \
+    "9" "Computadores no domínio" \
+    "10" "Verificar saúde" \
+    "0" "Sair" 3>&1 1>&2 2>&3) || break
+  case "$OPC" in
+    1) estado;; 2) listar_usuarios;; 3) criar_usuario;; 4) resetar_senha;; 5) desativar_usuario;;
+    6) listar_grupos;; 7) criar_grupo;; 8) add_membro;; 9) listar_pcs;; 10) saude;; 0|"") break;;
+  esac
+done
+clear

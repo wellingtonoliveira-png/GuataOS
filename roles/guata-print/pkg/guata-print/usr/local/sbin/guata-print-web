@@ -1,0 +1,441 @@
+#!/usr/bin/env python3
+# Guatá Print — painel web (impressoras CUPS, bilhetagem, cotas, relatórios).
+import json, os, re, subprocess, secrets, time, hashlib, threading, sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import ssl as _ssl
+
+ETC="/etc/guata-print"; CONF=ETC+"/config"; REG=ETC+"/config.json"
+PASSFILE=ETC+"/web.pass"; WEBDIR="/usr/share/guata-print/web"
+CERT=ETC+"/web-cert.pem"; KEY=ETC+"/web-key.pem"
+PAGELOG="/var/log/cups/page_log"
+SESS={}; TTL=8*3600; TLS_ON=False
+LOCAL={"127.0.0.1","::1","::ffff:127.0.0.1","localhost"}
+FAILS={}
+
+def run(args, inp=None, timeout=40):
+    try:
+        p=subprocess.run(args, input=inp, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout.strip(), p.stderr.strip()
+    except Exception as e:
+        return 1,"",str(e)
+
+# ---------- segurança (mesmo padrão endurecido do Guatá Files/DHCP) ----------
+def rate_ok(ip):
+    e=FAILS.get(ip); return not (e and e[1]>time.time())
+def rate_fail(ip):
+    e=FAILS.get(ip,[0,0.0]); e[0]+=1
+    if e[0]>=5: e[1]=time.time()+min(300,20*(e[0]-4))
+    FAILS[ip]=e
+def rate_reset(ip): FAILS.pop(ip,None)
+def _hashpw(senha, salt=None):
+    if salt is None: salt=secrets.token_hex(8)
+    h=hashlib.pbkdf2_hmac("sha256",senha.encode(),bytes.fromhex(salt),120000).hex()
+    return "pbkdf2$%s$%s"%(salt,h)
+def _checkpw(senha, stored):
+    stored=(stored or "").strip()
+    try:
+        if stored.startswith("pbkdf2$"):
+            _,salt,_h=stored.split("$",2)
+            return secrets.compare_digest(_hashpw(senha,salt),stored)
+    except Exception: return False
+    return secrets.compare_digest(hashlib.sha256(senha.encode()).hexdigest(),stored)
+
+def cfg():
+    d={}
+    try:
+        for ln in open(CONF):
+            ln=ln.strip()
+            if "=" in ln and not ln.startswith("#"):
+                k,v=ln.split("=",1); d[k.strip()]=v.strip().strip('"')
+    except Exception: pass
+    return d
+def modo(): return (cfg().get("MODO") or "simples")
+def configurado(): return os.path.exists(ETC+"/configurado")
+def realm():
+    d=cfg()
+    if d.get("REALM"): return d["REALM"].upper()
+    try:
+        for ln in open("/etc/krb5.conf"):
+            if "default_realm" in ln: return ln.split("=",1)[1].strip().upper()
+    except Exception: pass
+    return ""
+def is_dc():
+    if os.path.exists("/etc/guata-id/provisionado") or os.path.exists("/etc/guata-ad/provisionado"): return True
+    try:
+        if "active directory domain controller" in open("/etc/samba/smb.conf").read().lower(): return True
+    except Exception: pass
+    return False
+
+def check_login(usuario, senha, ip=""):
+    if not senha: return (False,"Informe a senha.")
+    m=modo()
+    if m in ("dc","empresa"):
+        r=realm()
+        if not r: return (False,"Domínio não detectado.")
+        usuario=(usuario or "Administrator").strip() or "Administrator"
+        if not re.match(r"^[A-Za-z0-9._@-]{1,64}$", usuario): return (False,"Usuário inválido.")
+        cc="/tmp/gprint-%s"%secrets.token_hex(4)
+        env=dict(os.environ, KRB5CCNAME="FILE:"+cc)
+        rc,_,_=run(["kinit",usuario+"@"+r], inp=senha+"\n")
+        try: os.remove(cc)
+        except Exception: pass
+        return (True,"") if rc==0 else (False,"Usuário ou senha incorretos.")
+    if not os.path.exists(PASSFILE):
+        if ip not in LOCAL:
+            return (False,"Primeiro acesso deve ser feito no próprio servidor para definir a senha (segurança).")
+        if len(senha)<6: return (False,"Defina uma senha com ao menos 6 caracteres.")
+        os.makedirs(ETC,exist_ok=True); open(PASSFILE,"w").write(_hashpw(senha)); os.chmod(PASSFILE,0o600)
+        return (True,"")
+    stored=open(PASSFILE).read().strip()
+    if _checkpw(senha,stored):
+        if not stored.startswith("pbkdf2$"):
+            try: open(PASSFILE,"w").write(_hashpw(senha)); os.chmod(PASSFILE,0o600)
+            except Exception: pass
+        return (True,"")
+    return (False,"Senha incorreta.")
+
+# ---------- registro (cotas, custo) ----------
+def reg_ler():
+    try:
+        d=json.load(open(REG))
+    except Exception:
+        d={}
+    d.setdefault("cotas",{})        # {"usuario_ou_@grupo": paginas_mes}
+    d.setdefault("custo_pb",0.10)   # custo por página P&B (R$)
+    d.setdefault("custo_cor",0.50)  # custo por página colorida (R$)
+    d.setdefault("compartilhar",True)
+    return d
+def reg_salvar(d):
+    os.makedirs(ETC,exist_ok=True)
+    tmp=REG+".tmp"; open(tmp,"w").write(json.dumps(d,indent=2,ensure_ascii=False)); os.replace(tmp,REG)
+
+# ---------- impressoras (CUPS) ----------
+def impressoras():
+    out=[]
+    rc,o,_=run(["lpstat","-l","-p"])
+    # fallback simples
+    nomes=[]
+    for ln in o.splitlines():
+        m=re.match(r"^(?:printer|impressora)\s+(\S+)\s+(.*)$", ln.strip(), re.I)
+        if m: nomes.append((m.group(1), ln.strip()))
+    # URIs e estado
+    rc,ov,_=run(["lpstat","-v"])
+    uri={}
+    for ln in ov.splitlines():
+        m=re.search(r"(?:device for|dispositivo para)\s+(\S+?):\s*(.*)$", ln.strip(), re.I)
+        if m: uri[m.group(1)]=m.group(2)
+    rc,od,_=run(["lpstat","-d"])
+    default=""
+    md=re.search(r":\s*(\S+)", od)
+    if md: default=md.group(1)
+    rc,oa,_=run(["lpstat","-a"])
+    aceita={}
+    for ln in oa.splitlines():
+        m=re.match(r"^(\S+)\s+(.*)$", ln.strip())
+        if m: aceita[m.group(1)]=("accept" in m.group(2).lower() or "aceita" in m.group(2).lower())
+    for nome,desc in nomes:
+        estado="parada"
+        dl=desc.lower()
+        if "idle" in dl or "ociosa" in dl or "pronta" in dl: estado="pronta"
+        elif "printing" in dl or "imprimindo" in dl: estado="imprimindo"
+        elif "disabled" in dl or "desativ" in dl: estado="desativada"
+        out.append({"nome":nome,"estado":estado,"uri":uri.get(nome,""),"default":nome==default,
+                    "aceita":aceita.get(nome,True),"desc":desc})
+    return out
+
+def drivers_disponiveis():
+    rc,o,_=run(["lpinfo","-m"], timeout=30)
+    out=[{"driver":"everywhere","nome":"Driver automático (IPP Everywhere) — recomendado"},
+         {"driver":"raw","nome":"Sem driver (RAW) — Windows usa o próprio"}]
+    for ln in o.splitlines()[:400]:
+        p=ln.split(" ",1)
+        if len(p)==2 and p[0] not in ("everywhere","raw"):
+            out.append({"driver":p[0],"nome":p[1][:70]})
+    return out
+
+def dispositivos_detectados():
+    rc,o,_=run(["lpinfo","-v"], timeout=30)
+    out=[]
+    for ln in o.splitlines():
+        p=ln.split(" ",1)
+        if len(p)==2 and p[0] in ("network","direct","usb","socket","dnssd","ipp","ipps","lpd"):
+            out.append({"classe":p[0],"uri":p[1]})
+    return out
+
+def addimpressora(d):
+    nome=re.sub(r"[^A-Za-z0-9_-]","",(d.get("nome") or ""))[:40]
+    if not nome: return (False,"Dê um nome à impressora (sem espaços).")
+    uri=(d.get("uri") or "").strip()
+    if not re.match(r"^(ipp|ipps|socket|usb|lpd|dnssd|http|https|smb)://", uri):
+        return (False,"Endereço (URI) da impressora inválido.")
+    drv=(d.get("driver") or "everywhere").strip()
+    args=["lpadmin","-p",nome,"-E","-v",uri,"-o","printer-is-shared=true"]
+    if drv=="everywhere": args+=["-m","everywhere"]
+    elif drv=="raw": pass
+    else: args+=["-m",drv]
+    loc=(d.get("local") or "").strip()[:60]
+    if loc: args+=["-L",loc]
+    rc,o,e=run(args,timeout=60)
+    if rc!=0: return (False,(e or o or "CUPS recusou a impressora.")[:200])
+    run(["cupsenable",nome]); run(["cupsaccept",nome])
+    return (True,"")
+
+def rmimpressora(nome):
+    nome=re.sub(r"[^A-Za-z0-9_-]","",nome or "")
+    if not nome: return (False,"Nome inválido.")
+    rc,o,e=run(["lpadmin","-x",nome]); return (rc==0,"" if rc==0 else (e or o))
+
+def pausar(nome,parar):
+    nome=re.sub(r"[^A-Za-z0-9_-]","",nome or "")
+    run(["cupsdisable" if parar else "cupsenable",nome]); return (True,"")
+
+def teste(nome):
+    nome=re.sub(r"[^A-Za-z0-9_-]","",nome or "")
+    tp="/usr/share/cups/data/testprint"
+    if os.path.exists(tp): rc,o,e=run(["lp","-d",nome,tp])
+    else: rc,o,e=run(["lp","-d",nome,"/etc/hostname"])
+    return (rc==0,"" if rc==0 else (e or o))
+
+def compartilhar(ligar):
+    run(["cupsctl","--share-printers" if ligar else "--no-share-printers"])
+    run(["cupsctl","--remote-any" if ligar else "--no-remote-any"])
+    d=reg_ler(); d["compartilhar"]=bool(ligar); reg_salvar(d)
+    return (True,"")
+
+# ---------- bilhetagem (page_log) ----------
+def _parse_pagelog(limite=5000):
+    # formato: printer user job-id date-time page num-copies job-billing host job-name media sides
+    linhas=[]
+    try:
+        with open(PAGELOG, errors="ignore") as fp:
+            data=fp.readlines()[-limite:]
+    except Exception:
+        return []
+    for ln in data:
+        p=ln.split()
+        if len(p)<6: continue
+        printer,user,jid=p[0],p[1],p[2]
+        dt=p[3].strip("[]")
+        try: copias=int(p[5])
+        except Exception: copias=1
+        sides=""; lado=""
+        # sides costuma estar nos últimos campos
+        for tok in p[6:]:
+            if "two-sided" in tok: lado="frente-verso"
+            elif "one-sided" in tok: lado="só frente"
+        cor="?"
+        # heurística de cor: media/sides não trazem cor; marcamos desconhecido
+        linhas.append({"printer":printer,"user":user,"job":jid,"quando":dt,"paginas":copias,"lado":lado})
+    return linhas
+
+def _mes_atual():
+    return time.strftime("%Y-%m")
+def _data_mes(dtstr):
+    # dt tipo 05/Nov/2026:14:03:21 -0300
+    m=re.match(r"(\d{2})/(\w{3})/(\d{4})", dtstr or "")
+    if not m: return ""
+    MES={'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06','Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12'}
+    return "%s-%s"%(m.group(3), MES.get(m.group(2),'00'))
+
+def bilhetagem(mes=None):
+    mes=mes or _mes_atual()
+    regs=_parse_pagelog()
+    itens=[r for r in regs if _data_mes(r["quando"])==mes]
+    return itens
+
+def resumo_usuarios(mes=None):
+    mes=mes or _mes_atual()
+    d=reg_ler(); cotas=d.get("cotas",{})
+    por={}
+    for r in bilhetagem(mes):
+        u=r["user"]; por.setdefault(u,{"usuario":u,"paginas":0,"jobs":0})
+        por[u]["paginas"]+=r["paginas"]; por[u]["jobs"]+=1
+    out=[]
+    for u,v in por.items():
+        cota=cotas.get(u) or cotas.get("@todos")
+        v["cota"]=cota
+        v["excedido"]=bool(cota and v["paginas"]>cota)
+        v["custo"]=round(v["paginas"]*d.get("custo_pb",0.10),2)
+        out.append(v)
+    out.sort(key=lambda x:-x["paginas"])
+    return out
+
+def resumo_impressoras(mes=None):
+    por={}
+    for r in bilhetagem(mes):
+        p=r["printer"]; por.setdefault(p,{"impressora":p,"paginas":0,"jobs":0})
+        por[p]["paginas"]+=r["paginas"]; por[p]["jobs"]+=1
+    return sorted(por.values(), key=lambda x:-x["paginas"])
+
+def meses_disponiveis():
+    ms=sorted({_data_mes(r["quando"]) for r in _parse_pagelog() if _data_mes(r["quando"])}, reverse=True)
+    return ms or [_mes_atual()]
+
+def saude():
+    rc,_,_=run(["systemctl","is-active","cups"])
+    cups=run(["systemctl","is-active","cups"])[1]
+    d=reg_ler()
+    return {"servico":cups,"impressoras":len(impressoras()),"compartilhar":d.get("compartilhar",True),
+            "is_dc":is_dc(),"modo":modo(),"host":run(["hostname"])[1],
+            "paginas_mes":sum(r["paginas"] for r in bilhetagem()),
+            "usuarios_mes":len(resumo_usuarios())}
+
+# ---------- cotas / config ----------
+def salvar_cota(alvo,paginas):
+    alvo=(alvo or "").strip()
+    if not alvo: return (False,"Informe o usuário (ou @grupo, ou @todos).")
+    d=reg_ler()
+    try: p=int(paginas)
+    except Exception: return (False,"Páginas inválidas.")
+    if p<=0: d["cotas"].pop(alvo,None)
+    else: d["cotas"][alvo]=p
+    reg_salvar(d); return (True,"")
+def salvar_custo(pb,cor):
+    d=reg_ler()
+    try: d["custo_pb"]=float(pb); d["custo_cor"]=float(cor)
+    except Exception: return (False,"Valores inválidos.")
+    reg_salvar(d); return (True,"")
+
+def grupos_dominio():
+    if not is_dc(): return []
+    rc,o,_=run(["samba-tool","group","list"])
+    return [g.strip() for g in o.splitlines() if g.strip()][:300] if rc==0 else []
+
+# ---------- config inicial ----------
+CONF_STATUS="/run/guata-print-config.status"
+def conf_status():
+    try:
+        pct,msg=open(CONF_STATUS).read().strip().split("|",1)
+        return {"pct":int(pct),"msg":msg,"pronto":(int(pct)>=100),"erro":("erro" in msg.lower())}
+    except Exception:
+        return {"pct":0,"msg":"","pronto":False,"erro":False}
+def estado_inicial():
+    return {"is_dc":is_dc(),"host":run(["hostname"])[1],"configurado":configurado(),"dispositivos":dispositivos_detectados()}
+def do_configurar(d):
+    try: open(CONF_STATUS,"w").write("20|Preparando CUPS...")
+    except Exception: pass
+    try:
+        open(CONF,"w").write("MODO=%s\n%s"%((d.get("modo") or "simples"),
+                             ("REALM=%s\n"%d["realm"] if d.get("realm") else "")))
+        compartilhar(True)
+        if is_dc():
+            open(CONF_STATUS,"w").write("60|Ativando compartilhamento para o domínio...")
+            run(["guata-print-regen","samba"])
+        open(ETC+"/configurado","w").write(time.strftime("%Y-%m-%d %H:%M"))
+        open(CONF_STATUS,"w").write("100|OK: Print pronto!")
+    except Exception as e:
+        try: open(CONF_STATUS,"w").write("100|ERRO: %s"%str(e)[:120])
+        except Exception: pass
+
+# ---------- HTTP ----------
+class H(BaseHTTPRequestHandler):
+    def log_message(self,*a): pass
+    def _send(self,code,body,ctype="application/json"):
+        b=body if isinstance(body,bytes) else str(body).encode()
+        self.send_response(code); self.send_header("Content-Type",ctype)
+        self.send_header("Content-Length",str(len(b)))
+        self.send_header("X-Content-Type-Options","nosniff")
+        self.send_header("X-Frame-Options","DENY")
+        self.send_header("Referrer-Policy","no-referrer")
+        self.send_header("Content-Security-Policy","default-src 'self' 'unsafe-inline' data:; frame-ancestors 'none'; base-uri 'none'")
+        if self.path.startswith("/api/"): self.send_header("Cache-Control","no-store")
+        self.end_headers(); self.wfile.write(b)
+    def _json(self,c,o): self._send(c,json.dumps(o,ensure_ascii=False))
+    def _tok(self):
+        m=re.search(r"gp_sess=([a-f0-9]+)", self.headers.get("Cookie","") or "")
+        if not m: return None
+        t=m.group(1); s=SESS.get(t)
+        if s and s["exp"]>time.time(): return t
+        SESS.pop(t,None); return None
+    def _body(self):
+        n=int(self.headers.get("Content-Length","0") or 0)
+        try: return json.loads(self.rfile.read(n) or b"{}")
+        except Exception: return {}
+    def do_GET(self):
+        if self.path in ("/","/index.html"):
+            try: return self._send(200, open(WEBDIR+"/index.html","rb").read(),"text/html; charset=utf-8")
+            except Exception: return self._send(500,"sem UI","text/plain")
+        if self.path.startswith("/assets/"):
+            import mimetypes
+            safe=os.path.normpath(os.path.join(WEBDIR,self.path.split("?")[0].lstrip("/")))
+            if safe.startswith(WEBDIR+os.sep) and os.path.isfile(safe):
+                return self._send(200, open(safe,"rb").read(), mimetypes.guess_type(safe)[0] or "application/octet-stream")
+            return self._send(404,"404","text/plain")
+        if self.path=="/api/sessao":
+            return self._json(200,{"logado":bool(self._tok()),"configurado":configurado(),"modo":modo()})
+        if self.path=="/api/estado-inicial": return self._json(200, estado_inicial())
+        if self.path=="/api/configurar-status": return self._json(200, conf_status())
+        if self.path.startswith("/api/"):
+            if not self._tok(): return self._json(401,{"erro":"faça login"})
+            if self.path=="/api/saude": return self._json(200,saude())
+            if self.path=="/api/impressoras": return self._json(200,{"itens":impressoras()})
+            if self.path=="/api/drivers": return self._json(200,{"itens":drivers_disponiveis()})
+            if self.path=="/api/dispositivos": return self._json(200,{"itens":dispositivos_detectados()})
+            if self.path.startswith("/api/bilhetagem"):
+                from urllib.parse import urlparse,parse_qs
+                q=parse_qs(urlparse(self.path).query); mes=(q.get("mes") or [None])[0]
+                return self._json(200,{"itens":bilhetagem(mes),"meses":meses_disponiveis()})
+            if self.path.startswith("/api/relatorio"):
+                from urllib.parse import urlparse,parse_qs
+                q=parse_qs(urlparse(self.path).query); mes=(q.get("mes") or [None])[0]
+                d=reg_ler()
+                return self._json(200,{"usuarios":resumo_usuarios(mes),"impressoras":resumo_impressoras(mes),
+                                       "meses":meses_disponiveis(),"custo_pb":d.get("custo_pb"),"custo_cor":d.get("custo_cor")})
+            if self.path=="/api/config":
+                d=reg_ler(); return self._json(200,{"cotas":d.get("cotas",{}),"custo_pb":d.get("custo_pb"),"custo_cor":d.get("custo_cor"),"grupos":grupos_dominio()})
+        self._send(404,"não encontrado","text/plain")
+    def do_POST(self):
+        if self.path=="/api/login":
+            ip=self.client_address[0]
+            if not rate_ok(ip): return self._json(429,{"erro":"Muitas tentativas. Aguarde um instante."})
+            d=self._body(); u=(d.get("usuario") or "Administrator").strip() or "Administrator"
+            ok,err=check_login(u,d.get("senha",""),ip)
+            if ok:
+                rate_reset(ip); t=secrets.token_hex(16); SESS[t]={"exp":time.time()+TTL,"usuario":u}
+                self.send_response(200); self.send_header("Content-Type","application/json")
+                sec="; Secure" if TLS_ON else ""
+                self.send_header("Set-Cookie","gp_sess=%s; Path=/; HttpOnly; SameSite=Strict%s; Max-Age=%d"%(t,sec,TTL))
+                body=json.dumps({"ok":True}).encode(); self.send_header("Content-Length",str(len(body)))
+                self.end_headers(); self.wfile.write(body); return
+            rate_fail(ip); return self._json(401,{"erro":err or "Falha."})
+        if self.path=="/api/configurar":
+            if configurado(): return self._json(403,{"erro":"Este servidor já foi configurado."})
+            if self.client_address[0] not in LOCAL:
+                return self._json(403,{"erro":"A configuração inicial deve ser feita no próprio servidor (localhost)."})
+            d=self._body(); st=conf_status()
+            if 0<st.get("pct",0)<100: return self._json(200,{"ok":True})
+            threading.Thread(target=do_configurar,args=(d,),daemon=True).start()
+            return self._json(200,{"ok":True})
+        if not self._tok(): return self._json(401,{"erro":"faça login"})
+        d=self._body()
+        if self.path=="/api/logout":
+            SESS.pop(self._tok(),None); return self._json(200,{"ok":True})
+        if self.path=="/api/impressora-add":
+            ok,err=addimpressora(d); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/impressora-rm":
+            ok,err=rmimpressora(d.get("nome","")); return self._json(200,{"ok":ok,"erro":err})
+        if self.path=="/api/impressora-pausar":
+            ok,err=pausar(d.get("nome",""),bool(d.get("parar"))); return self._json(200,{"ok":ok})
+        if self.path=="/api/impressora-teste":
+            ok,err=teste(d.get("nome","")); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/compartilhar":
+            ok,err=compartilhar(bool(d.get("ligar"))); return self._json(200,{"ok":ok})
+        if self.path=="/api/cota":
+            ok,err=salvar_cota(d.get("alvo",""),d.get("paginas",0)); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/custo":
+            ok,err=salvar_custo(d.get("pb",0.10),d.get("cor",0.50)); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        return self._json(404,{"erro":"rota desconhecida"})
+
+if __name__=="__main__":
+    os.makedirs(ETC,exist_ok=True)
+    srv=ThreadingHTTPServer(("0.0.0.0",int(os.environ.get("GUATA_PRINT_WEB_PORT","8083"))), H)
+    if os.path.exists(CERT) and os.path.exists(KEY):
+        try:
+            ctx=_ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+            ctx.minimum_version=_ssl.TLSVersion.TLSv1_2
+            ctx.load_cert_chain(CERT,KEY)
+            srv.socket=ctx.wrap_socket(srv.socket,server_side=True)
+            globals()['TLS_ON']=True
+        except Exception as e:
+            sys.stderr.write("TLS desativado: %s\n"%e)
+    srv.serve_forever()

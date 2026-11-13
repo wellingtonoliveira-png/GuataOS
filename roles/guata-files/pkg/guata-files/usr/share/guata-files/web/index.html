@@ -1,0 +1,770 @@
+<title>Guatá Files — compartilhamentos</title>
+<style>
+  :root{
+    --bg:#eef1f7; --card:#ffffff; --card2:#f4f6fb; --linha:#e2e6f0;
+    --ink:#1b2435; --suave:#5f6b85; --forte:#0f1626;
+    /* azul/indigo = AÇÃO (do mockup) */
+    --accent:#4f46e5; --accent2:#4338ca; --accent-s:#eef0fe;
+    /* verde = STATUS saudável */
+    --jade:#2f8f66; --jade2:#17694c; --jade-s:#e7f3ec;
+    --sol:#d98a2b; --sol-s:#f8eede; --ceu:#3f86c4; --ceu-s:#e6f0f9; --vermelho:#c0453a; --verm-s:#fbe9e7;
+    /* sidebar navy (sempre) */
+    --sb:#101c33; --sb2:#17243f; --sb-ink:#d4ddee; --sb-suave:#8293b2; --sb-linha:#233251;
+    --raio:16px; --sombra:0 18px 44px -26px rgba(20,30,60,.34); --sombra-s:0 8px 22px -16px rgba(20,30,60,.22);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;
+      --accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715;
+      --sombra:0 20px 50px -24px rgba(0,0,0,.6)}
+  }
+  :root[data-theme=dark]{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;--accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715}
+  :root[data-theme=light]{--bg:#eef1f7;--card:#fff;--card2:#f4f6fb;--linha:#e2e6f0;--ink:#1b2435;--suave:#5f6b85;--forte:#0f1626;--accent:#4f46e5;--accent2:#4338ca;--accent-s:#eef0fe;--jade:#2f8f66;--jade2:#17694c;--jade-s:#e7f3ec}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button,input,select{font-family:inherit}
+  h1,h2,h3{margin:0;color:var(--forte);line-height:1.2}
+  .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .leaf{fill:var(--jade);stroke:none}
+
+  /* ---------- LOGIN ---------- */
+  #login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1100px 480px at 50% -10%,color-mix(in srgb,var(--jade) 20%,transparent),transparent)}
+  .loginbox{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);padding:36px 32px;width:min(410px,100%);text-align:center}
+  .loginbox .masc{width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 2px;filter:drop-shadow(0 10px 18px rgba(16,50,33,.18))}
+  .loginbox h1{font-size:23px}
+  .loginbox p{margin:2px 0 20px;color:var(--suave);font-size:14px}
+  .field{text-align:left;margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--suave);margin-bottom:6px}
+  .field .muted{font-weight:500}
+  input,select{width:100%;padding:11px 13px;border:1.5px solid var(--linha);border-radius:11px;background:var(--card2);color:var(--ink);font-size:14.5px;outline:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-s)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14.5px;border-radius:11px;padding:11px 16px;border:1.5px solid var(--linha);background:var(--card);color:var(--forte);cursor:pointer}
+  .btn:hover{filter:brightness(.99)}
+  .btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff}
+  .btn.sm{padding:7px 11px;font-size:12.5px;border-radius:9px}
+  .btn.block{width:100%}
+  .btn.ghost{background:var(--card2)}
+  .btn.danger{color:var(--vermelho);border-color:color-mix(in srgb,var(--vermelho) 35%,var(--linha))}
+  .btn.ok{color:var(--jade2);border-color:color-mix(in srgb,var(--jade) 40%,var(--linha))}
+
+  /* ---------- CONFIGURADOR ---------- */
+  #config{min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(170deg,var(--accent-s),var(--card2))}
+  .cfgcard{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);width:min(480px,100%);padding:30px 30px 26px}
+  .cfghead{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .cfghead img{width:54px;height:54px;object-fit:contain}
+  .cfghead b{color:var(--forte);font-size:18px;display:block;line-height:1}
+  .cfghead span{color:var(--accent);font-size:12.5px;font-weight:700}
+  .dots{display:flex;gap:6px;margin:14px 0 20px}
+  .dots i{height:5px;flex:1;border-radius:999px;background:var(--linha)}
+  .dots i.on{background:var(--accent)}
+  .cfgstep{display:none} .cfgstep.on{display:block}
+  .cfgstep h2{font-size:21px;margin-bottom:6px}
+  .cfgstep p.sub{color:var(--suave);font-size:14px;margin-bottom:18px}
+  .cfgnav{display:flex;gap:10px;margin-top:8px}.cfgnav .btn{flex:1}
+  .optcard{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:15px;border:1.5px solid var(--linha);border-radius:14px;background:var(--card2);cursor:pointer;margin-bottom:10px}
+  .optcard:hover{border-color:var(--accent)} .optcard .oi{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+  .optcard b{color:var(--forte);font-size:15px} .optcard p{color:var(--suave);font-size:12.8px;margin:2px 0 0}
+  .resumo{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:14px 16px;font-size:14px;margin-bottom:6px}
+  .resumo div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+  .resumo b{color:var(--forte)}
+  .prog{height:10px;background:var(--card2);border-radius:999px;overflow:hidden;margin:16px 0 8px}
+  .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .4s}
+  .done-ic{width:70px;height:70px;border-radius:50%;background:var(--jade-s);color:var(--jade2);display:grid;place-items:center;margin:4px auto 10px}
+  .url-box{background:var(--accent-s);border:1px solid var(--linha);border-radius:12px;padding:12px;text-align:center;font-weight:800;color:var(--accent);font-size:16px;margin:10px 0}
+
+  /* ---------- SHELL ---------- */
+  #app{display:none;min-height:100vh}
+  .shell{display:grid;grid-template-columns:262px 1fr;min-height:100vh}
+  aside{background:var(--sb);color:var(--sb-ink);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--sb-linha)}
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 18px 14px}
+  .brand img{width:40px;height:40px;object-fit:contain;border-radius:10px}
+  .brand b{color:#fff;font-size:17px;font-weight:800;line-height:1}
+  .brand small{display:block;color:var(--sb-suave);font-size:11.5px;margin-top:3px}
+  nav.menu{display:flex;flex-direction:column;gap:2px;padding:8px 12px;flex:1;overflow:auto}
+  .migroup{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sb-suave);padding:10px 13px 4px;opacity:.75}
+  .migroup:first-child{padding-top:4px}
+  .mi{display:flex;align-items:center;gap:12px;padding:8.5px 13px;border-radius:11px;color:var(--sb-ink);text-decoration:none;font-weight:600;font-size:14.5px;cursor:pointer;border:none;background:none;text-align:left;width:100%}
+  .mi .ic{width:19px;height:19px;color:var(--sb-suave)}
+  .mi:hover{background:rgba(255,255,255,.055)}
+  .mi.on{background:color-mix(in srgb,var(--accent) 24%,transparent);color:#fff}
+  .mi.on .ic{color:#aeb6ff}
+  .mi .soon{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sb-suave);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:999px}
+  .sb-foot{padding:10px 14px;border-top:1px solid var(--sb-linha)}
+  .sb-foot .masc{width:54px;display:block;margin:0 auto 6px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4))}
+  .saude-sb{background:var(--sb2);border:1px solid var(--sb-linha);border-radius:12px;padding:8px 11px;font-size:11.5px;color:var(--sb-suave)}
+  .saude-sb b{display:flex;align-items:center;gap:7px;color:#bfe8cf;font-size:12.5px}
+  .saude-sb .dot{width:8px;height:8px;border-radius:50%;background:#49d08b}
+
+  main{min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:12px;padding:16px 26px;border-bottom:1px solid var(--linha);background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+  .topbar h2{font-size:21px}.topbar .sp{flex:1}
+  .burger{display:none;background:var(--card);border:1px solid var(--linha);width:40px;height:40px;border-radius:11px;color:var(--ink);cursor:pointer;place-items:center}
+  .content{padding:24px 32px 60px;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
+
+  .view{display:none} .view.on{display:block}
+
+  /* dashboard */
+  .dom-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .dom-head .nome{font-size:24px;font-weight:800;color:var(--forte)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px}
+  .pill.on{background:var(--jade-s);color:var(--jade2)} .pill.off{background:var(--verm-s);color:var(--vermelho)}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .dom-head .sp{flex:1}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .stat{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);padding:17px 18px;box-shadow:var(--sombra-s)}
+  .stat .l{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--suave)}
+  .stat .l .ic{width:16px;height:16px;color:var(--accent)}
+  .stat .v{font-size:30px;font-weight:800;color:var(--forte);margin:4px 0 2px;line-height:1}
+  .stat .s{font-size:12.5px;color:var(--suave)}
+  .stat.alerta{cursor:pointer} .stat.alerta .v{color:var(--sol)}
+  .stat.alerta.zero .v{color:var(--jade2)}
+  .jgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .jcard{text-align:left;background:var(--card);border:1px solid var(--linha);border-radius:14px;padding:16px;box-shadow:var(--sombra-s);cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:transform .12s,border-color .12s}
+  .jcard:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .jcard .ji{font-size:22px;margin-bottom:4px}
+  .jcard b{color:var(--forte);font-size:15px} .jcard small{color:var(--suave);font-size:12.5px}
+  .jcard.alerta:hover{border-color:var(--vermelho)}
+  /* grupos cards */
+  .gtabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .gtab{padding:8px 14px;border-radius:10px;border:1px solid var(--linha);background:var(--card);color:var(--suave);font-weight:700;font-size:13.5px;cursor:pointer}
+  .gtab.on{background:var(--accent);border-color:transparent;color:#fff}
+  .gcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .gcard{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:18px;box-shadow:var(--sombra-s);display:flex;flex-direction:column;gap:14px}
+  .gchead{display:flex;align-items:flex-start;gap:12px}
+  .gcicon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-s);color:var(--accent)}
+  .gcicon.admin{background:var(--verm-s);color:var(--vermelho)} .gcicon.sistema{background:var(--card2);color:var(--suave)}
+  .gcname{font-weight:800;color:var(--forte);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gcdesc{color:var(--suave);font-size:13px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .gcbadge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:999px;background:var(--accent-s);color:var(--accent);white-space:nowrap}
+  .gcbadge.admin{background:var(--verm-s);color:var(--vermelho)} .gcbadge.sistema{background:var(--card2);color:var(--suave)}
+  .gcmembers{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:10px 14px}
+  .gcmembers b{font-size:17px;color:var(--forte)}
+  .gctech{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .gctech .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--suave);background:var(--card2);border:1px solid var(--linha);padding:3px 8px;border-radius:7px}
+  /* transparência técnica (CLI) */
+  .cli{background:var(--sb);border:1px solid var(--sb-linha);border-radius:14px;padding:14px 16px;margin-top:18px;overflow:auto}
+  .cli .clihead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#aeb6ff;margin-bottom:10px}
+  .cli pre{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#cfe3d8;white-space:pre-wrap;word-break:break-word;line-height:1.75}
+
+  /* painel */
+  .panel{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);box-shadow:var(--sombra-s);overflow:hidden;margin-bottom:18px}
+  .ph{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--linha);flex-wrap:wrap}
+  .ph h3{font-size:16px}.ph .sp{flex:1}
+  .busca{width:auto;min-width:180px;max-width:240px;padding:8px 12px;font-size:13.5px;border-radius:10px}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--linha)}
+  .row:last-child{border-bottom:none}
+  .row .av{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;flex:0 0 auto}
+  .row .av.off{background:color-mix(in srgb,var(--suave) 20%,transparent);color:var(--suave)}
+  .row .nm{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .muted{color:var(--suave);font-size:12.7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .sp{flex:1;min-width:8px}
+  .empty{padding:34px 18px;text-align:center;color:var(--suave)}
+  .empty img{width:120px;opacity:.95;margin-bottom:6px}
+  .muted{color:var(--suave)} .small{font-size:12.5px}
+  .badge{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
+  .badge.off{background:var(--verm-s);color:var(--vermelho)}
+  .badge.alta{background:var(--verm-s);color:var(--vermelho)}
+  .badge.media{background:var(--sol-s);color:var(--sol)}
+  .badge.baixa{background:var(--ceu-s);color:var(--ceu)}
+  .badge.info{background:var(--jade-s);color:var(--jade2)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--accent-s);color:var(--accent);border:1px solid var(--linha);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+  .memrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--linha)}
+  .memrow:last-child{border:none}
+  /* ficha premium */
+  .modal.wide{width:min(560px,100%)}
+  .profhead{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+  .profphoto{width:84px;height:84px;border-radius:18px;background:var(--accent-s);display:grid;place-items:center;color:var(--accent);font-weight:800;font-size:30px;flex:0 0 auto;position:relative;overflow:hidden;cursor:pointer;border:1px solid var(--linha)}
+  .profphoto img{width:100%;height:100%;object-fit:cover}
+  .profphoto .cam{position:absolute;inset:auto 0 0 0;background:rgba(0,0,0,.58);color:#fff;font-size:9.5px;text-align:center;padding:3px 0;font-weight:700;letter-spacing:.03em}
+  .profhead h3{font-size:20px} .profhead .lg{color:var(--suave);font-size:13px;margin-top:2px}
+  .avimg{width:100%;height:100%;object-fit:cover;border-radius:10px}
+  .ptabs{display:flex;gap:2px;border-bottom:1px solid var(--linha);margin-bottom:16px}
+  .ptab{padding:9px 14px;font-weight:700;font-size:14px;color:var(--suave);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .ptab.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .ptabview{display:none} .ptabview.on{display:block}
+  .evbox{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:2px 14px;margin-top:16px}
+  .evbox summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px;padding:12px 0;list-style:none}
+  .evbox summary::-webkit-details-marker{display:none}
+  .evbox summary::before{content:"▾ ";font-size:11px}
+  .evbox .memrow{padding:7px 0}
+  /* organograma */
+  .org,.org ul{list-style:none;margin:0;padding:0}
+  .org ul{position:relative;padding-top:22px;display:flex;justify-content:center;gap:4px}
+  .org li{position:relative;padding:22px 10px 0;text-align:center}
+  .org li::before,.org li::after{content:'';position:absolute;top:0;right:50%;border-top:2px solid var(--linha);width:50%;height:22px}
+  .org li::after{right:auto;left:50%;border-left:2px solid var(--linha)}
+  .org li:only-child::before,.org li:only-child::after{display:none}
+  .org li:only-child{padding-top:0}
+  .org li:first-child::before,.org li:last-child::after{border:0 none}
+  .org li:last-child::before{border-right:2px solid var(--linha);border-radius:0 6px 0 0}
+  .org li:first-child::after{border-radius:6px 0 0 0}
+  .org ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--linha);height:22px}
+  .org>ul{padding-top:0} .org>ul>li{padding-top:0}
+  .org>ul>li::before,.org>ul>li::after{display:none}
+  .orgnode{display:inline-flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:8px 14px 8px 8px;cursor:pointer}
+  .orgnode:hover{border-color:var(--accent);box-shadow:var(--sombra-s)}
+  .orgav{width:36px;height:36px;border-radius:9px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 auto}
+  .orgav img{width:100%;height:100%;object-fit:cover}
+  .orgnm{font-weight:700;font-size:14px;white-space:nowrap} .orgcg{font-size:11px;color:var(--suave);white-space:nowrap}
+
+  /* form grid (segurança) */
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+  .fgrid .field{margin:0}
+  .switch{display:flex;align-items:center;gap:10px;padding:10px 0}
+  .switch input{width:auto}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha)}
+  .toggle-row:last-child{border:none}
+  .sw{position:relative;width:44px;height:25px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw .sl{position:absolute;inset:0;background:var(--linha);border-radius:999px;transition:.2s;cursor:pointer}
+  .sw .sl:before{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .sl{background:var(--accent)}
+  .sw input:checked + .sl:before{transform:translateX(19px)}
+
+  /* modal + toast */
+  .mask{display:none;position:fixed;inset:0;background:rgba(6,20,13,.55);z-index:50;place-items:center;padding:18px;overflow:auto}
+  .mask.open{display:grid}
+  .modal{background:var(--card);border:1px solid var(--linha);border-radius:18px;box-shadow:var(--sombra);width:min(460px,100%);padding:24px;max-height:92vh;overflow:auto}
+  .modal h3{font-size:19px;margin-bottom:3px}.modal .sub{color:var(--suave);font-size:13.5px;margin-bottom:16px}
+  .modal .acts{display:flex;gap:10px;margin-top:20px}.modal .acts .btn{flex:1}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(18px);opacity:0;transition:.25s;background:var(--forte);color:var(--bg);padding:12px 20px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)} #toast.erro{background:var(--vermelho);color:#fff}
+  .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media(max-width:860px){
+    .shell{grid-template-columns:1fr}
+    aside{position:fixed;left:0;top:0;width:262px;z-index:40;transform:translateX(-100%);transition:.25s}
+    aside.open{transform:none}
+    .burger{display:grid}
+    .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+    .backdrop.open{display:block}
+    .fgrid{grid-template-columns:1fr}
+  }
+  .invh{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--linha)}
+  @media print{
+    body{background:#fff}
+    body *{visibility:hidden}
+    .printavel,.printavel *{visibility:visible}
+    .printavel{position:absolute;left:0;top:0;width:100%;padding:10px 18px;color:#000}
+    .printavel .muted{color:#555}
+  }
+</style>
+<style>
+  .memlist{display:flex;flex-direction:column;gap:2px}
+  .memrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--linha)}
+  .topbar{display:flex;align-items:center;gap:10px;padding:16px 26px;border-bottom:1px solid var(--linha);position:sticky;top:0;background:var(--bg);z-index:5}
+  .topbar h2{margin:0;font-size:19px}
+</style>
+<!-- LOGIN -->
+<div id="login" style="display:none">
+  <form class="loginbox" id="loginForm">
+    <img class="masc" src="assets/mascote.png" alt="" onerror="this.style.display='none'">
+    <h1>Guatá Files</h1>
+    <p>Servidor de arquivos — entre para gerenciar</p>
+    <div class="field"><label>Usuário</label><input type="text" id="usuario" value="Administrator" autocomplete="username"></div>
+    <div class="field"><label>Senha</label><input type="password" id="senha" autocomplete="current-password" autofocus></div>
+    <button class="btn pri block" type="submit" id="btnEntrar">Entrar</button>
+    <p class="muted small" id="loginDica" style="margin-top:10px"></p>
+  </form>
+</div>
+
+<!-- CONFIGURADOR -->
+<div id="config" style="display:none;min-height:100vh;place-items:center;padding:22px">
+  <div class="loginbox" id="cfgBox" style="max-width:520px"></div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="shell">
+  <aside id="aside">
+    <div class="brand"><img src="assets/logo.png" onerror="this.style.display='none'"><div><b>Guatá Files</b><small>Arquivos soberanos</small></div></div>
+    <nav class="menu">
+      <div class="migroup">Visão geral</div>
+      <button class="mi" data-v="painel"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg> Painel</button>
+      <div class="migroup">Arquivos</div>
+      <button class="mi" data-v="shares"><svg class="ic" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Compartilhamentos</button>
+      <button class="mi" data-v="camadas"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Camadas (tiers)</button>
+      <button class="mi" data-v="armazenamento"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 11v6c0 1.7 4 3 9 3s9-1.3 9-3v-6"/></svg> Armazenamento</button>
+      <button class="mi" data-v="snapshots"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg> Voltar no tempo</button>
+      <div class="migroup">Sistema</div>
+      <button class="mi" data-v="protecao"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg> Proteção</button>
+      <button class="mi" data-v="auditoria"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Auditoria</button>
+      <button class="mi" data-v="saude"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Saúde</button>
+    </nav>
+    <div class="sb-foot">
+      <div class="saude-sb"><b><span class="dot"></span> Servidor de arquivos</b><span id="sbSaude">carregando…</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <h2 id="tituloView">Painel</h2><span class="sp"></span>
+      <button class="btn ghost" id="btnSair"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sair</button>
+    </header>
+    <div class="content">
+
+      <section class="view on" data-view="painel">
+        <div class="dom-head"><span class="nme nome" id="fHost">—</span><span class="pill on" id="fPill"><span class="dot"></span> no ar</span><span class="sp"></span>
+          <button class="btn pri" onclick="abrirCriarShare()"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M12 5v14M5 12h14"/></svg> Nova pasta</button></div>
+        <div class="cards" id="painelCards"></div>
+        <div class="panel" style="margin-top:14px"><div class="ph"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent)"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg><h3>Armazenamento</h3><span class="sp"></span><span class="muted small" id="discoResumo"></span></div>
+          <div id="discoBar" style="padding:16px 18px"></div></div>
+        <div style="display:flex;align-items:center;gap:8px;margin:26px 0 12px"><svg class="ic" viewBox="0 0 24 24" style="width:19px;height:19px;color:var(--jade)"><path d="M12 22V11M12 11C12 7 9 4 4 4c0 5 3 8 8 8z"/></svg><h3 style="font-size:16px">Tarefas rápidas</h3></div>
+        <div class="jgrid">
+          <button class="jcard" onclick="abrirCriarShare()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><b>Nova pasta</b><small>Cria um compartilhamento</small></button>
+          <button class="jcard" onclick="criarCamadas()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></span><b>Criar camadas</b><small>Público → Restrito</small></button>
+          <button class="jcard" onclick="irPara('shares')"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><b>Definir acessos</b><small>Grupos → níveis</small></button>
+        </div>
+      </section>
+
+      <section class="view" data-view="shares">
+        <div class="panel"><div class="ph"><h3>Compartilhamentos</h3><input class="busca" placeholder="Buscar…" oninput="filtrar('listaShares',this.value)"><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirCriarShare()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Nova pasta</button></div>
+          <div id="listaShares"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="camadas">
+        <div class="panel"><div class="ph"><h3>Camadas (tiers)</h3></div>
+          <div style="padding:14px 18px">
+            <p class="muted" style="margin:0 0 12px">Cria 4 pastas em camadas: <b>Público → Interno → Confidencial → Restrito</b>. Depois você liga cada camada a um grupo do domínio. Dica: crie <b>grupos aninhados</b> no Guatá ID — quem está no Restrito herda as camadas de baixo.</p>
+            <button class="btn pri" onclick="criarCamadas()">Criar estrutura de camadas</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="snapshots">
+        <div class="panel"><div class="ph"><h3>Voltar no tempo (snapshots)</h3><span class="sp"></span>
+          <select id="snapShare" onchange="carregarSnapshots()" style="width:auto;min-width:160px"></select>
+          <button class="btn sm" id="snapAgendaBtn" onclick="snapAgenda()">Agendar diário</button>
+          <button class="btn sm pri" style="width:auto" onclick="snapCriar()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg> Criar agora</button></div>
+          <div class="muted small" style="padding:10px 18px 0" id="snapInfo"></div>
+          <div id="listaSnaps"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="armazenamento">
+        <div class="cards" id="origCards"></div>
+        <div class="panel">
+          <div class="ph"><h3>Origens de armazenamento</h3><span class="sp"></span>
+            <button class="btn sm" onclick="abrirNas()">Adicionar NAS / rede</button>
+          </div>
+          <p class="sub" style="padding:0 2px 6px">Onde cada compartilhamento mora: o disco do servidor, outro disco, uma <b>partição Windows (NTFS)</b> ou um NAS na rede. Em NTFS/exFAT/FAT e NAS o acesso é por compartilhamento (sem os tiers finos de grupo).</p>
+          <div id="origBody" style="padding:2px"></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><h3>Discos e partições detectados</h3><span class="sp"></span>
+            <button class="btn sm" onclick="carregarArmazenamento()">Atualizar</button>
+          </div>
+          <div id="discosBody" style="padding:2px"></div>
+        </div>
+      </section>
+      <section class="view" data-view="auditoria">
+        <div class="panel">
+          <div class="ph"><h3>Auditar compartilhamentos</h3><span class="sp"></span>
+            <button class="btn sm" onclick="carregarAuditoria()">Atualizar</button></div>
+          <p class="sub" style="padding:0 2px 6px">Ligue a auditoria nas pastas sensíveis. O Guatá registra quem abriu, gravou, renomeou ou apagou arquivos (Samba vfs_full_audit).</p>
+          <div id="audShares" style="padding:2px"></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><h3>Registros de acesso</h3><span class="sp"></span><span class="muted small" id="audResumo"></span></div>
+          <div id="audBody" style="padding:2px"></div>
+        </div>
+      </section>
+      <section class="view" data-view="protecao">
+        <div class="cards" id="protCards"></div>
+        <div class="panel"><div class="ph"><h3>Proteção contra vírus / ransomware</h3><span class="sp"></span>
+          <button class="btn sm" id="protAgendaBtn" onclick="protecaoAgenda()">Agendar diária</button>
+          <button class="btn sm pri" style="width:auto" id="protScanBtn" onclick="protecaoScan()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M11 3a8 8 0 1 0 5.3 14M21 21l-4.3-4.3"/></svg> Verificar agora</button></div>
+          <div id="protBody" style="padding:4px 2px"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="saude">
+        <div class="cards" id="saudeCards"></div>
+        <div class="cli" id="saudeCli"></div>
+      </section>
+
+    </div>
+  </main>
+  </div>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function api(path,method="GET",body){
+  const o={method,headers:{}};
+  if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
+  const r=await fetch(path,o);let j={};try{j=await r.json();}catch(e){}
+  if(r.status===401&&path!=="/api/login"){mostrarLogin();throw new Error("sessao");}
+  return {ok:r.ok,status:r.status,data:j};
+}
+function toast(m,erro){const t=$("#toast");t.textContent=m;t.className=(erro?"erro ":"")+"show";setTimeout(()=>t.className=t.className.replace("show",""),3000);}
+function abrir(html){$("#modal").className="modal";$("#modal").innerHTML=html;$("#mask").classList.add("open");}
+function fechar(){$("#mask").classList.remove("open");$("#modal").className="modal";}
+$("#mask").addEventListener("click",e=>{if(e.target.id==="mask")fechar();});
+function filtrar(id,t){t=(t||"").toLowerCase().trim();document.querySelectorAll("#"+id+" .row").forEach(r=>{r.style.display=(!t||r.textContent.toLowerCase().includes(t))?"":"none";});}
+function vazio(msg,extra){return `<div class="empty"><img src="assets/mascote.png" onerror="this.style.display='none'"><div>${msg}</div>${extra?`<div class="muted small" style="margin-top:4px">${extra}</div>`:''}</div>`;}
+const NIVEL_LABEL={leitura:"Leitura",edicao:"Edição",total:"Total"};
+const NIVEL_BADGE={leitura:"info",edicao:"media",total:"alta"};
+
+function mostrarLogin(){$("#config").style.display="none";$("#app").style.display="none";$("#login").style.display="grid";setTimeout(()=>$("#senha").focus(),50);}
+function mostrarApp(){$("#login").style.display="none";$("#config").style.display="none";$("#app").style.display="block";irPara("painel");}
+let cfgModo="",cfgIsDC=false,cfgHostSug="guata-files";
+async function mostrarConfig(){
+  $("#login").style.display="none";$("#app").style.display="none";$("#config").style.display="grid";
+  try{const {data}=await api("/api/estado-inicial");cfgIsDC=!!data.is_dc;cfgHostSug=data.host_sugerido||"guata-files";}catch(e){}
+  cfgPasso0();
+}
+function cfgPasso0(){
+  const card=(m,tit,desc)=>`<button class="jcard" style="text-align:left;width:100%" onclick="cfgEscolher('${m}')"><b>${tit}</b><small>${desc}</small></button>`;
+  let opcoes="";
+  if(cfgIsDC){
+    opcoes=card("mesmo","Tudo junto (neste Guatá AD)","Usa os usuários e grupos do próprio domínio deste servidor")
+      +card("empresa","Entrar em OUTRO domínio","Avançado: ingressar num Guatá AD diferente")
+      +card("simples","Usuários locais","Standalone, sem domínio");
+  }else{
+    opcoes=card("empresa","Entrar no domínio Guatá AD","Usa os usuários e grupos do AD (recomendado p/ empresa)")
+      +card("simples","Usuários locais (casa / rede pequena)","Standalone, sem domínio");
+  }
+  $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote.png" onerror="this.style.display='none'">
+    <h1>Guatá Files</h1><p>Vamos configurar o servidor de arquivos. Como ele vai funcionar?</p>
+    <div class="jgrid" style="grid-template-columns:1fr;gap:10px;margin-top:8px">${opcoes}</div>`;
+}
+function cfgEscolher(m){cfgModo=m;
+  if(m==="empresa"){
+    $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote.png" style="width:72px;height:72px;margin:0 auto 4px;display:block"><h1 style="text-align:center">Entrar no domínio</h1><p class="sub" style="text-align:center">Dados do seu Guatá AD.</p>
+      <div class="field"><label>Nome deste servidor</label><input id="c_host" value="${esc(cfgHostSug)}"></div>
+      <div class="field"><label>Domínio (ex: empresa.local)</label><input id="c_realm" placeholder="empresa.local"></div>
+      <div class="field"><label>IP do Guatá AD (controlador)</label><input id="c_adip" placeholder="192.168.1.10"></div>
+      <div class="field"><label>Usuário administrador</label><input id="c_admin" value="Administrator"></div>
+      <div class="field"><label>Senha do administrador</label><input id="c_pass" type="password"></div>
+      <div class="cfgnav"><button class="btn ghost" onclick="cfgPasso0()">Voltar</button><button class="btn pri" onclick="cfgExecutar()">Entrar no domínio</button></div>`;
+  }else{
+    const nomes={mesmo:"Tudo junto neste Guatá AD",simples:"Modo simples (usuários locais)"};
+    $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote.png" style="width:72px;height:72px;margin:0 auto 4px;display:block"><h1 style="text-align:center">${esc(nomes[m]||m)}</h1><p class="sub">${m==="mesmo"?"Vou usar os grupos do domínio deste próprio servidor.":"Vou preparar o Samba standalone."}</p>
+      ${m==="simples"?`<div class="field"><label>Nome deste servidor</label><input id="c_host" value="${esc(cfgHostSug)}"></div>`:''}
+      <div class="cfgnav"><button class="btn ghost" onclick="cfgPasso0()">Voltar</button><button class="btn pri" onclick="cfgExecutar()">Configurar</button></div>`;
+  }
+}
+async function cfgExecutar(){
+  const body={modo:cfgModo,host:($("#c_host")?$("#c_host").value.trim():cfgHostSug)};
+  if(cfgModo==="empresa"){body.realm=$("#c_realm").value.trim();body.adip=$("#c_adip").value.trim();body.admin=$("#c_admin").value.trim()||"Administrator";body.adpass=$("#c_pass").value;
+    if(!body.realm||!body.adip||!body.adpass)return toast("Preencha domínio, IP e senha",true);}
+  $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote-compartilhando.png" style="width:80px;height:80px;margin:0 auto 4px;display:block"><h1 style="text-align:center">Configurando…</h1><p class="sub" id="cfgMsg">Iniciando…</p>
+    <div style="height:14px;border-radius:99px;background:var(--linha);overflow:hidden;margin:14px 0"><div id="cfgBarra" style="height:100%;width:2%;background:var(--accent);border-radius:99px;transition:width .4s"></div></div>`;
+  await api("/api/configurar","POST",body);
+  const timer=setInterval(async()=>{try{const {data:s}=await api("/api/configurar-status");
+    const bar=$("#cfgBarra");if(bar)bar.style.width=Math.max(2,s.pct||0)+"%";
+    const msg=$("#cfgMsg");if(msg)msg.textContent=s.msg||"...";
+    if(s.pronto){clearInterval(timer);
+      $("#cfgBox").innerHTML=`<img class="masc" src="assets/mascote.png" onerror="this.style.display='none'"><h1>${s.erro?'Quase lá':'Pronto!'}</h1><p>${esc(s.msg||'')}</p><button class="btn pri block" onclick="location.reload()">Abrir o painel</button>`;
+    }
+  }catch(e){}},1500);
+}
+
+const titulos={painel:"Painel",shares:"Compartilhamentos",camadas:"Camadas (tiers)",armazenamento:"Armazenamento",snapshots:"Voltar no tempo",protecao:"Proteção",auditoria:"Auditoria",saude:"Saúde"};
+function irPara(v){
+  document.querySelectorAll(".mi").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.dataset.view===v));
+  $("#tituloView").textContent=titulos[v]||"Painel";
+  if(v==="painel")carregarPainel();
+  if(v==="shares")carregarShares();
+  if(v==="snapshots")carregarSnapshots();
+  if(v==="armazenamento")carregarArmazenamento();
+  if(v==="protecao")carregarProtecao();
+  if(v==="auditoria")carregarAuditoria();
+  if(v==="saude")carregarSaude();
+}
+document.querySelectorAll(".mi").forEach(b=>b.onclick=()=>irPara(b.dataset.v));
+
+$("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("#btnEntrar");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  try{const r=await api("/api/login","POST",{usuario:$("#usuario").value.trim()||"Administrator",senha:$("#senha").value});
+    if(r.ok)mostrarApp();else toast(r.data.erro||"Falha",true);}catch(e){}b.disabled=false;b.textContent="Entrar";});
+$("#btnSair").addEventListener("click",async()=>{try{await api("/api/logout","POST",{});}catch(e){}mostrarLogin();});
+
+let sharesCache=[];
+async function carregarPainel(){
+  try{const {data:s}=await api("/api/saude");
+    $("#fHost").textContent=s.host||"servidor";
+    const on=(s.servico==="active");const pill=$("#fPill");pill.className="pill "+(on?"on":"off");
+    pill.innerHTML='<span class="dot"></span> '+(on?"no ar":"parado");
+    $("#sbSaude").textContent=(s.shares||0)+" pasta(s) · "+(s.modo||"simples");
+    const d=s.disco||{};
+    const IC1='<svg class="ic" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+    const IC2='<svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg>';
+    const IC3='<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg>';
+    const IC4='<svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>';
+    const stat=(ic,l,v,sub,cor)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v"${cor?` style="color:${cor}"`:''}>${v}</div><div class="s">${esc(sub)}</div></div>`;
+    $("#painelCards").innerHTML=
+      stat(IC1,"Compartilhamentos",s.shares||0,"pastas na rede")+
+      stat(IC2,"Disco",d.total_gb?((d.pct||0)+"% usado"):"—",d.total_gb?(d.livre_gb+" GB livres de "+d.total_gb):"")+
+      stat(IC3,"Proteção",s.clamav==="active"?"ClamAV ativo":"sem ClamAV",s.clamav==="active"?"monitorando":"opcional",(s.clamav==="active"?'var(--jade2)':''))+
+      stat(IC4,"Modo",(s.modo||"simples"),s.modo==="empresa"||s.modo==="dc"?"no domínio":"standalone");
+    const pct=d.pct||0,cor=pct>=90?'var(--vermelho)':(pct>=70?'var(--sol)':'var(--jade)');
+    if($("#discoResumo"))$("#discoResumo").textContent=d.total_gb?(d.livre_gb+" GB livres de "+d.total_gb+" GB"):"";
+    if($("#discoBar"))$("#discoBar").innerHTML=d.total_gb?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span class="muted">Uso do disco (/srv)</span><b style="color:${cor}">${pct}% usado</b></div>
+      <div style="height:14px;border-radius:99px;background:var(--linha);overflow:hidden"><div style="height:100%;width:${Math.max(2,Math.min(100,pct))}%;background:${cor};border-radius:99px;transition:width .4s"></div></div>
+      <div class="muted small" style="margin-top:8px">${d.livre_gb} GB livres · ${(d.total_gb-d.livre_gb).toFixed(1)} GB usados · ${d.total_gb} GB no total</div>`:'<div class="muted small">Não consegui ler o disco.</div>';
+  }catch(e){}
+}
+async function carregarShares(){
+  try{const {data}=await api("/api/shares");sharesCache=data.itens||[];const el=$("#listaShares");
+    if(!sharesCache.length){el.innerHTML=vazio("Nenhuma pasta compartilhada ainda.","Clique em “Nova pasta” para criar o primeiro compartilhamento.");return;}
+    const FLD='<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+    el.innerHTML=sharesCache.map((sh,i)=>`<div class="row" style="align-items:flex-start">
+      <div class="av">${FLD}</div>
+      <div style="min-width:0;flex:1">
+        <div class="nm">${esc(sh.nome)}${sh.tamanho?` <span class="muted" style="font-weight:500">· ${esc(sh.tamanho)}</span>`:''}${(sh.origem&&sh.origem!=="padrao")?` <span class="badge info" title="origem">${esc(sh.origem)}</span>`:''}</div>
+        <div class="muted small" style="font-family:ui-monospace">\\\\${esc($("#fHost").textContent||"servidor")}\\${esc(sh.nome)}</div>
+        <div class="chips" style="margin-top:6px">${sh.regras.length?sh.regras.map(r=>`<span class="badge ${NIVEL_BADGE[r.nivel]||'info'}">${esc(nomeTrustee(r))}: ${esc(NIVEL_LABEL[r.nivel]||r.nivel)}</span>`).join(""):'<span class="muted small">sem acesso definido — ninguém entra ainda</span>'}</div>
+      </div>
+      <span class="sp"></span>
+      <button class="btn sm pri" onclick="abrirDefinirNivel(${i})">Definir acesso</button>
+      <button class="btn sm danger" onclick="apagarShare('${esc(sh.nome)}')">Remover</button>
+    </div>`).join("");
+  }catch(e){}
+}
+async function abrirCriarShare(){
+  let ops='<option value="padrao">Disco do servidor (padrão)</option>';
+  try{const {data}=await api("/api/origens");(data.itens||[]).forEach(o=>{if(o.nome!=="padrao")ops+=`<option value="${esc(o.nome)}">${esc(o.rotulo||o.nome)} — ${esc((o.fs||o.tipo).toUpperCase())}</option>`;});}catch(e){}
+  abrir(`<h3>Nova pasta compartilhada</h3><p class="sub">Cria a pasta e publica na rede. Depois você define quem acessa.</p>
+    <div class="field"><label>Nome da pasta</label><input id="s_nome" placeholder="Ex: Financeiro" autofocus></div>
+    <div class="field"><label>Onde guardar (origem)</label><select id="s_origem">${ops}</select></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="s_ok">Criar</button></div>`);
+  $("#s_ok").onclick=async()=>{const nome=$("#s_nome").value.trim();if(!nome)return toast("Dê um nome",true);
+    const origem=$("#s_origem")?$("#s_origem").value:"padrao";
+    const b=$("#s_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/share-criar","POST",{nome,origem});b.disabled=false;b.textContent="Criar";
+    if(r.ok){fechar();toast("Pasta criada!");carregarShares();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function apagarShare(nome){if(!confirm("Remover o compartilhamento '"+nome+"'? (os arquivos em /srv são mantidos)"))return;
+  const r=await api("/api/share-apagar","POST",{nome});if(r.ok){toast("Compartilhamento removido.");carregarShares();carregarPainel();}else toast("Erro",true);}
+function nivelTipoMuda(){const t=$("#n_tipo")?$("#n_tipo").value:'grupo';
+  if($("#n_grupoWrap"))$("#n_grupoWrap").style.display=(t==='grupo')?'':'none';
+  if($("#n_usuarioWrap"))$("#n_usuarioWrap").style.display=(t==='usuario')?'':'none';
+  if($("#n_todosMsg"))$("#n_todosMsg").style.display=(t==='todos')?'':'none';}
+function nomeTrustee(r){return r.tipo==='todos'?'Todos os usuários':(r.tipo==='usuario'?('usuário '+r.grupo):r.grupo);}
+async function abrirDefinirNivel(i){const sh=sharesCache[i];if(!sh)return;
+  const {data}=await api("/api/grupos");const grupos=data.itens||[];const emp=(data.modo!=='simples');
+  const regrasHtml=sh.regras.length?sh.regras.map(r=>`<div class="memrow"><span>${esc(nomeTrustee(r))}</span><span style="display:flex;gap:8px;align-items:center"><span class="badge ${NIVEL_BADGE[r.nivel]||'info'}">${esc(NIVEL_LABEL[r.nivel]||r.nivel)}</span><button class="btn sm danger" onclick="removerNivel('${esc(sh.nome)}','${esc(r.grupo)}','${esc(r.tipo||'grupo')}')">tirar</button></span></div>`).join(""):'<div class="muted small">Ninguém tem acesso ainda.</div>';
+  abrir(`<h3>Acessos de “${esc(sh.nome)}”</h3><p class="sub">Dê acesso a um grupo, a um usuário específico, ou a todos.</p>
+    <div class="memlist" style="margin-bottom:12px">${regrasHtml}</div>
+    <div class="field"><label>Quem recebe acesso</label><select id="n_tipo" onchange="nivelTipoMuda()">
+      <option value="grupo">Um grupo</option>
+      <option value="usuario">Um usuário específico</option>
+      <option value="todos">Todos (everyone)</option></select></div>
+    <div class="field" id="n_grupoWrap"><label>Grupo</label><select id="n_grupo">${grupos.length?grupos.map(g=>`<option>${esc(g)}</option>`).join(""):'<option value="">(nenhum grupo encontrado)</option>'}</select></div>
+    <div class="field" id="n_usuarioWrap" style="display:none"><label>Usuário (login)</label><input id="n_usuario" placeholder="ex: joao.silva"></div>
+    <div class="muted small" id="n_todosMsg" style="display:none;margin:-4px 0 10px">Todos os usuários ${emp?'do domínio':'do servidor (inclui visitante)'} terão este nível.</div>
+    <div class="field"><label>Nível</label><select id="n_nivel">
+      <option value="leitura">Leitura — só ver e abrir</option>
+      <option value="edicao">Edição — criar e editar</option>
+      <option value="total">Total — controle total (dono)</option></select></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Fechar</button><button class="btn pri" id="n_ok">Dar acesso</button></div>`);
+  $("#n_ok").onclick=async()=>{const tipo=$("#n_tipo").value,nivel=$("#n_nivel").value;
+    let grupo="";if(tipo==='grupo')grupo=$("#n_grupo").value;else if(tipo==='usuario')grupo=$("#n_usuario").value.trim();
+    if(tipo!=='todos'&&!grupo)return toast(tipo==='usuario'?"Digite o usuário":"Escolha um grupo",true);
+    const b=$("#n_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/share-nivel","POST",{nome:sh.nome,grupo,nivel,tipo});b.disabled=false;b.textContent="Dar acesso";
+    if(r.ok){toast("Acesso definido!");fechar();carregarShares();}else toast(r.data.erro||"Erro",true);};
+}
+async function removerNivel(nome,grupo,tipo){const r=await api("/api/share-nivel","POST",{nome,grupo,nivel:"remover",tipo:tipo||"grupo"});
+  if(r.ok){toast("Acesso removido.");fechar();carregarShares();}else toast("Erro",true);}
+async function criarCamadas(){if(!confirm("Criar as 4 camadas (Público → Interno → Confidencial → Restrito)?"))return;
+  const r=await api("/api/camadas","POST",{});if(r.ok){toast("Camadas criadas!");carregarShares();carregarPainel();irPara("shares");}else toast("Erro",true);}
+let snapShareAtual="";
+function _dthr(ts){try{return new Date(ts*1000).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+async function carregarSnapshots(){
+  try{ if(!sharesCache.length){const r=await api("/api/shares");sharesCache=r.data.itens||[];}
+    const sel=$("#snapShare");if(sel && !sel.options.length){sel.innerHTML=sharesCache.map(s=>`<option>${esc(s.nome)}</option>`).join("");}
+    const sh=sel?sel.value:(sharesCache[0]&&sharesCache[0].nome);snapShareAtual=sh||"";
+    if(!sh){$("#listaSnaps").innerHTML=vazio("Crie uma pasta primeiro.","As versões anteriores aparecem aqui por pasta.");$("#snapInfo").textContent="";return;}
+    const {data}=await api("/api/snapshots?share="+encodeURIComponent(sh));
+    const ab=$("#snapAgendaBtn");if(ab){ab.textContent=data.agenda?"Diário ligado":"Agendar diário";ab.classList.toggle("ok",!!data.agenda);}
+    $("#snapInfo").innerHTML=`Pasta <b>${esc(sh)}</b> · disco <code>${esc(data.fs||'?')}</code> · aparece também em "Versões Anteriores" no Windows. ${data.agenda?'Snapshot automático diário ligado.':''}`;
+    const itens=data.itens||[];const el=$("#listaSnaps");
+    if(!itens.length){el.innerHTML=vazio("Nenhuma versão guardada ainda.","Clique em “Criar agora” para o primeiro ponto de restauração.");return;}
+    const IC='<svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>';
+    el.innerHTML=itens.map(it=>`<div class="row"><div class="av">${IC}</div>
+      <div style="min-width:0"><div class="nm">${esc(_dthr(it.ts))}</div><div class="muted small" style="font-family:ui-monospace">${esc(it.nome)}</div></div>
+      <span class="sp"></span><button class="btn sm pri" onclick="snapRestaurar('${esc(sh)}','${esc(it.nome)}')">Restaurar</button></div>`).join("");
+  }catch(e){}
+}
+async function snapCriar(){const sh=snapShareAtual;if(!sh)return toast("Escolha uma pasta",true);
+  toast("Criando snapshot…");const r=await api("/api/snapshot-criar","POST",{share:sh});
+  if(r.ok){toast("Snapshot criado!");carregarSnapshots();}else toast(r.data.erro||"Erro",true);}
+async function snapRestaurar(sh,snap){if(!confirm("Restaurar esta versão de '"+sh+"'?\n\nOs arquivos vão para uma pasta nova \"Restaurado em ...\" dentro do compartilhamento (nada é apagado)."))return;
+  toast("Restaurando…");const r=await api("/api/snapshot-restaurar","POST",{share:sh,snap});
+  if(r.ok){toast("Restaurado! Veja a pasta 'Restaurado em ...'");}else toast(r.data.erro||"Erro",true);}
+async function snapAgenda(){const {data}=await api("/api/snapshots?share="+encodeURIComponent(snapShareAtual||""));
+  const r=await api("/api/snapshot-agenda","POST",{ligar:!data.agenda});
+  if(r.ok){toast(data.agenda?"Agendamento desligado.":"Snapshot diário ligado (01h).");carregarSnapshots();}else toast("Erro",true);}
+function fmtBytes(n){n=+n||0;const u=["B","KB","MB","GB","TB","PB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++;}return (i>=3?n.toFixed(1):Math.round(n))+" "+u[i];}
+function barra(tam,livre){tam=+tam||0;livre=+livre||0;const usado=Math.max(0,tam-livre);const pct=tam?Math.round(usado*100/tam):0;const cor=pct>=90?'var(--vermelho)':(pct>=75?'var(--sol)':'var(--jade)');
+  return `<div style="height:10px;border-radius:99px;background:var(--linha);overflow:hidden;margin:7px 0 2px"><div style="height:100%;width:${Math.max(2,Math.min(100,pct))}%;background:${cor};border-radius:99px"></div></div><div class="muted small">${fmtBytes(usado)} de ${fmtBytes(tam)} usados · ${pct}%</div>`;}
+async function carregarAuditoria(){
+  try{
+    const {data:sh}=await api("/api/shares");const shares=sh.itens||[];
+    if(!shares.length){$("#audShares").innerHTML='<div class="muted small" style="padding:8px 2px">Nenhum compartilhamento ainda.</div>';}
+    else $("#audShares").innerHTML=shares.map(x=>{
+      const on=!!x.audit;
+      return `<div class="row"><div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+        <div style="min-width:0;flex:1"><div class="nm">${esc(x.nome)} ${on?'<span class="badge baixa">auditando</span>':'<span class="badge off">desligada</span>'}</div></div>
+        <span class="sp"></span>
+        <button class="btn sm ${on?'danger':'pri'}" onclick="auditoriaToggle('${esc(x.nome)}',${on?0:1})">${on?'Desligar':'Ligar'}</button></div>`;}).join("");
+    const {data:a}=await api("/api/auditoria");
+    if(!a.disponivel){$("#audBody").innerHTML=vazio("Auditoria ainda não começou.","Ligue a auditoria numa pasta acima; os acessos passam a aparecer aqui.");$("#audResumo").textContent="";return;}
+    const its=a.itens||[];$("#audResumo").textContent=its.length?`${its.length} eventos recentes`:"";
+    if(!its.length){$("#audBody").innerHTML=vazio("Nenhum acesso registrado ainda.","Assim que alguém abrir ou alterar um arquivo numa pasta auditada, aparece aqui.");return;}
+    const OPB={abriu:'info',gravou:'media',renomeou:'media','criou pasta':'baixa',criou:'baixa',apagou:'alta','removeu pasta':'alta'};
+    $("#audBody").innerHTML='<div class="memlist">'+its.map(e=>`<div class="memrow" style="align-items:flex-start">
+      <div style="min-width:0;flex:1"><div class="nm" style="font-size:13.5px"><b>${esc(e.usuario||'?')}</b> <span class="badge ${OPB[e.op]||'info'}">${esc(e.op)}</span> <span class="muted small">${esc(e.share)}</span></div>
+      <div class="muted small" style="font-family:ui-monospace;word-break:break-all">${esc(e.alvo||'')}</div></div>
+      <div class="muted small" style="white-space:nowrap;text-align:right">${esc(e.quando)}<br>${esc(e.ip||'')}</div></div>`).join("")+'</div>';
+  }catch(e){}
+}
+async function auditoriaToggle(nome,ligar){
+  toast(ligar?"Ligando auditoria…":"Desligando…");
+  const r=await api("/api/auditoria-toggle","POST",{nome,ligar:!!ligar});
+  if(r.ok){toast(ligar?"Auditoria ligada.":"Auditoria desligada.");carregarAuditoria();}else toast(r.data.erro||"Erro",true);
+}
+let origCache=[];
+async function carregarArmazenamento(){
+  try{
+    const {data:o}=await api("/api/origens");origCache=o.itens||[];
+    const DISCO='<svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg>';
+    const NET='<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="13" width="20" height="8" rx="2"/><path d="M6 7h.01M6 17h.01"/></svg>';
+    // cards: total de origens, espaço somado
+    let totT=0,totL=0;origCache.forEach(x=>{totT+=(+x.tam||0);totL+=(+x.livre||0);});
+    const stat=(ic,l,v,sub)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:17px">${v}</div><div class="s">${esc(sub)}</div></div>`;
+    $("#origCards").innerHTML=
+      stat(DISCO,"Origens",String(origCache.length),"locais de armazenamento")+
+      stat(DISCO,"Espaço total",fmtBytes(totT),"somando as origens")+
+      stat(DISCO,"Livre",fmtBytes(totL),"disponível para dados");
+    $("#origBody").innerHTML=origCache.map(x=>{
+      const pad=x.nome==="padrao", nas=x.tipo==="nas";
+      const tag = pad?'<span class="badge info">padrão</span>':(nas?'<span class="badge media">NAS</span>':`<span class="badge ${x.acl_fina?'baixa':'media'}">${esc((x.fs||"disco").toUpperCase())}</span>`);
+      const aviso = (!pad && !x.acl_fina)?'<div class="muted small" style="margin-top:2px">Sem tiers finos de grupo aqui — acesso definido por compartilhamento.</div>':'';
+      const btn = pad?'' : `<button class="btn sm danger" onclick="discoSoltar('${esc(x.nome)}')">Soltar</button>`;
+      return `<div class="row" style="align-items:flex-start">
+        <div class="av">${nas?NET:DISCO}</div>
+        <div style="min-width:0;flex:1">
+          <div class="nm">${esc(x.rotulo||x.nome)} ${tag}</div>
+          <div class="muted small" style="font-family:ui-monospace">${esc(x.mount||x.disp||"")}</div>
+          ${x.tam?barra(x.tam,x.livre):''}${aviso}
+        </div><span class="sp"></span>${btn}
+      </div>`;}).join("");
+    // discos detectados (ainda não usados)
+    const {data:d}=await api("/api/discos");const discos=d.itens||[];
+    const usados=new Set(origCache.map(x=>x.mount));
+    const body=discos.map(k=>{
+      const emUso = k.mount && (k.mount===(origCache.find(o=>o.nome==='padrao')||{}).mount || k.mount.indexOf('/srv/guata-')===0);
+      const win = ['ntfs','ntfs3','vfat','fat','msdos','exfat'].includes((k.fs||'').toLowerCase());
+      const tag = `<span class="badge ${win?'media':'baixa'}">${esc((k.fs||'?').toUpperCase())}</span>`;
+      const winTag = win?' <span class="badge info">Windows</span>':'';
+      const rotulo = k.label||k.modelo||k.path;
+      let acao;
+      if(k.sistema) acao='<span class="muted small">disco do sistema</span>';
+      else if(k.mount) acao=`<span class="muted small">montado em ${esc(k.mount)}</span>`;
+      else acao=`<button class="btn sm pri" onclick="discoUsar('${esc(k.path)}','${esc((k.label||'disco').replace(/[^A-Za-z0-9_-]/g,''))}')">Usar como origem</button>`;
+      return `<div class="row" style="align-items:flex-start">
+        <div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg></div>
+        <div style="min-width:0;flex:1">
+          <div class="nm">${esc(rotulo)} ${tag}${winTag}</div>
+          <div class="muted small" style="font-family:ui-monospace">${esc(k.path)} · ${fmtBytes(k.tam)}</div>
+        </div><span class="sp"></span>${acao}
+      </div>`;}).join("");
+    $("#discosBody").innerHTML=body||'<div class="muted small" style="padding:8px 2px">Nenhuma partição adicional detectada.</div>';
+  }catch(e){}
+}
+async function discoUsar(dev,sug){
+  const nome=prompt("Nome para esta origem (como vai aparecer):",sug||"disco");
+  if(!nome)return;
+  toast("Montando…");
+  const r=await api("/api/disco-usar","POST",{dev,nome});
+  if(r.ok){toast("Origem adicionada!");carregarArmazenamento();}else toast(r.data.erro||"Não consegui montar",true);
+}
+async function discoSoltar(nome){
+  if(!confirm("Soltar a origem '"+nome+"'? Os compartilhamentos nela ficam indisponíveis até remontar. (os dados no disco não são apagados)"))return;
+  const r=await api("/api/disco-soltar","POST",{nome});
+  if(r.ok){toast("Origem solta.");carregarArmazenamento();}else toast(r.data.erro||"Erro",true);
+}
+function abrirNas(){
+  abrir(`<h3>Adicionar NAS / pasta de rede</h3><p class="sub">Monta um compartilhamento de rede (CIFS/SMB) como origem de armazenamento.</p>
+    <div class="field"><label>Nome da origem</label><input id="na_nome" placeholder="Ex: NAS-Financeiro" autofocus></div>
+    <div class="field"><label>Caminho de rede</label><input id="na_rem" placeholder="//192.168.0.10/compartilhamento"></div>
+    <div class="field"><label>Usuário (deixe vazio p/ convidado)</label><input id="na_user" placeholder="usuario"></div>
+    <div class="field"><label>Senha</label><input id="na_pass" type="password"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="na_ok">Montar</button></div>`);
+  $("#na_ok").onclick=async()=>{const nome=$("#na_nome").value.trim(),rem=$("#na_rem").value.trim();
+    if(!nome||!rem)return toast("Informe nome e caminho",true);
+    const b=$("#na_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/nas","POST",{nome,remoto:rem,usuario:$("#na_user").value,senha:$("#na_pass").value});
+    b.disabled=false;b.textContent="Montar";
+    if(r.ok){fechar();toast("NAS montado!");carregarArmazenamento();}else toast(r.data.erro||"Não consegui montar",true);};
+}
+let protPoll=null;
+async function carregarProtecao(){
+  try{const {data:p}=await api("/api/protecao");
+    const inst=p.instalado;const on=(p.daemon==="active");
+    const ab=$("#protAgendaBtn");if(ab){ab.textContent=p.agenda?"Diária ligada":"Agendar diária";ab.classList.toggle("ok",!!p.agenda);}
+    const sb=$("#protScanBtn");if(sb)sb.disabled=!inst||p.rodando;
+    const I1='<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg>';
+    const I2='<svg class="ic" viewBox="0 0 24 24"><path d="M11 3a8 8 0 1 0 5.3 14M21 21l-4.3-4.3"/></svg>';
+    const I3='<svg class="ic" viewBox="0 0 24 24"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/></svg>';
+    const I4='<svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg>';
+    const stat=(ic,l,v,sub,cor)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:17px${cor?';color:'+cor:''}">${v}</div><div class="s">${esc(sub)}</div></div>`;
+    $("#protCards").innerHTML=
+      stat(I1,"ClamAV",inst?(on?"ativo":"instalado"):"não instalado",inst?(on?"protegendo":"disponível"):"sudo apt install clamav",inst?'var(--jade2)':'var(--vermelho)')+
+      stat(I2,"Última verificação",p.ultimo_scan?_dthr(p.ultimo_scan):"nunca","varredura das pastas",(p.ultimo_scan?'':''))+
+      stat(I3,"Ameaças",String(p.infectados||0),p.infectados?"em quarentena":"nenhuma",(p.infectados?'var(--vermelho)':'var(--jade2)'))+
+      stat(I4,"Verificação diária",p.agenda?"ligada":"manual",p.agenda?"03h todo dia":"ligue em Agendar");
+    let body="";
+    if(!inst){body=`<div class="row" style="background:var(--sol-s);border-radius:12px;margin:8px 0"><div style="min-width:0"><div class="nm">ClamAV não está instalado</div><div class="muted small">No servidor: <code>sudo apt install clamav clamav-daemon</code> — depois recarregue.</div></div></div>`;}
+    else if(p.rodando){body=`<div class="row" style="background:var(--accent-s);border-radius:12px;margin:8px 0"><span class="spin"></span><div style="margin-left:10px"><div class="nm">Verificando as pastas…</div><div class="muted small">Pode levar alguns minutos.</div></div></div>`;}
+    else if(p.infectados){body=`<div class="row" style="background:var(--verm-s);border-radius:12px;margin:8px 0"><div style="min-width:0"><div class="nm" style="color:var(--vermelho)">${p.infectados} ameaça(s) movida(s) para quarentena</div><div class="muted small">Arquivos infectados foram isolados em .quarentena</div></div></div>
+      <div class="memlist">${(p.arquivos||[]).map(a=>`<div class="memrow"><span style="font-family:ui-monospace;font-size:12px;word-break:break-all">${esc(a)}</span></div>`).join("")}</div>`;}
+    else if(p.ultimo_scan){body=`<div class="row" style="background:var(--jade-s);border-radius:12px;margin:8px 0"><div class="nm" style="color:var(--jade2)">Tudo limpo na última verificação</div></div>`;}
+    else{body=`<div class="muted small" style="padding:10px 0">Clique em “Verificar agora” para a primeira varredura.</div>`;}
+    $("#protBody").innerHTML=body;
+    if(p.rodando && !protPoll){protPoll=setInterval(carregarProtecao,3000);}
+    if(!p.rodando && protPoll){clearInterval(protPoll);protPoll=null;}
+  }catch(e){}
+}
+async function protecaoScan(){const r=await api("/api/protecao-scan","POST",{});
+  if(r.ok){toast("Verificação iniciada…");carregarProtecao();}else toast(r.data.erro||"Erro",true);}
+async function protecaoAgenda(){const {data:p}=await api("/api/protecao");
+  const r=await api("/api/protecao-agenda","POST",{ligar:!p.agenda});
+  if(r.ok){toast(p.agenda?"Agendamento desligado.":"Verificação diária ligada (03h).");carregarProtecao();}else toast("Erro",true);}
+async function carregarSaude(){
+  try{const {data:s}=await api("/api/saude");const on=(s.servico==="active");const d=s.disco||{};
+    const c=(ic,l,v,ok)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:18px;color:${ok?'var(--jade2)':'var(--vermelho)'}">${v}</div></div>`;
+    const H='<svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>';
+    const D='<svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg>';
+    const S='<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg>';
+    $("#saudeCards").innerHTML=
+      c(H,"Serviço (smbd)",on?"no ar":"parado",on)+
+      c(D,"Disco",(d.pct!=null?d.pct+"% usado":"—"),(d.pct==null||d.pct<90))+
+      c(S,"Proteção",s.clamav==="active"?"ClamAV ativo":"sem ClamAV",s.clamav==="active");
+    $("#saudeCli").innerHTML=`<div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Transparência técnica — comandos reais</div>
+      <pre>testparm -s                 # confere o smb.conf
+smbstatus                   # sessões e arquivos abertos
+net usershare info          # compartilhamentos
+smbcontrol smbd reload-config   # recarrega após mudar acessos</pre>`;
+  }catch(e){}
+}
+
+/* início */
+(async()=>{try{const r=await api("/api/sessao");
+  if(!r.data.configurado)mostrarConfig();
+  else if(r.data.logado)mostrarApp();
+  else {mostrarLogin();if(r.data.modo==='simples')$("#loginDica").textContent="Modo simples: a primeira senha que você digitar vira a senha do painel.";}
+}catch(e){mostrarLogin();}})();
+</script>

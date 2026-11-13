@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Kurumim
+Comment=Suas finanças, offline e no seu controle (edição guataOS do Fênix)
+Exec=kurumim
+Icon=/usr/share/icons/guata/kurumim.png
+Terminal=false
+Categories=Office;Finance;GTK;
+Keywords=finanças;dinheiro;gastos;orçamento;kurumim;
+StartupNotify=true

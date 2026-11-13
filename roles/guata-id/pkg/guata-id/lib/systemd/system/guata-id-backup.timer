@@ -1,0 +1,10 @@
+[Unit]
+Description=Guatá ID — Backup diário do domínio (02:00)
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

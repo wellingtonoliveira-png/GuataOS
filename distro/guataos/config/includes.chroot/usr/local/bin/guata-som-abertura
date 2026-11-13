@@ -1,0 +1,10 @@
+#!/bin/sh
+# Toca a "Manhã na Floresta" uma vez ao entrar — suave. Respeita o sistema quietinho.
+F=/usr/share/sounds/guata/abertura.oga
+[ -f "$F" ] || exit 0
+sleep 2   # espera o áudio subir
+if command -v canberra-gtk-play >/dev/null 2>&1; then canberra-gtk-play -f "$F" >/dev/null 2>&1 &
+elif command -v paplay >/dev/null 2>&1; then paplay "$F" >/dev/null 2>&1 &
+elif command -v ffplay >/dev/null 2>&1; then ffplay -nodisp -autoexit -loglevel quiet "$F" >/dev/null 2>&1 &
+fi
+exit 0

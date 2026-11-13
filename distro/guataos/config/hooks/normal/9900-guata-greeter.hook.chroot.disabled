@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+export DEBIAN_FRONTEND=noninteractive
+# remove o GDM pra o Guatá Greeter (LightDM) ser o login ÚNICO
+apt-get purge -y gdm3 2>/dev/null || true
+apt-get autoremove -y 2>/dev/null || true
+LDM=$( [ -e /usr/lib/systemd/system/lightdm.service ] && echo /usr/lib/systemd/system/lightdm.service || echo /lib/systemd/system/lightdm.service )
+ln -sf "$LDM" /etc/systemd/system/display-manager.service
+echo "/usr/sbin/lightdm" > /etc/X11/default-display-manager

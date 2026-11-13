@@ -1,0 +1,345 @@
+#!/usr/bin/env python3
+# Guatá AD — Painel web (stdlib puro). Conversa com o Samba via samba-tool.
+# Roda como root (precisa ler o banco do AD). Login = Administrator do domínio (Kerberos).
+import json, os, re, ssl, subprocess, secrets, time, html, mimetypes
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+WEBDIR = "/usr/share/guata-ad/web"
+PORT = int(os.environ.get("GUATA_AD_WEB_PORT", "80"))
+SESS = {}            # token -> expiry
+TTL = 60 * 60 * 8    # 8h
+
+def realm():
+    try:
+        for ln in open("/etc/guata-ad/dominio.conf"):
+            if ln.startswith("REALM="): return ln.strip().split("=",1)[1].upper()
+    except Exception: pass
+    try:
+        for ln in open("/etc/krb5.conf"):
+            if "default_realm" in ln: return ln.split("=",1)[1].strip()
+    except Exception: pass
+    return ""
+
+def run(args, inp=None, env=None):
+    try:
+        p = subprocess.run(args, input=inp, capture_output=True, text=True, timeout=40, env=env)
+        return p.returncode, p.stdout.strip(), p.stderr.strip()
+    except Exception as e:
+        return 1, "", str(e)
+
+def st(args):  # samba-tool helper
+    return run(["samba-tool"]+args)
+
+import base64
+DB = "/var/lib/samba/private/sam.ldb"
+def parse_ldif(text):
+    recs=[]; cur={}
+    for raw in text.splitlines():
+        if not raw.strip():
+            if cur: recs.append(cur); cur={}
+            continue
+        if raw.startswith("#") or raw.startswith(" "): continue
+        if ":" not in raw: continue
+        k,_,v = raw.partition(":")
+        k=k.strip()
+        if v.startswith(":"):
+            try: v=base64.b64decode(v[1:].strip()).decode("utf-8","replace")
+            except Exception: v=v[1:].strip()
+        else: v=v.strip()
+        if k in cur:
+            cur[k]=cur[k] if isinstance(cur[k],list) else [cur[k]]
+            cur[k].append(v)
+        else: cur[k]=v
+    if cur: recs.append(cur)
+    return recs
+def ldbsearch(filt, attrs):
+    rc,out,err = run(["ldbsearch","-H",DB,filt]+attrs)
+    return parse_ldif(out) if rc==0 else []
+def _s(v): return v[0] if isinstance(v,list) else (v or "")
+def usuarios_ricos():
+    recs=ldbsearch("(&(objectCategory=person)(objectClass=user))",
+                   ["sAMAccountName","displayName","mail","userAccountControl","title","pwdLastSet"])
+    out=[]
+    for r in recs:
+        login=_s(r.get("sAMAccountName"))
+        if not login: continue
+        try: uac=int(_s(r.get("userAccountControl","0")) or 0)
+        except Exception: uac=0
+        out.append({"login":login,"nome":_s(r.get("displayName")) or login,
+                    "email":_s(r.get("mail")),"cargo":_s(r.get("title")),
+                    "ativo": not bool(uac & 2),
+                    "nunca_expira": bool(uac & UAC_DONT_EXPIRE),
+                    "trocar_logon": (_s(r.get("pwdLastSet","")) or "")=="0"})
+    return sorted(out,key=lambda x:x["login"].lower())
+def grupos_do(login):
+    rc,out,_=st(["user","getgroups",login])
+    return [l.strip() for l in out.splitlines() if l.strip()] if rc==0 else []
+def grupos_ricos():
+    recs=ldbsearch("(objectClass=group)",["sAMAccountName","member","description"])
+    out=[]
+    for r in recs:
+        nome=_s(r.get("sAMAccountName"))
+        if not nome: continue
+        m=r.get("member")
+        n=0 if m is None else (len(m) if isinstance(m,list) else 1)
+        out.append({"nome":nome,"membros":n,"descricao":_s(r.get("description"))})
+    return sorted(out,key=lambda x:x["nome"].lower())
+def membros_do(grupo):
+    rc,out,_=st(["group","listmembers",grupo])
+    return [l.strip() for l in out.splitlines() if l.strip()] if rc==0 else []
+
+UAC_DISABLED=0x2; UAC_PWD_NOTREQD=0x20; UAC_DONT_EXPIRE=0x10000
+def _uac(login):
+    r=ldbsearch("(sAMAccountName=%s)"%login,["userAccountControl"])
+    try: return int(_s(r[0].get("userAccountControl","0")) or 0) if r else 0
+    except Exception: return 0
+def set_uac_flag(login, bit, on):
+    uac=_uac(login)
+    novo=(uac | bit) if on else (uac & ~bit)
+    return set_attr(login,"userAccountControl",str(novo))
+def set_trocar_logon(login, on):
+    # pwdLastSet=0 força troca no próximo logon; -1 marca como "setada agora"
+    return set_attr(login,"pwdLastSet","0" if on else "-1")
+def contas_inseguras():
+    recs=ldbsearch("(&(objectCategory=person)(objectClass=user))",
+                   ["sAMAccountName","displayName","userAccountControl","pwdLastSet"])
+    admins=set(m.split("\\")[-1].lower() for m in membros_do("Domain Admins"))
+    rank={"alta":3,"media":2,"baixa":1,"info":0}
+    out=[]
+    for r in recs:
+        login=_s(r.get("sAMAccountName"))
+        if not login or login.lower() in ("krbtgt","guest"): continue
+        try: uac=int(_s(r.get("userAccountControl","0")) or 0)
+        except Exception: uac=0
+        pls=_s(r.get("pwdLastSet","")) or ""
+        fl=[]
+        if uac & UAC_PWD_NOTREQD: fl.append(("Senha não exigida","alta"))
+        if uac & UAC_DONT_EXPIRE: fl.append(("Senha nunca expira","media"))
+        if uac & UAC_DISABLED: fl.append(("Conta desativada","baixa"))
+        if pls=="0": fl.append(("Precisa trocar a senha","baixa"))
+        if login.lower() in admins: fl.append(("Administrador do domínio","info"))
+        if fl:
+            sev=max(fl,key=lambda x:rank[x[1]])[1]
+            out.append({"login":login,"nome":_s(r.get("displayName")) or login,
+                        "sev":sev,"flags":[{"txt":t,"sev":s} for t,s in fl]})
+    out.sort(key=lambda x:-rank[x["sev"]])
+    return out
+def politica_show():
+    rc,out,_=run(["samba-tool","domain","passwordsettings","show"])
+    p={}
+    for ln in out.splitlines():
+        if ":" not in ln: continue
+        k,v=ln.split(":",1); k=k.strip().lower(); v=v.strip()
+        if "complexity" in k: p["complexidade"]= (v.lower()=="on")
+        elif "history length" in k: p["historico"]=_int(v)
+        elif "minimum password length" in k: p["min_tamanho"]=_int(v)
+        elif "minimum password age" in k: p["min_idade"]=_int(v)
+        elif "maximum password age" in k: p["max_idade"]=_int(v)
+        elif "lockout duration" in k: p["bloqueio_duracao"]=_int(v)
+        elif "lockout threshold" in k: p["bloqueio_tentativas"]=_int(v)
+        elif "reset account lockout" in k: p["bloqueio_reset"]=_int(v)
+    return p
+def _int(v):
+    import re as _re
+    m=_re.search(r"-?\d+",v); return int(m.group()) if m else 0
+def user_dn(login):
+    recs=ldbsearch("(sAMAccountName=%s)"%login,["dn"])
+    return _s(recs[0].get("dn")) if recs else None
+def set_attr(login, attr, valor):
+    dn=user_dn(login)
+    if not dn: return False,"usuário não encontrado"
+    if valor:
+        ldif="dn: %s\nchangetype: modify\nreplace: %s\n%s: %s\n"%(dn,attr,attr,valor)
+    else:
+        ldif="dn: %s\nchangetype: modify\ndelete: %s\n"%(dn,attr)
+    rc,o,e=run(["ldbmodify","-H",DB], inp=ldif)
+    return rc==0,(e or o)
+
+def check_pass(senha):
+    r = realm()
+    if not r: return False
+    cc = "/tmp/gad-%s" % secrets.token_hex(4)
+    env = dict(os.environ, KRB5CCNAME="FILE:"+cc)
+    rc,_,_ = run(["kinit", "Administrator@"+r], inp=senha+"\n", env=env)
+    try: os.remove(cc)
+    except Exception: pass
+    return rc == 0
+
+def lista(kind):
+    rc,out,err = st([kind,"list"])
+    return sorted([l for l in out.splitlines() if l.strip()]) if rc==0 else []
+
+def estado():
+    rc,out,err = st(["domain","info","127.0.0.1"])
+    info={}
+    for ln in out.splitlines():
+        if ":" in ln:
+            k,v=ln.split(":",1); info[k.strip()]=v.strip()
+    svc = run(["systemctl","is-active","samba-ad-dc"])[1]
+    d={}
+    try: d=dict(l.strip().split("=",1) for l in open("/etc/guata-ad/dominio.conf") if "=" in l)
+    except Exception: pass
+    # usuários: ativos vs inativos (fora contas de sistema)
+    us=[u for u in usuarios_ricos() if u["login"].lower() not in ("krbtgt","guest")]
+    ativos=sum(1 for u in us if u["ativo"]); inativos=len(us)-ativos
+    # computadores: windows vs outros
+    comps=ldbsearch("(objectClass=computer)",["sAMAccountName","operatingSystem","userAccountControl"])
+    total_c=win=outros=dcs=0
+    for c in comps:
+        if not _s(c.get("sAMAccountName")): continue
+        total_c+=1
+        os_=(_s(c.get("operatingSystem")) or "").lower()
+        if "windows" in os_: win+=1
+        elif os_: outros+=1
+        try:
+            if int(_s(c.get("userAccountControl","0")) or 0) & 0x2000: dcs+=1
+        except Exception: pass
+    insec=len(contas_inseguras())
+    return {"dominio": d.get("REALM",info.get("Domain","")),
+            "servidor": info.get("DC name", d.get("HOST","")),
+            "ip": d.get("IPCIDR","").split("/")[0],
+            "servico": svc, "controladores": max(dcs,1),
+            "usuarios": len(us), "usuarios_ativos":ativos, "usuarios_inativos":inativos,
+            "grupos": len(lista("group")),
+            "computadores": total_c, "computadores_windows":win, "computadores_outros":outros,
+            "inseguras": insec}
+
+class H(BaseHTTPRequestHandler):
+    def log_message(self,*a): pass
+    def _send(self, code, body, ctype="application/json"):
+        b = body.encode() if isinstance(body,str) else body
+        self.send_response(code); self.send_header("Content-Type",ctype)
+        self.send_header("Content-Length",str(len(b)))
+        self.send_header("X-Content-Type-Options","nosniff")
+        self.end_headers(); self.wfile.write(b)
+    def _json(self, code, obj): self._send(code, json.dumps(obj))
+    def _tok(self):
+        c = self.headers.get("Cookie","")
+        m = re.search(r"gad_sess=([a-f0-9]+)", c)
+        if not m: return None
+        t=m.group(1); exp=SESS.get(t)
+        if exp and exp>time.time(): return t
+        SESS.pop(t,None); return None
+    def _body(self):
+        n=int(self.headers.get("Content-Length","0") or 0)
+        try: return json.loads(self.rfile.read(n) or b"{}")
+        except Exception: return {}
+    def do_GET(self):
+        if self.path in ("/","/index.html"):
+            try: self._send(200, open(WEBDIR+"/index.html","rb").read(), "text/html; charset=utf-8")
+            except Exception: self._send(500,"erro","text/plain")
+            return
+        if self.path.startswith("/assets/"):
+            rel = self.path.split("?")[0].lstrip("/")
+            safe = os.path.normpath(os.path.join(WEBDIR, rel))
+            if safe.startswith(WEBDIR+os.sep) and os.path.isfile(safe):
+                ct = mimetypes.guess_type(safe)[0] or "application/octet-stream"
+                try: return self._send(200, open(safe,"rb").read(), ct)
+                except Exception: pass
+            return self._send(404,"404","text/plain")
+        if self.path=="/api/sessao":
+            return self._json(200, {"logado": bool(self._tok())})
+        if self.path.startswith("/api/"):
+            if not self._tok(): return self._json(401,{"erro":"faça login"})
+            if self.path=="/api/estado": return self._json(200, estado())
+            if self.path=="/api/usuarios": return self._json(200, {"itens":usuarios_ricos()})
+            if self.path.startswith("/api/usuario?"):
+                from urllib.parse import parse_qs, urlparse
+                login=(parse_qs(urlparse(self.path).query).get("login") or [""])[0]
+                u=next((x for x in usuarios_ricos() if x["login"]==login), None)
+                if not u: return self._json(404,{"erro":"não encontrado"})
+                u=dict(u); u["grupos"]=grupos_do(login)
+                return self._json(200, u)
+            if self.path=="/api/grupos": return self._json(200, {"itens":grupos_ricos()})
+            if self.path.startswith("/api/grupo?"):
+                from urllib.parse import parse_qs, urlparse
+                nome=(parse_qs(urlparse(self.path).query).get("nome") or [""])[0]
+                return self._json(200, {"nome":nome,"membros":membros_do(nome)})
+            if self.path=="/api/computadores": return self._json(200, {"itens":lista("computer")})
+            if self.path=="/api/contas-inseguras": return self._json(200, {"itens":contas_inseguras()})
+            if self.path=="/api/politica-senha": return self._json(200, politica_show())
+        self._send(404,"não encontrado","text/plain")
+    def do_POST(self):
+        if self.path=="/api/login":
+            d=self._body(); senha=d.get("senha","")
+            if senha and check_pass(senha):
+                t=secrets.token_hex(16); SESS[t]=time.time()+TTL
+                self.send_response(200); self.send_header("Content-Type","application/json")
+                self.send_header("Set-Cookie", f"gad_sess={t}; Path=/; HttpOnly; SameSite=Strict; Max-Age={TTL}")
+                body=json.dumps({"ok":True}).encode(); self.send_header("Content-Length",str(len(body)))
+                self.end_headers(); self.wfile.write(body); return
+            return self._json(401, {"erro":"Senha do Administrador incorreta."})
+        if not self._tok(): return self._json(401,{"erro":"faça login"})
+        d=self._body()
+        if self.path=="/api/logout":
+            t=self._tok(); SESS.pop(t,None); return self._json(200,{"ok":True})
+        if self.path=="/api/usuario-criar":
+            u=(d.get("login") or "").strip(); p=d.get("senha") or ""; nome=(d.get("nome") or u).strip()
+            email=(d.get("email") or "").strip(); cargo=(d.get("cargo") or "").strip(); grupo=(d.get("grupo") or "").strip()
+            if not re.match(r"^[A-Za-z0-9._-]{1,64}$",u): return self._json(400,{"erro":"Login inválido (use letras, números, ponto)."})
+            if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$",email): return self._json(400,{"erro":"E-mail inválido."})
+            if len(p)<8 or not re.search(r"[A-Z]",p) or not re.search(r"[a-z]",p) or not re.search(r"[0-9]",p):
+                return self._json(400,{"erro":"Senha fraca (mín. 8, com maiúscula, minúscula e número)."})
+            parts=nome.split(" ",1); gn=parts[0]; sn=parts[1] if len(parts)>1 else ""
+            args=["user","create",u,p,f"--given-name={gn}",f"--surname={sn}",f"--full-name={nome}"]
+            if email: args.append(f"--mail-address={email}")
+            if cargo: args.append(f"--job-title={cargo}")
+            rc,o,e=st(args)
+            if rc!=0: return self._json(400,{"ok":False,"erro":e or o})
+            if grupo: st(["group","addmembers",grupo,u])
+            return self._json(200,{"ok":True})
+        if self.path=="/api/usuario-editar":
+            u=(d.get("login") or "").strip()
+            if not u: return self._json(400,{"erro":"login faltando"})
+            email=(d.get("email") or "").strip(); cargo=(d.get("cargo") or "").strip()
+            if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$",email): return self._json(400,{"erro":"E-mail inválido."})
+            ok1,e1=set_attr(u,"mail",email); ok2,e2=set_attr(u,"title",cargo)
+            if ok1 and ok2: return self._json(200,{"ok":True})
+            return self._json(400,{"ok":False,"erro":(e1 if not ok1 else e2)})
+        if self.path=="/api/usuario-senha":
+            u=(d.get("login") or "").strip(); p=d.get("senha") or ""
+            if len(p)<8 or not re.search(r"[A-Z]",p) or not re.search(r"[a-z]",p) or not re.search(r"[0-9]",p):
+                return self._json(400,{"erro":"Senha fraca."})
+            rc,o,e=st(["user","setpassword",u,f"--newpassword={p}"])
+            return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/usuario-estado":
+            u=(d.get("login") or "").strip(); acao="disable" if d.get("acao")=="desativar" else "enable"
+            rc,o,e=st(["user",acao,u]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-criar":
+            g=(d.get("nome") or "").strip()
+            if not g: return self._json(400,{"erro":"Nome vazio."})
+            rc,o,e=st(["group","add",g]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-membro":
+            g=(d.get("grupo") or "").strip(); u=(d.get("login") or "").strip()
+            rc,o,e=st(["group","addmembers",g,u]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-remover-membro":
+            g=(d.get("grupo") or "").strip(); u=(d.get("login") or "").strip()
+            rc,o,e=st(["group","removemembers",g,u]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-apagar":
+            g=(d.get("nome") or "").strip()
+            rc,o,e=st(["group","delete",g]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/usuario-flag":
+            u=(d.get("login") or "").strip(); flag=d.get("flag"); on=bool(d.get("valor"))
+            if flag=="nunca_expira": ok,e=set_uac_flag(u,UAC_DONT_EXPIRE,on)
+            elif flag=="trocar_logon": ok,e=set_trocar_logon(u,on)
+            else: return self._json(400,{"erro":"flag desconhecida"})
+            return self._json(200 if ok else 400,{"ok":ok,"erro":e})
+        if self.path=="/api/politica-senha":
+            def arg(k,v): return "%s=%s"%(k,v)
+            a=["domain","passwordsettings","set"]
+            if "complexidade" in d: a.append("--complexity=%s"%("on" if d["complexidade"] else "off"))
+            if d.get("min_tamanho") not in (None,""): a.append("--min-pwd-length=%d"%int(d["min_tamanho"]))
+            if d.get("historico") not in (None,""): a.append("--history-length=%d"%int(d["historico"]))
+            if d.get("min_idade") not in (None,""): a.append("--min-pwd-age=%d"%int(d["min_idade"]))
+            if d.get("max_idade") not in (None,""): a.append("--max-pwd-age=%d"%int(d["max_idade"]))
+            if d.get("bloqueio_tentativas") not in (None,""): a.append("--account-lockout-threshold=%d"%int(d["bloqueio_tentativas"]))
+            if d.get("bloqueio_duracao") not in (None,""): a.append("--account-lockout-duration=%d"%int(d["bloqueio_duracao"]))
+            if d.get("bloqueio_reset") not in (None,""): a.append("--reset-account-lockout-after=%d"%int(d["bloqueio_reset"]))
+            if len(a)==3: return self._json(400,{"erro":"nada para alterar"})
+            rc,o,e=st(a); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        self._send(404,"não encontrado","text/plain")
+
+if __name__=="__main__":
+    srv=ThreadingHTTPServer(("0.0.0.0",PORT), H)
+    print(f"Guatá AD Web em http://0.0.0.0:{PORT}")
+    srv.serve_forever()

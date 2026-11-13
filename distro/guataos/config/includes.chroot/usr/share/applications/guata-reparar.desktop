@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Reparar
+Comment=Reparar antes de trocar
+Exec=guata-reparar
+Icon=/usr/share/icons/guata/app-reparar.png
+Terminal=false
+Categories=System;
+StartupWMClass=br.com.guataos.Reparar

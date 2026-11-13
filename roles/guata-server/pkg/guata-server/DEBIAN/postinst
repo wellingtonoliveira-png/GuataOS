@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+chmod +x /usr/local/sbin/guata-server-funcoes /usr/local/bin/guata-server 2>/dev/null || true
+cat <<'MSG'
+
+  Guatá Server pronto. Para montar as funções do servidor:
+       sudo guata-server
+
+MSG
+exit 0

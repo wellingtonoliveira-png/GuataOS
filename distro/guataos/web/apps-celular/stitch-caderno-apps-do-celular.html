@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface":"#FFFCF7","surface-bright":"#FFFFFF","on-tertiary-container":"#4c3e0d","inverse-on-surface":"#ccfcdb","primary-fixed-dim":"#FFB877","on-tertiary-fixed":"#231b00","surface-container-lowest":"#ffffff","surface-container-high":"#FBEEDB","on-error":"#ffffff","secondary-fixed-dim":"#92d87d","on-secondary":"#ffffff","surface-variant":"#F2EADC","on-surface":"#2E2117","outline":"#A89883","on-tertiary-fixed-variant":"#534614","tertiary-fixed-dim":"#dac587","on-secondary-container":"#00663B","on-surface-variant":"#6E5F50","on-secondary-fixed-variant":"#105305","on-primary-container":"#00331c","on-tertiary":"#ffffff","on-primary-fixed-variant":"#005230","error-container":"#ffdad6","background":"#FFFCF7","error":"#ba1a1a","secondary-fixed":"#FFE2B0","surface-dim":"#F1E9DC","inverse-primary":"#59de98","surface-container":"#FBF3E8","on-primary-fixed":"#002110","surface-container-highest":"#F2E9DB","inverse-surface":"#0a3822","on-primary":"#ffffff","outline-variant":"#bccabe","on-background":"#002111","surface-tint":"#006d41","secondary":"#00884F","primary-fixed":"#FFD1A3","tertiary":"#C98A00","primary":"#E35A00","tertiary-container":"#bdaa6f","secondary-container":"#adf596","surface-container-low":"#FFF7EE","tertiary-fixed":"#FDEBC2","on-error-container":"#93000a","on-secondary-fixed":"#012200","primary-container":"#FF6B00"},borderRadius:{"DEFAULT":"1rem","lg":"2rem","xl":"3rem","full":"9999px"},spacing:{"space-xl":"2.25rem","gutter":"1.5rem","space-lg":"1.5rem","space-md":"1rem","space-xs":"0.25rem","margin":"2.5rem","gutter-compact":"1rem","margin-compact":"1.25rem","space-2xl":"3.5rem","space-sm":"0.5rem"},fontFamily:{"headline-lg":["Plus Jakarta Sans"],"display-md":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"label-lg":["Inter"],"label-md":["Inter"],"body-md":["Inter"],"headline-sm":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"body-sm":["Inter"],"body-lg":["Inter"],"label-sm":["Inter"]},fontSize:{"headline-lg":["28px",{"lineHeight":"36px","fontWeight":"700"}],"display-md":["36px",{"lineHeight":"44px","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"30px","fontWeight":"600"}],"label-lg":["15px",{"lineHeight":"20px","fontWeight":"600"}],"label-md":["13px",{"lineHeight":"18px","fontWeight":"600"}],"body-md":["15px",{"lineHeight":"22px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"26px","fontWeight":"600"}],"display-lg":["44px",{"lineHeight":"52px","fontWeight":"800"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"body-lg":["17px",{"lineHeight":"26px","fontWeight":"400"}],"label-sm":["11px",{"lineHeight":"14px","fontWeight":"500"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface min-h-screen selection:bg-secondary-container selection:text-on-secondary-container"><header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 w-full px-gutter flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md shrink-0"><div class="flex items-center gap-space-xs"><button aria-label="Fechar janela" class="w-3.5 h-3.5 rounded-full bg-error hover:opacity-80 transition-opacity" type="button"></button><button aria-label="Minimizar janela" class="w-3.5 h-3.5 rounded-full bg-tertiary-container hover:opacity-80 transition-opacity" type="button"></button><button aria-label="Maximizar janela" class="w-3.5 h-3.5 rounded-full bg-primary-container hover:opacity-80 transition-opacity" type="button"></button></div><div class="h-5 w-[1px] bg-outline-variant/40 mx-space-xs hidden sm:block"></div><img alt="GuatáOS Folha Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW-ZnIkqo5gUgH42JmfZhRttidfNgfPOWavljV3f3bXlfLGtBq1kB7kWhu94yiOzUZrNcOppXZIICsGm_WP7JhM84nExGEa0qOvChCNnKal0XSs_6RTQLYyR_oe8-h8UWg4sLa0-AuYZryII5DLMdPQ4cMZ31yd2_k01dOgyXmYCCDFG3QNfA1DeggbmVUksBFll0EGPo8n3qkupSjmyXzKBbiS-yrX7nWG3tbmset"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight leading-none">GuatáOS</span><span class="font-label-sm text-label-sm text-on-surface-variant leading-none">Apps do Celular</span></div></div><div class="flex-1 max-w-xl mx-auto px-space-sm hidden md:block"><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-space-md text-primary text-[20px] pointer-events-none">search</span><input class="w-full h-11 pl-11 pr-space-lg rounded-full bg-surface-container-lowest/90 text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary shadow-[0_2px_8px_rgba(14,59,37,0.05)] transition-all" placeholder="Buscar aplicativos, jogos e ferramentas…" type="text"/></div></div><div class="flex items-center gap-space-md shrink-0"><div class="hidden lg:flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-surface-container-high/60"><span class="material-symbols-outlined text-secondary text-[18px]">eco</span><span class="font-label-sm text-label-sm text-on-secondary-container">Mascote Ativo</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><aside class="fixed left-0 top-20 bottom-0 w-64 bg-surface-container-low/75 backdrop-blur-md z-40 flex flex-col justify-between py-space-lg shadow-[0_8px_32px_-4px_rgba(14,59,37,0.04)]"><div class="flex flex-col gap-space-sm px-space-md"><div class="px-space-md py-space-xs"><span class="font-label-sm text-label-sm uppercase tracking-wider text-outline">Explorar Floresta</span></div><nav class="flex flex-col gap-1.5" data-active-classes="bg-primary-container text-on-primary font-label-lg rounded-full shadow-[0_4px_16px_rgba(0,168,104,0.25)]"><a aria-current="page" class="flex items-center gap-space-md px-space-md py-2.5 transition-all bg-primary-container text-on-primary font-label-lg rounded-full shadow-[0_4px_16px_rgba(0,168,104,0.25)]" data-path="apps-em-destaque" href="#"><span class="material-symbols-outlined text-[20px]">auto_awesome</span><span>Em Destaque</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-full text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="meus-aplicativos" href="#"><span class="material-symbols-outlined text-[20px]">apps</span><span>Meus Apps</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-full text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="central-de-jogos" href="#"><span class="material-symbols-outlined text-[20px]">sports_esports</span><span>Jogos &amp; Lazer</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-full text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="estudos-e-familia" href="#"><span class="material-symbols-outlined text-[20px]">school</span><span>Estudos &amp; Família</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-full text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="gerenciador-de-instalacoes" href="#"><span class="material-symbols-outlined text-[20px]">downloading</span><span>Downloads &amp; APKs</span></a></nav></div><div class="px-space-md"><div class="p-space-md rounded-2xl bg-surface-container-high/70 flex flex-col gap-space-xs"><div class="flex items-center gap-space-xs text-primary"><span class="material-symbols-outlined text-[20px]">security</span><span class="font-label-sm text-label-sm font-semibold">Guatá Protegido</span></div><p class="font-body-sm text-body-sm text-on-surface-variant leading-tight">Todos os APKs verificados pelo Guará Shield.</p></div></div></aside><div class="pl-64 flex flex-col min-h-screen"><main class="w-full flex-1 pt-20 px-gutter bg-surface"><div class="flex flex-col w-full gap-space-xl pb-space-2xl">
+<!-- 1. Top Setup & Atmosphere Onboarding Banner -->
+<section class="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-tertiary-fixed via-surface-container-low to-surface-container-high p-space-lg md:p-space-xl shadow-sm">
+<div class="pointer-events-none absolute -right-16 -top-20 w-80 h-80 rounded-full bg-primary-fixed/30 blur-3xl"></div>
+<div class="pointer-events-none absolute -left-12 -bottom-20 w-64 h-64 rounded-full bg-secondary-fixed/40 blur-2xl"></div>
+<div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-space-lg">
+<div class="flex items-start gap-space-md max-w-2xl">
+<div class="w-14 h-14 shrink-0 rounded-2xl bg-surface-container-lowest/90 backdrop-blur-md flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[32px]">potted_plant</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Preparando seus apps do celular… 🌱</h1>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-primary-container text-on-primary font-bold shadow-xs">
+              78% Pronto
+            </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+            Configurando o motor rápido e seguro do GuatáOS. Só leva alguns segundos para você usar na tela grande!
+          </p>
+<div class="flex items-center gap-space-sm mt-2 text-on-secondary-container">
+<span class="material-symbols-outlined text-[18px] text-secondary">verified_user</span>
+<span class="font-label-md text-label-md">100% Seguro • Sem anúncios indesejados • Feito para toda a família</span>
+</div>
+</div>
+</div>
+<div class="w-full lg:w-80 p-space-md rounded-2xl bg-surface-container-lowest/80 backdrop-blur-md shadow-sm flex flex-col gap-space-xs shrink-0">
+<div class="flex items-center justify-between text-on-surface">
+<span class="font-label-md text-label-md flex items-center gap-1 text-secondary">
+<span class="material-symbols-outlined text-[18px]">neurology</span> Motor Waydroid Guará
+          </span>
+<span class="font-label-sm text-label-sm font-bold text-primary">78%</span>
+</div>
+<div class="w-full h-3 bg-surface-container rounded-full overflow-hidden p-0.5">
+<div class="h-full bg-gradient-to-r from-secondary to-primary-container rounded-full transition-all duration-1000 ease-out" style="width: 78%;"></div>
+</div>
+<div class="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>Otimizando gráficos</span>
+<span>Falta ~12s</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. Category Filter Chips Section -->
+<section class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between px-space-xs">
+<span class="font-label-md text-label-md text-outline uppercase tracking-wider">Categorias de Aplicativos</span>
+<span class="font-label-sm text-label-sm text-primary flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span> Loja Sincronizada
+      </span>
+</div>
+<div class="flex items-center gap-space-sm overflow-x-auto py-1 scrollbar-none" id="categoryChips">
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-label-lg text-label-lg shadow-sm transition-transform active:scale-95 shrink-0">
+<span class="material-symbols-outlined text-[20px]">dataset</span>
+<span>Todos os Apps</span>
+</button>
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg shadow-xs transition-all shrink-0">
+<span class="material-symbols-outlined text-[20px] text-primary">chat</span>
+<span>Mensagens</span>
+</button>
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg shadow-xs transition-all shrink-0">
+<span class="material-symbols-outlined text-[20px] text-tertiary">share</span>
+<span>Redes Sociais</span>
+</button>
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg shadow-xs transition-all shrink-0">
+<span class="material-symbols-outlined text-[20px] text-secondary">sports_esports</span>
+<span>Jogos</span>
+</button>
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg shadow-xs transition-all shrink-0">
+<span class="material-symbols-outlined text-[20px] text-error">smart_display</span>
+<span>Vídeo &amp; Séries</span>
+</button>
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg shadow-xs transition-all shrink-0">
+<span class="material-symbols-outlined text-[20px] text-outline">handyman</span>
+<span>Utilidades</span>
+</button>
+</div>
+</section>
+<!-- 3. Featured Apps -->
+<section class="flex flex-col gap-space-md">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-[26px]">grade</span>
+<h2 class="font-headline-md text-headline-md text-on-surface tracking-tight">Destaques Mais Amados</h2>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Os favoritos dos brasileiros prontos para usar com um só toque na tela do computador.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-lg">
+<article class="relative flex flex-col justify-between p-space-lg rounded-lg bg-surface-container-lowest/90 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white shadow-md">
+<span class="material-symbols-outlined text-[36px]">forum</span>
+</div>
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-high text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">verified</span> Família &amp; Conversas
+            </span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">WhatsApp</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Converse com parentes e amigos com teclado grande e chamadas de vídeo nítidas na sua tela.</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-lg mt-space-sm border-0 border-t border-surface-container">
+<div class="flex items-center gap-1.5 text-secondary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span>Já Instalado</span>
+</div>
+<button class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-secondary-container font-label-lg text-label-lg transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[20px]">open_in_new</span>
+<span>Abrir</span>
+</button>
+</div>
+</article>
+<article class="relative flex flex-col justify-between p-space-lg rounded-lg bg-surface-container-lowest/90 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#FF543E] via-[#C837AB] to-[#5851DB] flex items-center justify-center text-white shadow-md">
+<span class="material-symbols-outlined text-[36px]">photo_camera</span>
+</div>
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">visibility</span> Fotos &amp; Reels
+            </span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Instagram</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Veja fotos de viagens, vídeos de receitas e stories dos netos com muito mais conforto.</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-lg mt-space-sm border-0 border-t border-surface-container">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Tamanho: ~48 MB</span>
+<button class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-primary-container hover:opacity-90 text-on-primary font-label-lg text-label-lg shadow-sm transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span>Instalar</span>
+</button>
+</div>
+</article>
+<article class="relative flex flex-col justify-between p-space-lg rounded-lg bg-surface-container-lowest/90 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#FF0000] to-[#CC0000] flex items-center justify-center text-white shadow-md">
+<span class="material-symbols-outlined text-[36px]">smart_display</span>
+</div>
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">hd</span> Vídeos &amp; Música
+            </span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">YouTube</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Assista a receitas, cultos, jogos e seus canais favoritos em alta definição sem travar.</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-lg mt-space-sm border-0 border-t border-surface-container">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Tamanho: ~32 MB</span>
+<button class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-primary-container hover:opacity-90 text-on-primary font-label-lg text-label-lg shadow-sm transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span>Instalar</span>
+</button>
+</div>
+</article>
+</div>
+</section>
+<!-- 4. Curated Family Apps Grid -->
+<section class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between flex-wrap gap-2">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface tracking-tight">Mais Aplicativos para Seu Dia a Dia</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Programas leves, seguros e testados para rodar de forma suave.</p>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high/60 text-secondary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>Sem anúncios ocultos</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">
+<div class="p-space-md rounded-2xl bg-surface-container-lowest/85 backdrop-blur-sm shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-space-md">
+<div class="flex items-start gap-space-md">
+<div class="w-14 h-14 rounded-2xl bg-on-surface flex items-center justify-center text-surface shadow-xs shrink-0"><span class="material-symbols-outlined text-[30px] text-primary-fixed-dim">music_video</span></div>
+<div class="flex flex-col min-w-0"><div class="flex items-center justify-between"><span class="font-headline-sm text-headline-sm text-on-surface truncate">TikTok</span><span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm shrink-0">Lazer</span></div><p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">Vídeos curtos divertidos, danças, dicas do dia a dia e bom humor.</p></div>
+</div>
+<div class="flex items-center justify-between pt-space-xs border-0 border-t border-surface-container/60"><span class="font-label-sm text-label-sm text-outline">Leve e Rápido</span><button class="px-5 py-2 rounded-full bg-primary-container text-on-primary font-label-md text-label-md hover:opacity-90 transition-transform active:scale-95 flex items-center gap-1.5 shadow-xs"><span class="material-symbols-outlined text-[18px]">download</span> Instalar</button></div>
+</div>
+<div class="p-space-md rounded-2xl bg-surface-container-lowest/85 backdrop-blur-sm shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-space-md">
+<div class="flex items-start gap-space-md">
+<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2AABEE] to-[#229ED9] flex items-center justify-center text-white shadow-xs shrink-0"><span class="material-symbols-outlined text-[30px]">send</span></div>
+<div class="flex flex-col min-w-0"><div class="flex items-center justify-between"><span class="font-headline-sm text-headline-sm text-on-surface truncate">Telegram</span><span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm shrink-0">Mensagens</span></div><p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">Grupos familiares grandes, envio de arquivos sem limites e notícias.</p></div>
+</div>
+<div class="flex items-center justify-between pt-space-xs border-0 border-t border-surface-container/60"><span class="font-label-sm text-label-sm text-outline">41 MB</span><button class="px-5 py-2 rounded-full bg-primary-container text-on-primary font-label-md text-label-md hover:opacity-90 transition-transform active:scale-95 flex items-center gap-1.5 shadow-xs"><span class="material-symbols-outlined text-[18px]">download</span> Instalar</button></div>
+</div>
+<div class="p-space-md rounded-2xl bg-surface-container-lowest/85 backdrop-blur-sm shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-space-md">
+<div class="flex items-start gap-space-md">
+<div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#FFAA00] to-[#E65100] flex items-center justify-center text-white shadow-xs shrink-0"><span class="material-symbols-outlined text-[30px]">directions_run</span></div>
+<div class="flex flex-col min-w-0"><div class="flex items-center justify-between"><span class="font-headline-sm text-headline-sm text-on-surface truncate">Subway Surfers</span><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm shrink-0">Infantil</span></div><p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">Jogo clássico de corrida nos trens para alegrar a criançada nas férias.</p></div>
+</div>
+<div class="flex items-center justify-between pt-space-xs border-0 border-t border-surface-container/60"><span class="font-label-sm text-label-sm text-outline">Jogue com Teclado</span><button class="px-5 py-2 rounded-full bg-primary-container text-on-primary font-label-md text-label-md hover:opacity-90 transition-transform active:scale-95 flex items-center gap-1.5 shadow-xs"><span class="material-symbols-outlined text-[18px]">download</span> Instalar</button></div>
+</div>
+<div class="p-space-md rounded-2xl bg-surface-container-lowest/85 backdrop-blur-sm shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-space-md">
+<div class="flex items-start gap-space-md">
+<div class="w-14 h-14 rounded-2xl bg-[#58CC02] flex items-center justify-center text-white shadow-xs shrink-0"><span class="material-symbols-outlined text-[30px]">school</span></div>
+<div class="flex flex-col min-w-0"><div class="flex items-center justify-between"><span class="font-headline-sm text-headline-sm text-on-surface truncate">Duolingo</span><span class="px-2 py-0.5 rounded-full bg-surface-container-high text-secondary font-label-sm text-label-sm shrink-0">Estudos</span></div><p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">Aprenda inglês e espanhol brincando 15 minutos por dia com a corujinha.</p></div>
+</div>
+<div class="flex items-center justify-between pt-space-xs border-0 border-t border-surface-container/60"><span class="font-label-sm text-label-sm text-secondary flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">check</span> Instalado</span><button class="px-5 py-2 rounded-full bg-surface-container-high text-on-secondary-container font-label-md text-label-md hover:bg-surface-container-highest transition-transform active:scale-95 flex items-center gap-1.5 shadow-xs"><span class="material-symbols-outlined text-[18px]">play_arrow</span> Abrir</button></div>
+</div>
+<div class="p-space-md rounded-2xl bg-surface-container-lowest/85 backdrop-blur-sm shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-space-md">
+<div class="flex items-start gap-space-md">
+<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1F1F1F] to-[#404040] flex items-center justify-center text-white shadow-xs shrink-0"><span class="material-symbols-outlined text-[30px]">movie_edit</span></div>
+<div class="flex flex-col min-w-0"><div class="flex items-center justify-between"><span class="font-headline-sm text-headline-sm text-on-surface truncate">CapCut</span><span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm shrink-0">Criatividade</span></div><p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">Crie homenagens de aniversário e edite vídeos de família com facilidade.</p></div>
+</div>
+<div class="flex items-center justify-between pt-space-xs border-0 border-t border-surface-container/60"><span class="font-label-sm text-label-sm text-outline">Fácil de usar</span><button class="px-5 py-2 rounded-full bg-primary-container text-on-primary font-label-md text-label-md hover:opacity-90 transition-transform active:scale-95 flex items-center gap-1.5 shadow-xs"><span class="material-symbols-outlined text-[18px]">download</span> Instalar</button></div>
+</div>
+<div class="p-space-md rounded-2xl bg-surface-container-lowest/85 backdrop-blur-sm shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-space-md">
+<div class="flex items-start gap-space-md">
+<div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#E91E63] to-[#FF9800] flex items-center justify-center text-white shadow-xs shrink-0"><span class="material-symbols-outlined text-[30px]">shapes</span></div>
+<div class="flex flex-col min-w-0"><div class="flex items-center justify-between"><span class="font-headline-sm text-headline-sm text-on-surface truncate">Candy Crush Saga</span><span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm shrink-0">Passatempo</span></div><p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">Quebra-cabeça clássico e relaxante com doces coloridos para descontrair.</p></div>
+</div>
+<div class="flex items-center justify-between pt-space-xs border-0 border-t border-surface-container/60"><span class="font-label-sm text-label-sm text-outline">Relaxante</span><button class="px-5 py-2 rounded-full bg-primary-container text-on-primary font-label-md text-label-md hover:opacity-90 transition-transform active:scale-95 flex items-center gap-1.5 shadow-xs"><span class="material-symbols-outlined text-[18px]">download</span> Instalar</button></div>
+</div>
+</div>
+</section>
+<!-- 5. Reassurance & Mascot Tip Banner -->
+<section class="relative overflow-hidden rounded-xl bg-tertiary-fixed/60 p-space-lg flex flex-col md:flex-row items-center gap-space-lg shadow-sm">
+<div class="w-20 h-20 rounded-full bg-surface-container-lowest flex items-center justify-center text-tertiary shrink-0 shadow-md ring-4 ring-tertiary-container/30"><span class="material-symbols-outlined text-[44px]">pets</span></div>
+<div class="flex flex-col gap-1 text-center md:text-left flex-1">
+<div class="flex items-center justify-center md:justify-start gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-tertiary-fixed">Como funciona no GuatáOS?</span><span class="px-2 py-0.5 rounded-full bg-tertiary text-on-tertiary font-label-sm text-label-sm">Dica do Guará</span></div>
+<p class="font-body-lg text-body-lg text-on-tertiary-fixed-variant leading-relaxed">O sistema baixa e prepara os aplicativos do celular de forma <strong>invisível e protegida</strong>. Não precisa criar contas difíceis nem mexer em configurações. Você só clica em "Instalar" e eles aparecem no seu menu!</p>
+</div>
+<div class="shrink-0"><button class="px-6 py-2.5 rounded-full bg-surface-container-lowest hover:bg-surface text-on-surface font-label-lg text-label-lg shadow-xs transition-all flex items-center gap-2"><span class="material-symbols-outlined text-[20px] text-primary">live_help</span><span>Entenda a Tecnologia</span></button></div>
+</section>
+</div>
+</main><footer class="w-full bg-surface-container-low/70 py-space-md px-gutter text-center shadow-[0_-1px_6px_rgba(0,0,0,0.02)]"><p class="font-body-sm text-body-sm text-on-surface-variant">Seus apps favoritos do celular, agora no seu computador. • GuatáOS Floresta Segura</p></footer></div></body></html>

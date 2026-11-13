@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# Gravar ISO no pen drive — Pajé. Transforma um .iso/.img num pen drive
+# bootável. DESTRUTIVO no pen drive escolhido → confirma antes. Mostra só discos
+# removíveis (USB), pra não gravar no HD do sistema por engano.
+# ─────────────────────────────────────────────────────────────────────────────
+T="Pajé — Gravar ISO no pen drive"
+
+iso=$(yad --title="$T" --file --width=720 --height=480 \
+  --file-filter="Imagens (*.iso *.img) | *.iso *.img" --file-filter="Todos | *" \
+  --text="1) Escolha o arquivo .iso ou .img") || exit 0
+[ -z "$iso" ] && exit 0
+
+# só removíveis (RM=1) — evita o disco do sistema
+removiveis=$(lsblk -dpno NAME,SIZE,MODEL,RM | awk '$NF==1{$NF="";print}')
+[ -z "$removiveis" ] && { yad --title="$T" --text="Nenhum pen drive/removível detectado.\nEspete o pen drive e tente de novo." --button=OK:0; exit 1; }
+
+usb=$(echo "$removiveis" | yad --title="$T" --width=620 --height=260 --list \
+  --text="2) Em qual pen drive gravar?\n<span color='red'><b>Tudo nele será apagado.</b></span>" \
+  --column="Dispositivo" --column="Tamanho" --column="Modelo" --print-column=1 --separator="") || exit 0
+[ -z "$usb" ] && exit 0
+
+conf=$(yad --title="$T" --entry --width=520 \
+  --text="Gravar\n  <b>$iso</b>\nno pen drive  <b>$usb</b>\n\n<span color='red'>Isto APAGA o pen drive.</span>\n\nDigite <b>GRAVAR</b> para confirmar:")
+[ "$conf" != "GRAVAR" ] && { yad --title="$T" --text="Cancelado — nada foi gravado." --button=OK:0; exit 0; }
+
+cmd="pkexec bash -c \"echo 'Gravando em $usb ...'; dd if='$iso' of=$usb bs=4M status=progress oflag=sync && sync && echo 'CONCLUÍDO. Pode remover o pen drive.'\""
+if command -v gnome-terminal >/dev/null; then gnome-terminal -- bash -c "$cmd; echo; read -n1 -r -p 'Pressione uma tecla para fechar...'"
+else x-terminal-emulator -e bash -c "$cmd; echo; read -n1 -r -p 'Pressione uma tecla...'"; fi

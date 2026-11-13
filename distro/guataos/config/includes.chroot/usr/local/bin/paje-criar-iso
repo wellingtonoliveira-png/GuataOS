@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# Criar ISO de uma pasta — Pajé. Gera um arquivo .iso a partir de uma pasta
+# (para backup, distribuição, gravar em mídia). Não é destrutivo.
+# ─────────────────────────────────────────────────────────────────────────────
+T="Pajé — Criar ISO de uma pasta"
+
+pasta=$(yad --title="$T" --file --directory --width=720 --height=480 \
+  --text="1) Qual pasta virar ISO?") || exit 0
+[ -z "$pasta" ] && exit 0
+
+saida=$(yad --title="$T" --file --save --width=720 --height=480 --filename="dados.iso" \
+  --text="2) Onde salvar o arquivo .iso?") || exit 0
+[ -z "$saida" ] && exit 0
+case "$saida" in *.iso) ;; *) saida="$saida.iso" ;; esac
+
+rotulo=$(yad --title="$T" --entry --width=420 --entry-text="GUATA_DADOS" \
+  --text="3) Nome (rótulo) do disco:") || rotulo="GUATA_DADOS"
+
+cmd="echo 'Criando $saida a partir de $pasta ...'; xorriso -as mkisofs -V '${rotulo//[^A-Za-z0-9_]/_}' -J -joliet-long -r -o '$saida' '$pasta' && echo 'CONCLUÍDO: $saida'"
+if command -v gnome-terminal >/dev/null; then gnome-terminal -- bash -c "$cmd; echo; read -n1 -r -p 'Pressione uma tecla para fechar...'"
+else x-terminal-emulator -e bash -c "$cmd; echo; read -n1 -r -p 'Pressione uma tecla...'"; fi

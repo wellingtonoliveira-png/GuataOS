@@ -1,0 +1,7 @@
+[org.gnome.desktop.app-folders]
+folder-children=['Guata']
+
+[org.gnome.desktop.app-folders.folders:/org/gnome/desktop/app-folders/folders/Guata/]
+name='Guatá 🌿'
+translate=false
+apps=['guata-central.desktop','guata-energia.desktop','guata-reparar.desktop','guata-pausa.desktop','guata-raizes.desktop','guata-brasil.desktop','receitas.desktop','guata-primeiros-passos.desktop','br.com.guataos.Ocara.desktop','paje.desktop','cantinho-gui.desktop','caderno.desktop','receitas.desktop','guata-entrar-dominio.desktop','kurumim.desktop','guata-wallpapers.desktop','guata-atualizacoes.desktop','guata-diagnostico.desktop','guata-instalar.desktop']

@@ -1,0 +1,13 @@
+Package: guata-dhcp
+Version: 1.0.2
+Section: net
+Priority: optional
+Architecture: all
+Depends: kea-dhcp4-server, python3, iproute2, openssl
+Recommends: kea-dhcp-ddns-server, samba-common-bin
+Maintainer: Wellsystem / Guatá <wellington@sopremabrasil.com.br>
+Homepage: https://guataos.com.br
+Description: Guatá DHCP — servidor DHCP soberano, fácil como um app
+ Entrega IPs na rede com escopos por sub-rede, concessões (leases) ao vivo,
+ reservas de IP por MAC e registro automático no DNS do Guatá AD (DDNS).
+ Motor Kea por baixo, traduzido em telas simples. BETA. Um produto Wellsystem.

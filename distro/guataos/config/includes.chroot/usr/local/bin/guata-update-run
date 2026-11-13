@@ -1,0 +1,9 @@
+#!/bin/bash
+# Atualização automática do Guatá (roda via systemd, como root).
+# Só mexe no guata-desktop — não faz upgrade do sistema todo (seguro).
+export DEBIAN_FRONTEND=noninteractive
+LOG=/var/log/guata-update.log
+echo "=== $(date '+%Y-%m-%d %H:%M:%S') verificando ===" >> "$LOG"
+apt-get update >> "$LOG" 2>&1 || exit 0
+apt-get install -y --only-upgrade guata-desktop >> "$LOG" 2>&1
+echo "ok" >> "$LOG"

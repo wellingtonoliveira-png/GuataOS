@@ -1,0 +1,8 @@
+#!/bin/bash
+case "${1:-}" in
+  painel|panel) exec sudo guata-id-painel ;;
+  criar|provisionar|setup) exec sudo guata-id-provisionar ;;
+  *)
+    if [ -f /etc/guata-id/provisionado ]; then exec sudo guata-id-painel
+    else exec sudo guata-id-provisionar; fi ;;
+esac

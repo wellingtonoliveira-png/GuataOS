@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Atualizações do Guatá
+Comment=Mantenha o sistema e os apps do Guatá atualizados
+Exec=guata-atualizacoes
+Icon=/usr/share/icons/guata/app-atualizacoes.png
+Terminal=false
+Categories=System;Settings;
+StartupWMClass=br.com.guataos.Atualizacoes

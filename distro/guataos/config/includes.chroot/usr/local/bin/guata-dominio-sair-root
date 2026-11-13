@@ -1,0 +1,2 @@
+#!/bin/bash
+realm leave 2>&1; exit $?

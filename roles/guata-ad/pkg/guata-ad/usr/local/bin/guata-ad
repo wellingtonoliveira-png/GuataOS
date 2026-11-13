@@ -1,0 +1,8 @@
+#!/bin/bash
+case "${1:-}" in
+  painel|panel) exec sudo guata-ad-painel ;;
+  criar|provisionar|setup) exec sudo guata-ad-provisionar ;;
+  *)
+    if [ -f /etc/guata-ad/provisionado ]; then exec sudo guata-ad-painel
+    else exec sudo guata-ad-provisionar; fi ;;
+esac

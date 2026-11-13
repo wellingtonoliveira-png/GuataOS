@@ -1,0 +1,54 @@
+#!/bin/bash
+ICON=/usr/share/icons/guata/mascote-pensando-128.png
+[ -f "$ICON" ] || ICON=/usr/share/icons/guata/mascote-pensando-128.png
+T="Entrar no Domínio"
+
+# Já está num domínio? oferece sair.
+if realm list 2>/dev/null | grep -q "domain-name:"; then
+  CUR=$(realm list 2>/dev/null | grep -m1 "domain-name:" | awk '{print $2}')
+  yad --question --window-icon="$ICON" --image="$ICON" --image-on-top --width=460 --borders=16 --title="$T" \
+    --text="<b>Este computador já está no domínio:</b>\n<tt>$CUR</tt>\n\nQuer SAIR do domínio?" \
+    --button="Fechar!gtk-close:1" --button="Sair do domínio!gtk-ok:0"
+  [ $? -ne 0 ] && exit 0
+  OUT=$(pkexec /usr/local/bin/guata-dominio-sair-root 2>&1)
+  [ $? -eq 0 ] && yad --info --window-icon="$ICON" --width=420 --title="$T" --text="Saiu do domínio <b>$CUR</b>." \
+    || yad --error --window-icon="$ICON" --width=480 --title="$T" --text="Não consegui sair:\n<tt>$(echo "$OUT"|tail -2)</tt>"
+  exit 0
+fi
+
+# Passo 1 — domínio
+DOM=$(yad --title="$T" --window-icon="$ICON" --width=500 --center --borders=16 --image="$ICON" --image-on-top --form \
+  --field="Domínio da empresa::text" "empresa.local" \
+  --text="<b>Vamos colocar este computador no domínio da empresa.</b>\nDigite o nome do domínio (ex.: <tt>empresa.local</tt>)." \
+  --button="Cancelar!gtk-cancel:1" --button="Testar e continuar!gtk-ok:0")
+[ $? -ne 0 ] && exit 0
+DOM=$(echo "$DOM" | cut -d'|' -f1 | tr -d ' ')
+[ -z "$DOM" ] && exit 0
+
+# Passo 2 — testar
+( echo "20"; echo "# Procurando o controlador de domínio..."; realm discover "$DOM" >/tmp/.guata-disc 2>&1; echo "90"; sleep 0.3; echo "100" ) | \
+  yad --progress --pulsate --auto-close --no-buttons --window-icon="$ICON" --width=420 --title="$T" --text="Testando a conexão com $DOM..."
+if ! realm discover "$DOM" >/dev/null 2>&1; then
+  yad --error --window-icon="$ICON" --width=500 --borders=16 --title="$T" \
+    --text="<b>Não encontrei o domínio $DOM.</b>\n\nAs 2 causas mais comuns:\n• O <b>DNS</b> deste PC precisa apontar para o servidor do domínio (o DC).\n• O <b>relógio</b> precisa estar na hora certa.\n\nFale com o TI e tente de novo."
+  exit 1
+fi
+NTP=$(timedatectl show -p NTPSynchronized --value 2>/dev/null); HORA="⚠️  Relógio pode estar fora da hora"; [ "$NTP" = "yes" ] && HORA="✅  Relógio sincronizado"
+
+# Passo 3 — admin
+CRED=$(yad --title="$T" --window-icon="$ICON" --width=500 --center --borders=16 --form \
+  --field="Usuário administrador do domínio::text" --field="Senha::H" \
+  --text="<b>Domínio encontrado! 🎉</b>\n✅  Controlador de domínio OK\n$HORA\n\nAgora preciso de um <b>administrador do domínio</b> (só desta vez, pra entrar).")
+[ $? -ne 0 ] && exit 0
+ADMIN=$(echo "$CRED" | cut -d'|' -f1); PASS=$(echo "$CRED" | cut -d'|' -f2)
+[ -z "$ADMIN" ] && exit 0
+
+# Passo 4 — entrar
+OUT=$(printf '%s\n' "$PASS" | pkexec /usr/local/bin/guata-dominio-root "$DOM" "$ADMIN" 2>&1); RC=$?
+if [ $RC -eq 0 ]; then
+  yad --info --window-icon="$ICON" --image="$ICON" --image-on-top --width=520 --borders=16 --title="$T" \
+    --text="<b>Pronto! Este computador entrou no domínio $DOM. 🎉</b>\n\nAgora é só <b>deslogar</b> e entrar com o usuário da empresa:\n<tt>   usuario@$DOM</tt>\n\nA pasta pessoal é criada sozinha no primeiro login. Sem terminal, sem dor de cabeça."
+else
+  yad --error --window-icon="$ICON" --width=540 --borders=16 --title="$T" \
+    --text="<b>Não consegui entrar no domínio.</b>\n\nDetalhe:\n<tt>$(echo "$OUT" | tail -3)</tt>\n\nConfira usuário/senha e a conexão com o TI."
+fi

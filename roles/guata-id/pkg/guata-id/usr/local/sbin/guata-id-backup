@@ -1,0 +1,13 @@
+#!/bin/bash
+# Backup automático do domínio Guatá ID (chamado pelo timer systemd).
+set -e
+DIR=/var/lib/guata-id/backups
+mkdir -p "$DIR"
+samba-tool domain backup offline --targetdir="$DIR"
+# integridade + rotação (mantém os 5 mais novos)
+cd "$DIR"
+for f in samba-backup-*.tar.bz2; do
+  [ -e "$f" ] || continue
+  [ -e "$f.sha256" ] || sha256sum "$f" > "$f.sha256"
+done
+ls -1t samba-backup-*.tar.bz2 2>/dev/null | tail -n +6 | while read -r v; do rm -f "$v" "$v.sha256"; done

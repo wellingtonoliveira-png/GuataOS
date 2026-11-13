@@ -1,0 +1,145 @@
+#!/bin/bash
+# Guatá Files — Painel: pastas compartilhadas + níveis de acesso (tiers)
+set -uo pipefail
+export NEWT_COLORS='root=,black
+window=,white
+border=green,white
+listbox=black,white
+actlistbox=white,green
+button=white,green
+entry=black,white
+title=green,white'
+T="Guatá Files  —  Painel"
+ETC=/etc/guata-files; BASE=/srv/guata-files; SHCONF=/etc/guata-files/shares.conf; SHDIR=$ETC/shares
+mkdir -p "$SHDIR" "$BASE"
+[ "$(id -u)" = 0 ] || { echo "Rode como root (sudo guata-files painel)."; exit 1; }
+[ -f "$ETC/configurado" ] || { whiptail --title "$T" --yesno "Ainda não configurado. Configurar agora?" 9 56 && exec guata-files-configurar; exit 0; }
+. "$ETC/config" 2>/dev/null; MODO=${MODO:-simples}
+msg(){ whiptail --title "$T" --msgbox "$1" "${2:-16}" "${3:-72}"; }
+ask(){ whiptail --title "$T" --inputbox "$1" "${2:-10}" "${3:-66}" "${4:-}" 3>&1 1>&2 2>&3; }
+
+# garante include no smb.conf
+grep -q "include = $SHCONF" /etc/samba/smb.conf 2>/dev/null || echo "   include = $SHCONF" >> /etc/samba/smb.conf
+touch "$SHCONF"
+
+gref(){ # referência de grupo p/ smb.conf conforme o modo
+  if [ "$MODO" = empresa ] || [ "$MODO" = dc ]; then echo "@\"$1\""; else echo "@$1"; fi; }
+
+listar_grupos(){ # imprime grupos disponíveis
+  case "$MODO" in
+    dc)      samba-tool group list 2>/dev/null | sort ;;
+    empresa) wbinfo -g 2>/dev/null | sort ;;
+    *)       getent group | awk -F: '$3>=1000 && $1!="nogroup"{print $1}' | sort ;;
+  esac
+}
+
+regen(){ # reconstrói shares.conf a partir dos registros + aplica ACLs POSIX
+  : > "$SHCONF"
+  for f in "$SHDIR"/*; do
+    [ -f "$f" ] || continue
+    local sh=$(basename "$f") path="$BASE/$(basename "$f")"
+    mkdir -p "$path"
+    local valid="" rlist="" wlist="" alist=""
+    while IFS='|' read -r g lvl; do
+      [ -z "$g" ] && continue
+      local ref=$(gref "$g"); valid="$valid $ref"
+      case "$lvl" in
+        leitura) rlist="$rlist $ref"; setfacl -R -m "g:$g:rX" "$path" 2>/dev/null; setfacl -R -d -m "g:$g:rX" "$path" 2>/dev/null;;
+        edicao)  wlist="$wlist $ref"; setfacl -R -m "g:$g:rwX" "$path" 2>/dev/null; setfacl -R -d -m "g:$g:rwX" "$path" 2>/dev/null;;
+        total)   wlist="$wlist $ref"; alist="$alist $ref"; setfacl -R -m "g:$g:rwX" "$path" 2>/dev/null; setfacl -R -d -m "g:$g:rwX" "$path" 2>/dev/null;;
+      esac
+    done < "$f"
+    {
+      echo "[$sh]"
+      echo "   path = $path"
+      echo "   read only = no"
+      echo "   browseable = yes"
+      echo "   vfs objects = acl_xattr"
+      [ -n "$valid" ] && echo "   valid users =$valid"
+      [ -n "$rlist" ] && echo "   read list =$rlist"
+      [ -n "$wlist" ] && echo "   write list =$wlist"
+      [ -n "$alist" ] && echo "   admin users =$alist"
+      echo ""
+    } >> "$SHCONF"
+  done
+  smbcontrol smbd reload-config >/dev/null 2>&1 || systemctl reload smbd 2>/dev/null || systemctl restart smbd 2>/dev/null
+}
+
+criar_pasta(){
+  local n; n=$(ask "Nome da pasta compartilhada (ex: Financeiro):") || return
+  n=$(echo "$n"|tr -cd 'A-Za-z0-9_ -'|sed 's/ /_/g'); [ -z "$n" ] && return
+  mkdir -p "$BASE/$n"; touch "$SHDIR/$n"; regen
+  msg "Pasta '$n' criada e compartilhada.\n\nNa rede: \\\\$(hostname)\\$n\n\nAgora defina quem acessa (Níveis de acesso)." 12 66
+}
+
+definir_nivel(){
+  mapfile -t SHS < <(ls "$SHDIR" 2>/dev/null)
+  [ ${#SHS[@]} -gt 0 ] || { msg "Crie uma pasta primeiro." 8 50; return; }
+  local M=(); for s in "${SHS[@]}"; do M+=("$s" ""); done
+  local sh; sh=$(whiptail --title "$T" --menu "Em qual pasta?" 18 60 8 "${M[@]}" 3>&1 1>&2 2>&3) || return
+  mapfile -t GRP < <(listar_grupos)
+  [ ${#GRP[@]} -gt 0 ] || { msg "Nenhum grupo encontrado.\n($([ "$MODO" = empresa ] && echo 'confira o ingresso no domínio' || echo 'crie um grupo primeiro'))" 10 60; return; }
+  local GM=(); for g in "${GRP[@]}"; do GM+=("$g" ""); done
+  local g; g=$(whiptail --title "$T" --menu "Qual grupo recebe acesso a '$sh'?" 20 60 10 "${GM[@]}" 3>&1 1>&2 2>&3) || return
+  local lvl; lvl=$(whiptail --title "$T" --menu "Nível de acesso de '$g' em '$sh':" 15 66 3 \
+    "leitura" "Só pode ver e abrir (Leitura)" \
+    "edicao"  "Pode criar e editar (Edição)" \
+    "total"   "Controle total (Dono)" 3>&1 1>&2 2>&3) || return
+  # remove entrada antiga do grupo e grava nova
+  grep -v "^$g|" "$SHDIR/$sh" > "$SHDIR/$sh.tmp" 2>/dev/null; mv "$SHDIR/$sh.tmp" "$SHDIR/$sh"
+  echo "$g|$lvl" >> "$SHDIR/$sh"; regen
+  msg "'$g' agora tem acesso de ${lvl^^} em '$sh'." 9 60
+}
+
+camadas(){
+  if ! whiptail --title "$T" --yesno "Vou criar 4 pastas em CAMADAS (tiers):\n\n  Publico  →  Interno  →  Confidencial  →  Restrito\n\nDepois você liga cada camada a um grupo.\nCriar a estrutura?" 14 66; then return; fi
+  for c in Publico Interno Confidencial Restrito; do mkdir -p "$BASE/$c"; touch "$SHDIR/$c"; done
+  regen
+  msg "Camadas criadas!\n\nAgora use 'Níveis de acesso' para ligar cada camada\nao seu grupo. Dica: no Guatá AD crie grupos aninhados\n(quem é do Restrito também entra nas camadas de baixo)." 13 68
+}
+
+criar_grupo_local(){
+  [ "$MODO" = empresa ] && { msg "No modo empresa os grupos vêm do Guatá AD.\nCrie lá: guata-ad painel." 9 60; return; }
+  local g; g=$(ask "Nome do novo grupo local:") || return; [ -z "$g" ] && return
+  groupadd "$g" 2>/dev/null && msg "Grupo '$g' criado." 8 50 || msg "Já existe ou erro." 8 50
+}
+criar_usuario_local(){
+  [ "$MODO" = empresa ] && { msg "No modo empresa os usuários vêm do Guatá AD." 9 60; return; }
+  local u; u=$(ask "Novo usuário (login):") || return; [ -z "$u" ] && return
+  id "$u" >/dev/null 2>&1 || useradd -m -s /bin/bash "$u"
+  local p; p=$(whiptail --title "$T" --passwordbox "Senha para $u:" 10 60 3>&1 1>&2 2>&3) || return
+  printf "%s\n%s\n" "$p" "$p" | smbpasswd -s -a "$u" >/dev/null 2>&1 && msg "Usuário '$u' criado." 8 50 || msg "Erro." 8 50
+}
+
+snapshots(){
+  local fstype; fstype=$(stat -f -c %T "$BASE" 2>/dev/null)
+  if [ "$fstype" = btrfs ]; then
+    msg "Detectei Btrfs — 'voltar no tempo' disponível.\n\n(Agendamento de snapshots automáticos entra na próxima\nversão do Guatá Files.)" 12 66
+  else
+    msg "Proteção 'voltar no tempo':\n\nO sistema de arquivos atual ($fstype) não tem snapshots nativos.\nPara ativar, use Btrfs ou ZFS no disco de dados — aí o Guatá\nFiles agenda cópias automáticas e você restaura com 1 clique.\n(Em evolução.)" 14 70
+  fi
+}
+
+listar(){
+  local out=""
+  for f in "$SHDIR"/*; do [ -f "$f" ] || continue; out+="  • $(basename "$f")\n"; while IFS='|' read -r g l; do [ -n "$g" ] && out+="        - $g: ${l^^}\n"; done < "$f"; done
+  [ -z "$out" ] && out="  (nenhuma pasta ainda)"
+  msg "PASTAS E ACESSOS\n\n$out\nNa rede: \\\\$(hostname)\\<pasta>" 22 70
+}
+
+while true; do
+  O=$(whiptail --title "$T  ($MODO)" --menu "O que você quer fazer?" 20 66 10 \
+    "1" "Criar pasta compartilhada" \
+    "2" "Definir níveis de acesso (tiers)" \
+    "3" "Criar estrutura de camadas (Público→Restrito)" \
+    "4" "Listar pastas e acessos" \
+    "5" "Criar grupo local (modo simples)" \
+    "6" "Criar usuário local (modo simples)" \
+    "7" "Proteção: voltar no tempo (snapshots)" \
+    "0" "Sair" 3>&1 1>&2 2>&3) || break
+  case "$O" in
+    1) criar_pasta;; 2) definir_nivel;; 3) camadas;; 4) listar;;
+    5) criar_grupo_local;; 6) criar_usuario_local;; 7) snapshots;; 0|"") break;;
+  esac
+done
+clear

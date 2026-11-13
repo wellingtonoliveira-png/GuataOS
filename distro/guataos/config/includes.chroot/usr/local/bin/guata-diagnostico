@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Diagnóstico — "Solucionar Problemas" que EXPLICA e CORRIGE. Nunca 'Erro 1'."""
+import gi, subprocess, shutil, socket, threading, os
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+
+CSS = """
+.janela{background:#f4f7f3;}
+.titulo{font-size:24px;font-weight:850;color:#13231c;}
+.sub{color:#6f8277;font-size:15px;}
+.item{background:#fff;border:1px solid #e2e9e2;border-radius:14px;padding:14px 16px;}
+.nome{font-size:16px;font-weight:800;color:#20302a;}
+.detalhe{font-size:13.5px;color:#6f8277;}
+.badge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;}
+.ok{background:#e3f5ea;color:#1f9d63;}
+.aviso{background:#fbeedf;color:#e08a3c;}
+.erro{background:#f7e9eb;color:#b05563;}
+.b{font-size:15px;font-weight:800;border-radius:12px;padding:11px 20px;background:#2f8f66;color:#fff;border:none;}
+.b:hover{background:#1f7a55;}
+.fix{font-size:13px;font-weight:700;border-radius:10px;padding:7px 14px;background:#fff;border:2px solid #e0d4bd;color:#4a4031;}
+.fix:hover{background:#fffdf8;}
+"""
+
+def sh(cmd, t=8):
+    try: return subprocess.run(cmd, capture_output=True, text=True, timeout=t)
+    except Exception: return None
+
+# cada check devolve (status, detalhe, fix_label, fix_cmd)  status: ok|aviso|erro
+def c_internet():
+    try:
+        socket.setdefaulttimeout(3); socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("1.1.1.1",53))
+        return ("ok","Você está conectado à internet.",None,None)
+    except Exception:
+        return ("erro","Sem internet. Verifique o Wi-Fi ou o cabo de rede.","Abrir rede",["gnome-control-center","wifi"])
+def c_dns():
+    try:
+        socket.gethostbyname("deb.debian.org"); return ("ok","Os nomes de sites estão sendo resolvidos.",None,None)
+    except Exception:
+        return ("erro","A internet pode estar ok, mas os nomes de sites não resolvem (DNS).","Abrir rede",["gnome-control-center","network"])
+def c_relogio():
+    r=sh(["timedatectl","show","-p","NTPSynchronized","--value"])
+    if r and r.stdout.strip()=="yes": return ("ok","Relógio sincronizado (importante p/ domínio e certificados).",None,None)
+    return ("aviso","O relógio pode estar fora de hora — isso quebra domínio e sites seguros.","Sincronizar agora",["pkexec","timedatectl","set-ntp","true"])
+def c_disco():
+    r=sh(["df","--output=pcent,avail","/"]);
+    if not r: return ("aviso","Não consegui ler o disco.",None,None)
+    try:
+        linha=r.stdout.strip().splitlines()[-1].split()
+        pct=int(linha[0].replace("%",""));
+        if pct>=92: return ("erro",f"Disco quase cheio ({pct}%). Libere espaço pra não travar.","Abrir limpeza",["gnome-control-center","applications"])
+        if pct>=80: return ("aviso",f"Disco em {pct}%. Fique de olho no espaço.",None,None)
+        return ("ok",f"Espaço em disco saudável ({pct}% usado).",None,None)
+    except Exception: return ("aviso","Não consegui medir o disco.",None,None)
+def c_som():
+    import re as _re
+    # 1) pactl (PulseAudio / pipewire-pulse): qualquer sink listado = tem saída
+    if shutil.which("pactl"):
+        r=sh(["pactl","list","short","sinks"])
+        if r and r.returncode==0 and (r.stdout or "").strip():
+            return ("ok","Saída de som detectada.",None,None)
+    # 2) wpctl (PipeWire): tem alguma saída no bloco "Sinks:"
+    if shutil.which("wpctl"):
+        r=sh(["wpctl","status"])
+        out=(r.stdout if r else "") or ""
+        if "Sinks:" in out:
+            bloco=out.split("Sinks:")[1].split("Sources:")[0]
+            if _re.search(r"\d+\.\s", bloco):
+                return ("ok","Saída de som detectada.",None,None)
+    # 3) hardware (ALSA): existe placa de som
+    try:
+        if os.path.isdir("/proc/asound") and any(d.startswith("card") for d in os.listdir("/proc/asound")):
+            return ("ok","Placa de som detectada.",None,None)
+    except Exception:
+        pass
+    return ("aviso","Não detectei uma saída de som ativa. Verifique fones/caixas.","Abrir som",["gnome-control-center","sound"])
+def c_rede():
+    if shutil.which("nmcli"):
+        r=sh(["nmcli","-t","-f","STATE","general"])
+        if r and r.stdout.strip().startswith("conectado") or (r and "connected" in r.stdout): return ("ok","Rede ativa (gerenciada pelo NetworkManager).",None,None)
+    return ("aviso","A rede não parece conectada.","Abrir rede",["gnome-control-center","network"])
+def c_dominio():
+    if shutil.which("realm"):
+        r=sh(["realm","list"])
+        if r and r.stdout.strip():
+            dom=r.stdout.splitlines()[0].strip()
+            return ("ok",f"Esta máquina está no domínio: {dom}",None,None)
+        return ("ok","Máquina fora de domínio (normal p/ uso pessoal). Use 'Entrar no Domínio' p/ ingressar.",None,None)
+    return ("ok","Sem suporte a domínio avaliado.",None,None)
+def c_updates():
+    r=sh(["apt-get","-s","upgrade"],20)
+    if not r: return ("ok","Não foi possível checar agora.",None,None)
+    n=len([l for l in r.stdout.splitlines() if l.startswith("Inst ")])
+    if n==0: return ("ok","Sistema atualizado.",None,None)
+    return ("aviso",f"{n} atualização(ões) disponível(is).","Atualizar",["guata-atualizacoes"])
+def c_impressora():
+    if shutil.which("lpstat"):
+        r=sh(["lpstat","-p"])
+        if r and r.stdout.strip(): return ("ok","Impressora(s) configurada(s).",None,None)
+        return ("ok","Nenhuma impressora configurada (adicione quando precisar).","Adicionar",["gnome-control-center","printers"])
+    return ("ok","Serviço de impressão não avaliado.",None,None)
+
+CHECKS=[("🌐 Internet",c_internet),("🔎 DNS (nomes de sites)",c_dns),("🕐 Relógio / Hora",c_relogio),
+        ("💾 Espaço em disco",c_disco),("🔊 Som",c_som),("📶 Rede",c_rede),
+        ("🏢 Domínio da empresa",c_dominio),("⬆️ Atualizações",c_updates),("🖨️ Impressoras",c_impressora)]
+
+class Diag(Adw.Application):
+    def __init__(self): super().__init__(application_id="br.com.guataos.Diagnostico")
+    def do_activate(self):
+        css=Gtk.CssProvider(); css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, 1000)
+        self.win=Adw.ApplicationWindow(application=self); self.win.add_css_class("janela"); self.win.set_title("Diagnóstico"); self.win.set_default_size(680,720)
+        tv=Adw.ToolbarView(); hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True); hb.set_title_widget(Gtk.Label(label="🩺 Diagnóstico do Guatá"))
+        tv.add_top_bar(hb); self.win.set_content(tv)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=18, margin_start=22, margin_end=22, margin_bottom=18)
+        tv.set_content(root)
+        l=Gtk.Label(label="Verificar a saúde do computador", xalign=0); l.add_css_class("titulo"); root.append(l)
+        s=Gtk.Label(label="Eu testo os pontos principais e, se achar problema, explico e ofereço a correção.", xalign=0); s.set_wrap(True); s.add_css_class("sub"); root.append(s)
+        self.bro=Gtk.Button(label="▶ Rodar diagnóstico"); self.bro.add_css_class("b"); self.bro.set_halign(Gtk.Align.START); self.bro.connect("clicked", self.rodar)
+        root.append(self.bro)
+        sc=Gtk.ScrolledWindow(hexpand=True, vexpand=True)
+        self.lista=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); sc.set_child(self.lista); root.append(sc)
+        self.win.present()
+    def rodar(self, *_):
+        self.bro.set_sensitive(False); self.bro.set_label("Verificando…")
+        child=self.lista.get_first_child()
+        while child: self.lista.remove(child); child=self.lista.get_first_child()
+        threading.Thread(target=self._rodar_bg, daemon=True).start()
+    def _rodar_bg(self):
+        for nome, fn in CHECKS:
+            try: st,det,flabel,fcmd=fn()
+            except Exception as e: st,det,flabel,fcmd=("aviso",f"Não consegui testar ({e}).",None,None)
+            GLib.idle_add(self._add, nome, st, det, flabel, fcmd)
+        GLib.idle_add(self._fim)
+    def _add(self, nome, st, det, flabel, fcmd):
+        card=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12); card.add_css_class("item")
+        col=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        top=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        n=Gtk.Label(label=nome, xalign=0); n.add_css_class("nome"); top.append(n)
+        bd=Gtk.Label(label={"ok":"OK","aviso":"Atenção","erro":"Problema"}[st]); bd.add_css_class("badge"); bd.add_css_class(st)
+        bd.set_halign(Gtk.Align.START); top.append(bd)
+        col.append(top)
+        d=Gtk.Label(label=det, xalign=0); d.set_wrap(True); d.add_css_class("detalhe"); col.append(d)
+        card.append(col)
+        if flabel and fcmd:
+            fb=Gtk.Button(label=flabel); fb.add_css_class("fix"); fb.set_valign(Gtk.Align.CENTER)
+            fb.connect("clicked", lambda _b,c=fcmd: self._fix(c)); card.append(fb)
+        self.lista.append(card)
+    def _fix(self, cmd):
+        try: subprocess.Popen(cmd)
+        except Exception: pass
+    def _fim(self):
+        self.bro.set_sensitive(True); self.bro.set_label("▶ Rodar de novo")
+
+if __name__ == "__main__":
+    Diag().run(None)

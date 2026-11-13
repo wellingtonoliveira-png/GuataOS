@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Pausa — foco e descanso, com jeito. NUNCA mede produtividade do funcionário."""
+import gi, subprocess, shutil, os
+gi.require_version("Gtk","4.0"); gi.require_version("Adw","1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+ICON="/usr/share/icons/guata"
+CSS="""
+.janela{background:#eef3ea}.janela{background:#f6f3ec}
+headerbar{background:#efe7d7;border:none;box-shadow:none}headerbar .title{font-weight:850;color:#5a4f3c}
+.titulo{font-size:24px;font-weight:850;color:#13231c}.sub{color:#7f8c7e;font-size:14px}
+.timer{font-size:72px;font-weight:850;color:#2f8f66;font-feature-settings:"tnum"}
+.card{background:#fff;border:1px solid #e6ded0;border-radius:18px;padding:22px}
+.b{font-size:16px;font-weight:800;border-radius:13px;padding:13px 26px;background:#2f8f66;color:#fff;border:none}
+.b:hover{background:#1f7a55}.b.sec{background:#fff;color:#20302a;border:2px solid #e6ded0}.b.sec:hover{background:#f3f9f5}
+.opt{font-size:14px;color:#26332a}
+.nota{background:#e4f2ea;border-radius:12px;padding:12px 15px;color:#26332a;font-size:12.5px}
+@media(prefers-color-scheme:dark){.janela{background:#0a120d}.janela{background:#0e1712}headerbar{background:#152219}
+ .titulo{color:#fff}.sub,.opt{color:#8ea89c}.card{background:#14201a;border-color:#233029}.nota{background:#16271e;color:#cfe}.b.sec{background:#14201a;color:#e7f1ec;border-color:#233029}}
+"""
+def notify(titulo,corpo):
+    if shutil.which("notify-send"):
+        try:subprocess.Popen(["notify-send","-i",os.path.join(ICON,"mascote-acenando.png"),titulo,corpo])
+        except Exception:pass
+class Pausa(Adw.Application):
+    def __init__(self):super().__init__(application_id="br.com.guataos.Pausa")
+    def do_activate(self):
+        css=Gtk.CssProvider();css.load_from_data(CSS.encode());Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(),css,1000)
+        self.secs=25*60;self.run=False;self.tid=None;self.lembrete=False;self.lid=None
+        self.win=Adw.ApplicationWindow(application=self);self.win.set_title("Pausa");self.win.set_default_size(560,620);self.win.add_css_class("janela")
+        tv=Adw.ToolbarView();hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True);hb.set_title_widget(Gtk.Label(label="🧘 Pausa"));tv.add_top_bar(hb);self.win.set_content(tv)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=14,margin_top=18,margin_start=26,margin_end=26,margin_bottom=22);tv.set_content(root)
+        t=Gtk.Label(label="Respira. Trabalhar bem também é descansar.",xalign=0);t.add_css_class("titulo");t.set_wrap(True);root.append(t)
+        # timer de foco
+        card=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=12);card.add_css_class("card")
+        cl=Gtk.Label(label="Modo foco",xalign=0.5);cl.add_css_class("sub");card.append(cl)
+        self.lbl=Gtk.Label(label="25:00");self.lbl.add_css_class("timer");self.lbl.set_halign(Gtk.Align.CENTER);card.append(self.lbl)
+        row=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=10,halign=Gtk.Align.CENTER)
+        self.bplay=Gtk.Button(label="▶ Começar");self.bplay.add_css_class("b");self.bplay.connect("clicked",self._play)
+        bz=Gtk.Button(label="↺");bz.add_css_class("b");bz.add_css_class("sec");bz.connect("clicked",self._reset)
+        for m in (15,25,45):
+            bm=Gtk.Button(label=f"{m}m");bm.add_css_class("b");bm.add_css_class("sec");bm.connect("clicked",self._setmin,m);row.append(bm)
+        row.append(self.bplay);row.append(bz);card.append(row);root.append(card)
+        # lembretes de descanso
+        opt=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);opt.add_css_class("card")
+        self.sw=Gtk.Switch();self.sw.set_valign(Gtk.Align.CENTER);self.sw.connect("state-set",self._toggle_lembrete)
+        r1=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=10)
+        l1=Gtk.Label(label="Lembretes gentis de descanso (olhos 20-20-20, alongar, beber água)",xalign=0);l1.add_css_class("opt");l1.set_wrap(True);l1.set_hexpand(True)
+        r1.append(l1);r1.append(self.sw);opt.append(r1);root.append(opt)
+        nota=Gtk.Label(xalign=0);nota.add_css_class("nota");nota.set_wrap(True)
+        nota.set_markup("💚 <b>Isso é só seu.</b> O Pausa nunca envia nada pra empresa e jamais mede sua produtividade. Pode desligar quando quiser.")
+        root.append(nota)
+        self.win.present()
+    def _setmin(self,_b,m):self.secs=m*60;self._upd()
+    def _play(self,_b):
+        self.run=not self.run
+        self.bplay.set_label("⏸ Pausar" if self.run else "▶ Começar")
+        if self.run and not self.tid:self.tid=GLib.timeout_add_seconds(1,self._tick)
+    def _reset(self,_b):self.run=False;self.bplay.set_label("▶ Começar");self.secs=25*60;self._upd()
+    def _tick(self):
+        if not self.run:self.tid=None;return False
+        self.secs-=1;self._upd()
+        if self.secs<=0:
+            self.run=False;self.bplay.set_label("▶ Começar");self.tid=None
+            notify("Foco concluído 🌱","Hora de uma pausa. Levanta, alonga, bebe uma água.")
+            self.secs=25*60;self._upd();return False
+        return True
+    def _upd(self):self.lbl.set_label(f"{self.secs//60:02d}:{self.secs%60:02d}")
+    def _toggle_lembrete(self,_s,state):
+        self.lembrete=state
+        if state and not self.lid:self.lid=GLib.timeout_add_seconds(20*60,self._lembra)
+        elif not state and self.lid:GLib.source_remove(self.lid);self.lid=None
+        return False
+    def _lembra(self):
+        if not self.lembrete:self.lid=None;return False
+        notify("Pausa dos olhos 👀","Olhe 20 segundos para algo a uns 6 metros. E que tal uma água? 💧")
+        return True
+if __name__=="__main__":Pausa().run(None)

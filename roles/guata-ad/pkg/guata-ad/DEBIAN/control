@@ -1,0 +1,14 @@
+Package: guata-ad
+Version: 1.2.0
+Section: net
+Priority: optional
+Architecture: all
+Depends: samba, python3-samba, samba-ad-dc, samba-ad-provision, samba-dsdb-modules, krb5-user, winbind, libnss-winbind, libpam-winbind, dnsutils, ldb-tools, chrony, whiptail, acl, attr
+Recommends: network-manager
+Maintainer: Wellsystem / Guatá <wellington@sopremabrasil.com.br>
+Homepage: https://guataos.com.br
+Description: Guatá AD — servidor de domínio soberano (Samba AD DC), fácil como um app
+ Transforma um Debian em um Active Directory completo e aberto:
+ login único, usuários, grupos, senhas e permissões para toda a rede,
+ com um assistente bonito em português. O poder do AD, de graça,
+ aberto e soberano — um produto Wellsystem.

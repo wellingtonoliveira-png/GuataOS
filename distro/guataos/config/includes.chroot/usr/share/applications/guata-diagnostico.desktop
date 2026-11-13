@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Diagnóstico
+Comment=Verifica a saúde do computador e ajuda a corrigir
+Exec=guata-diagnostico
+Icon=/usr/share/icons/guata/app-diagnostico.png
+Terminal=false
+Categories=System;Settings;
+StartupWMClass=br.com.guataos.Diagnostico

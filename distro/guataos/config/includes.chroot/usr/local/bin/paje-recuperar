@@ -1,0 +1,28 @@
+#!/bin/bash
+# Pajé — Recuperar arquivos (gráfico, sem terminal). Usa o PhotoRec por baixo.
+ICON=/usr/share/icons/guata/guata-icone-128.png
+[ -f "$ICON" ] || ICON=drive-harddisk
+
+DEV=$(lsblk -dprno NAME,SIZE,MODEL | yad --title="Recuperar arquivos" --window-icon="$ICON" \
+  --width=640 --height=340 --list --column="Disco" --column="Tamanho" --column="Modelo" \
+  --print-column=1 --separator="" \
+  --text="<b>De qual disco recuperar?</b>\nEscolha o disco onde os arquivos foram apagados." \
+  --button="Cancelar!gtk-cancel:1" --button="Continuar!gtk-ok:0")
+[ $? -ne 0 ] || [ -z "$DEV" ] && exit 0
+DEV=$(echo "$DEV" | tr -d ' ' )
+
+DEST=$(yad --title="Onde salvar o que for recuperado?" --window-icon="$ICON" --file --directory \
+  --text="Escolha uma pasta <b>em OUTRO disco ou pen drive</b> (nunca no mesmo disco que você está recuperando).")
+[ -z "$DEST" ] && exit 0
+OUT="$DEST/Recuperados_$(date +%Y%m%d_%H%M)"
+mkdir -p "$OUT"
+
+( pkexec photorec /log /d "$OUT/arquivo" /cmd "$DEV" wholespace,search >/dev/null 2>&1; echo 100 ) | \
+  yad --progress --pulsate --auto-close --no-buttons --title="Recuperando..." --window-icon="$ICON" \
+      --width=480 --text="Procurando e recuperando arquivos de <b>$DEV</b>...\n\nIsso pode demorar bastante — pode deixar rodando. ☕"
+
+N=$(find "$OUT" -type f 2>/dev/null | wc -l)
+yad --info --window-icon="$ICON" --width=440 --title="Pronto!" \
+  --text="Recuperação concluída.\n\n<b>$N arquivo(s)</b> salvos em:\n$OUT" \
+  --button="Abrir a pasta!gtk-open:0" --button="Fechar!gtk-close:1"
+[ $? -eq 0 ] && xdg-open "$OUT" >/dev/null 2>&1 &

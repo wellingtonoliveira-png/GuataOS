@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+# Guatá DHCP — painel web (escopos, concessões/leases, reservas por MAC, DDNS).
+import json, os, re, subprocess, secrets, time, hashlib, threading, sys, ipaddress
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import ssl as _ssl
+
+ETC="/etc/guata-dhcp"; CONF=ETC+"/config"; REG=ETC+"/config.json"
+PASSFILE=ETC+"/web.pass"; WEBDIR="/usr/share/guata-dhcp/web"
+CERT=ETC+"/web-cert.pem"; KEY=ETC+"/web-key.pem"
+CONF_STATUS="/run/guata-dhcp-config.status"
+LEASES="/var/lib/kea/kea-leases4.csv"
+SESS={}; TTL=8*3600; TLS_ON=False
+LOCAL={"127.0.0.1","::1","::ffff:127.0.0.1","localhost"}
+FAILS={}
+
+def run(args, inp=None, timeout=40):
+    try:
+        p=subprocess.run(args, input=inp, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout.strip(), p.stderr.strip()
+    except Exception as e:
+        return 1,"",str(e)
+
+# ---------- segurança (mesmo padrão endurecido do Guatá Files) ----------
+def rate_ok(ip):
+    e=FAILS.get(ip); return not (e and e[1]>time.time())
+def rate_fail(ip):
+    e=FAILS.get(ip,[0,0.0]); e[0]+=1
+    if e[0]>=5: e[1]=time.time()+min(300,20*(e[0]-4))
+    FAILS[ip]=e
+def rate_reset(ip): FAILS.pop(ip,None)
+def _hashpw(senha, salt=None):
+    if salt is None: salt=secrets.token_hex(8)
+    h=hashlib.pbkdf2_hmac("sha256",senha.encode(),bytes.fromhex(salt),120000).hex()
+    return "pbkdf2$%s$%s"%(salt,h)
+def _checkpw(senha, stored):
+    stored=(stored or "").strip()
+    try:
+        if stored.startswith("pbkdf2$"):
+            _,salt,_h=stored.split("$",2)
+            return secrets.compare_digest(_hashpw(senha,salt),stored)
+    except Exception: return False
+    return secrets.compare_digest(hashlib.sha256(senha.encode()).hexdigest(),stored)
+
+def cfg():
+    d={}
+    try:
+        for ln in open(CONF):
+            ln=ln.strip()
+            if "=" in ln and not ln.startswith("#"):
+                k,v=ln.split("=",1); d[k.strip()]=v.strip().strip('"')
+    except Exception: pass
+    return d
+def modo(): return (cfg().get("MODO") or "simples")
+def configurado(): return os.path.exists(ETC+"/configurado")
+def realm():
+    d=cfg()
+    if d.get("REALM"): return d["REALM"].upper()
+    try:
+        for ln in open("/etc/krb5.conf"):
+            if "default_realm" in ln: return ln.split("=",1)[1].strip().upper()
+    except Exception: pass
+    return ""
+
+def check_login(usuario, senha, ip=""):
+    if not senha: return (False,"Informe a senha.")
+    m=modo()
+    if m in ("dc","empresa"):
+        r=realm()
+        if not r: return (False,"Domínio não detectado.")
+        usuario=(usuario or "Administrator").strip() or "Administrator"
+        if not re.match(r"^[A-Za-z0-9._@-]{1,64}$", usuario): return (False,"Usuário inválido.")
+        cc="/tmp/gdhcp-%s"%secrets.token_hex(4)
+        env=dict(os.environ, KRB5CCNAME="FILE:"+cc)
+        rc,_,_=run(["kinit",usuario+"@"+r], inp=senha+"\n")
+        try: os.remove(cc)
+        except Exception: pass
+        return (True,"") if rc==0 else (False,"Usuário ou senha incorretos.")
+    if not os.path.exists(PASSFILE):
+        if ip not in LOCAL:
+            return (False,"Primeiro acesso deve ser feito no próprio servidor para definir a senha (segurança).")
+        if len(senha)<6: return (False,"Defina uma senha com ao menos 6 caracteres.")
+        os.makedirs(ETC,exist_ok=True); open(PASSFILE,"w").write(_hashpw(senha)); os.chmod(PASSFILE,0o600)
+        return (True,"")
+    stored=open(PASSFILE).read().strip()
+    if _checkpw(senha,stored):
+        if not stored.startswith("pbkdf2$"):
+            try: open(PASSFILE,"w").write(_hashpw(senha)); os.chmod(PASSFILE,0o600)
+            except Exception: pass
+        return (True,"")
+    return (False,"Senha incorreta.")
+
+# ---------- registro DHCP ----------
+def reg_ler():
+    try:
+        d=json.load(open(REG))
+        for k,v in {"interface":"","escopos":[],"reservas":[],"ddns":False}.items(): d.setdefault(k,v)
+        return d
+    except Exception:
+        return {"interface":"","escopos":[],"reservas":[],"ddns":False}
+def reg_salvar(d):
+    os.makedirs(ETC,exist_ok=True)
+    tmp=REG+".tmp"; open(tmp,"w").write(json.dumps(d,indent=2,ensure_ascii=False)); os.replace(tmp,REG)
+def aplicar():
+    return run(["guata-dhcp-regen","apply"],timeout=30)
+
+def _ip(s):
+    try: ipaddress.ip_address(str(s).strip()); return str(s).strip()
+    except Exception: return None
+def _mac(s):
+    s=(s or "").strip().lower().replace("-",":")
+    return s if re.match(r"^([0-9a-f]{2}:){5}[0-9a-f]{2}$", s) else None
+
+def interfaces():
+    rc,o,_=run(["ip","-j","addr"])
+    out=[]
+    try:
+        for i in json.loads(o or "[]"):
+            nm=i.get("ifname")
+            if not nm or nm=="lo": continue
+            v4=[a.get("local") for a in i.get("addr_info",[]) if a.get("family")=="inet"]
+            out.append({"nome":nm,"ips":v4,"estado":i.get("operstate","")})
+    except Exception: pass
+    return out
+
+def escopos_lista(): return reg_ler().get("escopos",[])
+
+def escopo_salvar(e):
+    rede=_ip(e.get("rede","")); 
+    try: masc=int(e.get("mascara") or 24)
+    except Exception: masc=24
+    if not rede or not (1<=masc<=30): return (False,"Rede ou máscara inválida.")
+    net=ipaddress.ip_network("%s/%s"%(rede,masc),strict=False)
+    ini=_ip(e.get("ini")); fim=_ip(e.get("fim"))
+    if not ini or not fim: return (False,"Faixa de IPs inválida.")
+    if ipaddress.ip_address(ini) not in net or ipaddress.ip_address(fim) not in net:
+        return (False,"A faixa precisa estar dentro da sub-rede.")
+    gw=_ip(e.get("gateway")) if e.get("gateway") else ""
+    dns=[x for x in [_ip(d) for d in (e.get("dns") or [])] if x]
+    try: lease=int(e.get("lease") or 86400)
+    except Exception: lease=86400
+    dom=re.sub(r"[^A-Za-z0-9.-]","",(e.get("dominio") or ""))[:64]
+    novo={"rede":str(net.network_address),"mascara":masc,"ini":ini,"fim":fim,
+          "gateway":gw,"dns":dns,"lease":lease,"dominio":dom}
+    d=reg_ler(); subs=d.get("escopos",[])
+    idx=next((k for k,x in enumerate(subs) if x.get("rede")==novo["rede"] and int(x.get("mascara"))==masc),None)
+    if idx is None: subs.append(novo)
+    else: subs[idx]=novo
+    d["escopos"]=subs; reg_salvar(d)
+    rc,o,er=aplicar()
+    return (rc==0, "" if rc==0 else (er or o or "Kea recusou a configuração."))
+def escopo_apagar(rede, mascara):
+    d=reg_ler()
+    d["escopos"]=[x for x in d.get("escopos",[]) if not (x.get("rede")==rede and str(x.get("mascara"))==str(mascara))]
+    reg_salvar(d); aplicar(); return (True,"")
+
+def reservas_lista(): return reg_ler().get("reservas",[])
+def reserva_salvar(r):
+    mac=_mac(r.get("mac","")); ip=_ip(r.get("ip",""))
+    if not mac: return (False,"MAC inválido (use aa:bb:cc:dd:ee:ff).")
+    if not ip: return (False,"IP inválido.")
+    nome=re.sub(r"[^A-Za-z0-9.-]","",(r.get("nome") or ""))[:48]
+    d=reg_ler(); res=d.get("reservas",[])
+    idx=next((k for k,x in enumerate(res) if x.get("mac")==mac),None)
+    novo={"mac":mac,"ip":ip,"nome":nome}
+    if idx is None: res.append(novo)
+    else: res[idx]=novo
+    d["reservas"]=res; reg_salvar(d)
+    rc,o,er=aplicar(); return (rc==0,"" if rc==0 else (er or o))
+def reserva_apagar(mac):
+    mac=_mac(mac) or ""
+    d=reg_ler(); d["reservas"]=[x for x in d.get("reservas",[]) if x.get("mac")!=mac]
+    reg_salvar(d); aplicar(); return (True,"")
+
+def leases_lista():
+    reservas={x.get("ip"):x.get("nome") for x in reg_ler().get("reservas",[])}
+    por_ip={}
+    try:
+        with open(LEASES) as fp:
+            linhas=fp.read().splitlines()
+    except Exception:
+        return []
+    if not linhas: return []
+    cab=linhas[0].split(",")
+    col={n:i for i,n in enumerate(cab)}
+    def g(p,n):
+        i=col.get(n); return p[i] if i is not None and i<len(p) else ""
+    agora=time.time()
+    for ln in linhas[1:]:
+        if not ln.strip(): continue
+        p=ln.split(",")
+        ip=g(p,"address")
+        if not ip: continue
+        por_ip[ip]=p  # memfile: última linha vence
+    out=[]
+    for ip,p in por_ip.items():
+        try: exp=int(g(p,"expire") or 0)
+        except Exception: exp=0
+        estado=g(p,"state") or "0"
+        if estado!="0": continue
+        if exp and exp<agora: continue
+        mac=g(p,"hwaddr"); host=g(p,"hostname")
+        out.append({"ip":ip,"mac":mac,"nome":host or reservas.get(ip,""),
+                    "expira":exp,"reservado":ip in reservas})
+    out.sort(key=lambda x: list(map(int,x["ip"].split("."))) if "." in x["ip"] else [0])
+    return out
+
+def ddns_estado():
+    return run(["systemctl","is-enabled","guata-dhcp-ddns.timer"])[1].strip()=="enabled"
+def ddns_toggle(ligar):
+    if ligar and not is_dc():
+        return (False,"DDNS registra no DNS do Guatá AD — disponível quando o DHCP roda no próprio AD.")
+    acao="enable" if ligar else "disable"
+    rc,o,e=run(["systemctl",acao,"--now","guata-dhcp-ddns.timer"])
+    d=reg_ler(); d["ddns"]=bool(ligar); reg_salvar(d)
+    return (rc==0,"" if rc==0 else e)
+
+def is_dc():
+    if os.path.exists("/etc/guata-id/provisionado") or os.path.exists("/etc/guata-ad/provisionado"): return True
+    try:
+        if "active directory domain controller" in open("/etc/samba/smb.conf").read().lower(): return True
+    except Exception: pass
+    return False
+
+def estado_inicial():
+    return {"is_dc":is_dc(),"host_sugerido":(run(["hostname"])[1] or "guata-dhcp"),
+            "configurado":configurado(),"interfaces":interfaces()}
+def conf_status():
+    try:
+        pct,msg=open(CONF_STATUS).read().strip().split("|",1)
+        return {"pct":int(pct),"msg":msg,"pronto":(int(pct)>=100),"erro":("erro" in msg.lower())}
+    except Exception:
+        return {"pct":0,"msg":"","pronto":False,"erro":False}
+def do_configurar(d):
+    try: open(CONF_STATUS,"w").write("5|Iniciando...")
+    except Exception: pass
+    env=dict(os.environ)
+    for k in ("modo","host","realm"): env["G_"+k.upper()]=(d.get(k) or "")
+    env["G_IFACE"]=(d.get("interface") or "")
+    try:
+        # grava escopo inicial se enviado
+        if d.get("rede"):
+            ok,err=escopo_salvar(d)
+        reg=reg_ler(); reg["interface"]=d.get("interface") or reg.get("interface","")
+        reg_salvar(reg)
+        open(CONF,"w").write("MODO=%s\n%s"%((d.get("modo") or "simples"),
+                             ("REALM=%s\n"%d["realm"] if d.get("realm") else "")))
+        host=re.sub(r"[^a-z0-9-]","",(d.get("host") or "guata-dhcp").lower()) or "guata-dhcp"
+        run(["hostnamectl","set-hostname",host])
+        open(CONF_STATUS,"w").write("70|Aplicando no Kea...")
+        aplicar()
+        open(ETC+"/configurado","w").write(time.strftime("%Y-%m-%d %H:%M"))
+        open(CONF_STATUS,"w").write("100|OK: DHCP pronto!")
+    except Exception as e:
+        try: open(CONF_STATUS,"w").write("100|ERRO: %s"%str(e)[:120])
+        except Exception: pass
+
+def saude():
+    kea=run(["systemctl","is-active","kea-dhcp4-server"])[1]
+    d=reg_ler()
+    return {"servico":kea,"modo":modo(),"interface":d.get("interface",""),
+            "escopos":len(d.get("escopos",[])),"reservas":len(d.get("reservas",[])),
+            "leases":len(leases_lista()),"ddns":ddns_estado(),"is_dc":is_dc(),
+            "host":run(["hostname"])[1]}
+
+def servico_acao(acao):
+    if acao not in ("start","stop","restart"):
+        return (False,"Ação inválida.")
+    if acao in ("start","restart") and not reg_ler().get("escopos"):
+        return (False,"Defina ao menos um escopo antes de ligar o DHCP — o Kea precisa de uma faixa de IPs.")
+    if acao=="stop":
+        run(["systemctl","disable","--now","kea-dhcp4-server"])
+        return (True,"")
+    run(["systemctl","enable","kea-dhcp4-server"])
+    rc,o,e=run(["systemctl",acao,"kea-dhcp4-server"])
+    if rc!=0:
+        return (False,(e or o or "O Kea não subiu — confira o escopo e a interface.").strip()[:200])
+    ativo=run(["systemctl","is-active","kea-dhcp4-server"])[1].strip()=="active"
+    return (ativo,"" if ativo else "O serviço não permaneceu ativo. Confira o escopo/interface.")
+
+class H(BaseHTTPRequestHandler):
+    def log_message(self,*a): pass
+    def _send(self,code,body,ctype="application/json"):
+        b=body if isinstance(body,bytes) else str(body).encode()
+        self.send_response(code); self.send_header("Content-Type",ctype)
+        self.send_header("Content-Length",str(len(b)))
+        self.send_header("X-Content-Type-Options","nosniff")
+        self.send_header("X-Frame-Options","DENY")
+        self.send_header("Referrer-Policy","no-referrer")
+        self.send_header("Content-Security-Policy","default-src 'self' 'unsafe-inline' data:; frame-ancestors 'none'; base-uri 'none'")
+        if self.path.startswith("/api/"): self.send_header("Cache-Control","no-store")
+        self.end_headers(); self.wfile.write(b)
+    def _json(self,c,o): self._send(c,json.dumps(o,ensure_ascii=False))
+    def _tok(self):
+        m=re.search(r"gd_sess=([a-f0-9]+)", self.headers.get("Cookie","") or "")
+        if not m: return None
+        t=m.group(1); s=SESS.get(t)
+        if s and s["exp"]>time.time(): return t
+        SESS.pop(t,None); return None
+    def _body(self):
+        n=int(self.headers.get("Content-Length","0") or 0)
+        try: return json.loads(self.rfile.read(n) or b"{}")
+        except Exception: return {}
+    def do_GET(self):
+        if self.path in ("/","/index.html"):
+            try: return self._send(200, open(WEBDIR+"/index.html","rb").read(),"text/html; charset=utf-8")
+            except Exception: return self._send(500,"sem UI","text/plain")
+        if self.path.startswith("/assets/"):
+            import mimetypes
+            safe=os.path.normpath(os.path.join(WEBDIR,self.path.split("?")[0].lstrip("/")))
+            if safe.startswith(WEBDIR+os.sep) and os.path.isfile(safe):
+                return self._send(200, open(safe,"rb").read(), mimetypes.guess_type(safe)[0] or "application/octet-stream")
+            return self._send(404,"404","text/plain")
+        if self.path=="/api/sessao":
+            return self._json(200,{"logado":bool(self._tok()),"configurado":configurado(),"modo":modo()})
+        if self.path=="/api/estado-inicial": return self._json(200, estado_inicial())
+        if self.path=="/api/configurar-status": return self._json(200, conf_status())
+        if self.path.startswith("/api/"):
+            if not self._tok(): return self._json(401,{"erro":"faça login"})
+            if self.path=="/api/saude": return self._json(200,saude())
+            if self.path=="/api/escopos": return self._json(200,{"itens":escopos_lista()})
+            if self.path=="/api/leases": return self._json(200,{"itens":leases_lista()})
+            if self.path=="/api/reservas": return self._json(200,{"itens":reservas_lista()})
+            if self.path=="/api/interfaces": return self._json(200,{"itens":interfaces()})
+        self._send(404,"não encontrado","text/plain")
+    def do_POST(self):
+        if self.path=="/api/login":
+            ip=self.client_address[0]
+            if not rate_ok(ip): return self._json(429,{"erro":"Muitas tentativas. Aguarde um instante."})
+            d=self._body(); u=(d.get("usuario") or "Administrator").strip() or "Administrator"
+            ok,err=check_login(u,d.get("senha",""),ip)
+            if ok:
+                rate_reset(ip); t=secrets.token_hex(16); SESS[t]={"exp":time.time()+TTL,"usuario":u}
+                self.send_response(200); self.send_header("Content-Type","application/json")
+                sec="; Secure" if TLS_ON else ""
+                self.send_header("Set-Cookie","gd_sess=%s; Path=/; HttpOnly; SameSite=Strict%s; Max-Age=%d"%(t,sec,TTL))
+                body=json.dumps({"ok":True}).encode(); self.send_header("Content-Length",str(len(body)))
+                self.end_headers(); self.wfile.write(body); return
+            rate_fail(ip); return self._json(401,{"erro":err or "Falha."})
+        if self.path=="/api/configurar":
+            if configurado(): return self._json(403,{"erro":"Este servidor já foi configurado."})
+            if self.client_address[0] not in LOCAL:
+                return self._json(403,{"erro":"A configuração inicial deve ser feita no próprio servidor (localhost)."})
+            d=self._body(); st=conf_status()
+            if 0<st.get("pct",0)<100: return self._json(200,{"ok":True})
+            threading.Thread(target=do_configurar,args=(d,),daemon=True).start()
+            return self._json(200,{"ok":True})
+        if not self._tok(): return self._json(401,{"erro":"faça login"})
+        d=self._body()
+        if self.path=="/api/logout":
+            SESS.pop(self._tok(),None); return self._json(200,{"ok":True})
+        if self.path=="/api/escopo-salvar":
+            ok,err=escopo_salvar(d); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/escopo-apagar":
+            ok,err=escopo_apagar(d.get("rede",""),d.get("mascara","")); return self._json(200,{"ok":ok})
+        if self.path=="/api/reserva-salvar":
+            ok,err=reserva_salvar(d); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/reserva-apagar":
+            ok,err=reserva_apagar(d.get("mac","")); return self._json(200,{"ok":ok})
+        if self.path=="/api/ddns":
+            ok,err=ddns_toggle(bool(d.get("ligar"))); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        if self.path=="/api/servico":
+            ok,err=servico_acao((d.get("acao") or "").strip()); return self._json(200 if ok else 400,{"ok":ok,"erro":err})
+        return self._json(404,{"erro":"rota desconhecida"})
+
+if __name__=="__main__":
+    os.makedirs(ETC,exist_ok=True)
+    srv=ThreadingHTTPServer(("0.0.0.0",int(os.environ.get("GUATA_DHCP_WEB_PORT","8082"))), H)
+    if os.path.exists(CERT) and os.path.exists(KEY):
+        try:
+            ctx=_ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+            ctx.minimum_version=_ssl.TLSVersion.TLSv1_2
+            ctx.load_cert_chain(CERT,KEY)
+            srv.socket=ctx.wrap_socket(srv.socket,server_side=True)
+            globals()['TLS_ON']=True
+        except Exception as e:
+            sys.stderr.write("TLS desativado: %s\n"%e)
+    srv.serve_forever()

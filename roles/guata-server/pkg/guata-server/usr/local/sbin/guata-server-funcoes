@@ -1,0 +1,61 @@
+#!/bin/bash
+# Guatá Server — Funções do servidor (estilo "Adicionar função" do Windows Server)
+set -uo pipefail
+export NEWT_COLORS='root=,black
+window=,white
+border=green,white
+listbox=black,white
+actlistbox=white,green
+button=white,green
+title=green,white'
+T="Guatá Server  —  Funções"
+[ "$(id -u)" = 0 ] || { echo "Rode como root (sudo guata-server)."; exit 1; }
+msg(){ whiptail --title "$T" --msgbox "$1" "${2:-14}" "${3:-72}"; }
+
+# role | pacote | comando | nome | descrição | marcador_configurado
+ROLES=(
+  "id|guata-id|guata-id|Identidade & Domínio (Guatá ID)|Login único, usuários, grupos e senhas da rede|/etc/guata-id/provisionado"
+  "files|guata-files|guata-files|Servidor de Arquivos|Pastas com níveis de acesso (tiers) e voltar no tempo|/etc/guata-files/configurado"
+  "dhcp|guata-dhcp|guata-dhcp|Servidor DHCP|Entrega IPs na rede: escopos, concessões, reservas por MAC e DDNS|/etc/guata-dhcp/configurado"
+  "print|guata-print|guata-print|Servidor de Impressão|Compartilha impressoras: bilhetagem, cotas e relatórios|/etc/guata-print/configurado"
+)
+
+estado_role(){ # imprime [ ok ] / [ instalado ] / [ disponível ] / [ em breve ]
+  local pkg="$2" cfg="$6"
+  if [ -f "$cfg" ]; then echo "ativo"; return; fi
+  if dpkg -s "$pkg" >/dev/null 2>&1; then echo "instalado"; else echo "disponível"; fi
+}
+
+adicionar(){
+  local role="$1" pkg="$2" cmd="$3" nome="$4"
+  if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+    whiptail --title "$T" --yesno "Adicionar a função \"$nome\"?\n\nVou instalar o pacote ($pkg) e abrir o assistente." 11 66 || return
+    clear; echo "Instalando $nome ..."
+    apt-get update -qq >/dev/null 2>&1
+    if ! apt-get install -y "$pkg" >/tmp/gs.log 2>&1; then
+      msg "Não consegui instalar.\n\n$(tail -6 /tmp/gs.log)\n\n(Confira internet e o repositório Guatá.)" 16 72; return
+    fi
+  fi
+  if [ "$role" = dhcp ]; then
+    msg "Guatá DHCP instalado!\n\nAbra o painel para configurar (no próprio servidor):\nhttps://localhost:8082\n\n(escolha a placa de rede e crie o primeiro escopo)" 13 66; return
+  fi
+  if [ "$role" = print ]; then
+    msg "Guatá Print instalado!\n\nAbra o painel para configurar (no próprio servidor):\nhttps://localhost:8083\n\n(adicione sua impressora e compartilhe para a rede)" 13 66; return
+  fi
+  clear; exec "$cmd"
+}
+
+while true; do
+  MENU=()
+  for r in "${ROLES[@]}"; do IFS='|' read -r role pkg cmd nome desc cfg <<< "$r"
+    st=$(estado_role "$role" "$pkg" "$cmd" "$nome" "$desc" "$cfg")
+    MENU+=("$role" "$(printf '%-26s [%s]' "$nome" "$st")")
+  done
+  MENU+=("sair" "Sair")
+  OP=$(whiptail --title "$T" --menu "Funções deste servidor\n(ativo = já configurado · disponível = clique para adicionar)" 18 72 8 "${MENU[@]}" 3>&1 1>&2 2>&3) || break
+  [ "$OP" = sair ] && break
+  for r in "${ROLES[@]}"; do IFS='|' read -r role pkg cmd nome desc cfg <<< "$r"
+    [ "$role" = "$OP" ] && adicionar "$role" "$pkg" "$cmd" "$nome"
+  done
+done
+clear

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Entrar no Domínio
+Comment=Colocar este computador no domínio (Active Directory) da empresa — sem terminal
+Exec=entrar-dominio
+Icon=/usr/share/icons/guata/app-dominio.png
+Terminal=false
+Categories=System;Network;
+Keywords=dominio;domain;active directory;ad;rede;empresa;realm;sssd;
+StartupNotify=true

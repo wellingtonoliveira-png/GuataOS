@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Kurumim — finanças pessoais do Guatá (app web nativo, WebKit). Offline, local.
+Copiloto de IA opcional: lê a chave de ~/.config/guata/ia.json (mesma do Assistente)
+e responde sobre as finanças do usuário. Os dados ficam SEMPRE na máquina."""
+import gi, os, json, threading, urllib.request, urllib.error
+gi.require_version("Gtk", "3.0"); gi.require_version("WebKit2", "4.1")
+from gi.repository import Gtk, WebKit2, GLib
+
+HTML = "file:///usr/share/kurumim-web/index.html"
+DATA = os.path.expanduser("~/.local/share/kurumim"); os.makedirs(DATA, exist_ok=True)
+
+# ───────────── IA (mesma config do Assistente Guatá) ─────────────
+IA_CFG = os.path.expanduser("~/.config/guata/ia.json")
+IA_PRESETS = {
+    "claude":     {"tipo": "claude", "base": "https://api.anthropic.com/v1",                      "modelo": "claude-sonnet-5"},
+    "openai":     {"tipo": "openai", "base": "https://api.openai.com/v1",                          "modelo": "gpt-4o-mini"},
+    "gemini":     {"tipo": "openai", "base": "https://generativelanguage.googleapis.com/v1beta/openai", "modelo": "gemini-2.0-flash"},
+    "openrouter": {"tipo": "openai", "base": "https://openrouter.ai/api/v1",                       "modelo": "openai/gpt-4o-mini"},
+    "groq":       {"tipo": "openai", "base": "https://api.groq.com/openai/v1",                     "modelo": "llama-3.3-70b-versatile"},
+    "local":      {"tipo": "openai", "base": "http://localhost:11434/v1",                          "modelo": "llama3.1"},
+    "outro":      {"tipo": "openai", "base": "",                                                   "modelo": ""},
+}
+SISTEMA = ("Você é o copiloto financeiro do Kurumim, o app de finanças pessoais do Guatá OS. "
+           "Responda SEMPRE em português do Brasil, curto, prático e gentil — nunca julgue. "
+           "Use o resumo financeiro do usuário (em JSON, valores em reais) para responder à "
+           "pergunta. Dê números concretos quando der e, se fizer sentido, uma dica de economia "
+           "leve. Se faltar dado, diga com honestidade.")
+
+def ia_perfil():
+    try:
+        with open(IA_CFG) as f: cfg = json.load(f)
+    except Exception:
+        cfg = {}
+    prov = cfg.get("provedor", "claude")
+    preset = IA_PRESETS.get(prov, IA_PRESETS["claude"])
+    p = cfg.get("perfis", {}).get(prov, {})
+    return {"tipo": preset["tipo"],
+            "base": (p.get("base") or preset["base"]).rstrip("/"),
+            "modelo": p.get("modelo") or preset["modelo"],
+            "api_key": p.get("api_key", "")}
+
+def ia_perguntar(perfil, texto):
+    try:
+        if perfil["tipo"] == "claude":
+            corpo = json.dumps({"model": (perfil["modelo"] if not perfil["modelo"].startswith("gemini-1.5") else "gemini-2.0-flash"), "max_tokens": 800,
+                                "system": SISTEMA, "messages": [{"role": "user", "content": texto}]}).encode()
+            req = urllib.request.Request(perfil["base"] + "/messages", data=corpo, method="POST")
+            req.add_header("x-api-key", perfil["api_key"]); req.add_header("anthropic-version", "2023-06-01")
+            req.add_header("content-type", "application/json")
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read().decode())
+            return ("".join(b.get("text", "") for b in d.get("content", []) if b.get("type") == "text").strip(), None)
+        else:
+            msgs = [{"role": "system", "content": SISTEMA}, {"role": "user", "content": texto}]
+            corpo = json.dumps({"model": (perfil["modelo"] if not perfil["modelo"].startswith("gemini-1.5") else "gemini-2.0-flash"), "max_tokens": 800, "messages": msgs}).encode()
+            req = urllib.request.Request((("https://generativelanguage.googleapis.com/v1beta/openai" if "generativelanguage.googleapis.com" in perfil["base"] and not perfil["base"].rstrip("/").endswith("/openai") else perfil["base"].rstrip("/")) + "/chat/completions"), data=corpo, method="POST")
+            req.add_header("content-type", "application/json")
+            if perfil["api_key"]: req.add_header("Authorization", "Bearer " + perfil["api_key"])
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read().decode())
+            return (d["choices"][0]["message"]["content"].strip(), None)
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403): return (None, "Chave de API inválida. Configure no app Assistente Guatá.")
+        return (None, f"Erro da API ({e.code}).")
+    except urllib.error.URLError:
+        return (None, "Sem conexão com o provedor de IA.")
+    except Exception as e:
+        return (None, f"Falha: {e}")
+
+
+class Kurumim:
+    def __init__(self):
+        self.win = Gtk.Window(title="Kurumim"); self.win.set_default_size(440, 780)
+        try: self.win.set_icon_from_file("/usr/share/icons/guata/kurumim.svg")
+        except Exception: pass
+        try:
+            dm = WebKit2.WebsiteDataManager(base_data_directory=DATA, base_cache_directory=os.path.join(DATA, "cache"))
+            ctx = WebKit2.WebContext.new_with_website_data_manager(dm)
+        except Exception:
+            ctx = WebKit2.WebContext.get_default()
+        self.ucm = WebKit2.UserContentManager()
+        self.ucm.register_script_message_handler("ia")
+        self.ucm.connect("script-message-received::ia", self.on_ia)
+        self.wv = WebKit2.WebView(web_context=ctx, user_content_manager=self.ucm)
+        self.wv.load_uri(HTML)
+        self.win.add(self.wv); self.win.connect("destroy", Gtk.main_quit); self.win.show_all()
+
+    def on_ia(self, ucm, val):
+        try:
+            payload = val.to_string()
+        except AttributeError:
+            payload = val.get_js_value().to_string()
+        try:
+            dados = json.loads(payload)
+        except Exception:
+            dados = {"pergunta": payload, "resumo": {}}
+        perfil = ia_perfil()
+        if not perfil["api_key"] and "localhost" not in perfil["base"]:
+            self._js("window.receberIA(%s)" % json.dumps(
+                {"erro": "Configure a IA primeiro: app Assistente Guatá → engrenagem → provedor + chave."}))
+            return
+        threading.Thread(target=self._ia_bg, args=(dados, perfil), daemon=True).start()
+
+    def _ia_bg(self, dados, perfil):
+        pergunta = (dados.get("pergunta") or "").strip()
+        resumo = dados.get("resumo", {})
+        texto = (f"Resumo financeiro do usuário (JSON):\n{json.dumps(resumo, ensure_ascii=False)}\n\n"
+                 f"Pergunta: {pergunta}")
+        resp, erro = ia_perguntar(perfil, texto)
+        rec = {"erro": erro} if erro else {"resposta": resp}
+        self._js("window.receberIA(%s)" % json.dumps(rec, ensure_ascii=False))
+
+    def _js(self, js):
+        GLib.idle_add(lambda: (self.wv.run_javascript(js, None, None, None), False)[1])
+
+
+if __name__ == "__main__":
+    Kurumim()
+    Gtk.main()

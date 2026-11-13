@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Reparar — reparar antes de trocar. Bateria, disco, temperatura, limpeza.
+Filosofia anti-descarte."""
+import gi, subprocess, shutil, os, glob, threading
+gi.require_version("Gtk","4.0"); gi.require_version("Adw","1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+ICON="/usr/share/icons/guata"
+CSS="""
+.janela{background:#eef3ea}.janela{background:#f6f3ec}
+headerbar{background:#efe7d7;border:none;box-shadow:none}headerbar .title{font-weight:850;color:#5a4f3c}
+.titulo{font-size:24px;font-weight:850;color:#13231c}.sub{color:#7f8c7e;font-size:14px}
+.item{background:#fff;border:1px solid #e6ded0;border-radius:16px;padding:16px 18px}
+.item .n{font-size:16px;font-weight:800;color:#13231c}.item .d{font-size:13px;color:#7f8c7e}
+.badge{font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px}
+.ok{background:#e3f5ea;color:#1f9d63}.aviso{background:#fbeedf;color:#e08a3c}.erro{background:#f7e9eb;color:#b05563}
+.fix{font-size:13px;font-weight:800;background:#2f8f66;color:#fff;border:none;border-radius:11px;padding:9px 16px}
+.fix:hover{background:#1f7a55}
+@media(prefers-color-scheme:dark){.janela{background:#0a120d}.janela{background:#0e1712}headerbar{background:#152219}
+ .titulo{color:#fff}.sub,.item .d{color:#8ea89c}.item{background:#14201a;border-color:#233029}.item .n{color:#e7f1ec}}
+"""
+def sh(c,t=8):
+    try:return subprocess.run(c,capture_output=True,text=True,timeout=t)
+    except Exception:return None
+def c_bateria():
+    full=glob.glob("/sys/class/power_supply/BAT*/charge_full")+glob.glob("/sys/class/power_supply/BAT*/energy_full")
+    des=glob.glob("/sys/class/power_supply/BAT*/charge_full_design")+glob.glob("/sys/class/power_supply/BAT*/energy_full_design")
+    if not full or not des: return("ok","Bateria","Sem bateria (ou sem dados) — nada a reparar aqui.",None,None)
+    try:
+        f=int(open(full[0]).read());d=int(open(des[0]).read());saude=round(100*f/d)
+        cyc=glob.glob("/sys/class/power_supply/BAT*/cycle_count");cstr=""
+        if cyc:
+            cv=open(cyc[0]).read().strip()
+            if cv and cv!="0": cstr=f" · {cv} ciclos"
+        if saude>=80: return("ok","Bateria",f"Saúde {saude}%{cstr}. Está boa.",None,None)
+        if saude>=60: return("aviso","Bateria",f"Saúde {saude}%{cstr}. Já trabalhou bastante — fique de olho.",None,None)
+        return("erro","Bateria",f"Saúde {saude}%{cstr}. Degradada — vale avaliar troca da bateria (não do notebook!).",None,None)
+    except Exception: return("ok","Bateria","Não consegui ler os dados da bateria.",None,None)
+def c_disco():
+    r=sh(["df","--output=pcent,avail","-h","/"])
+    if not r: return("ok","Espaço em disco","Não consegui ler.",None,None)
+    try:
+        linha=r.stdout.strip().splitlines()[-1].split();pct=int(linha[0].replace("%",""))
+        if pct>=90: return("erro","Espaço em disco",f"{pct}% cheio. Libere espaço pra não travar.","Limpar agora","limpar")
+        if pct>=75: return("aviso","Espaço em disco",f"{pct}% usado. Dá pra limpar cache e pacotes antigos.","Limpar","limpar")
+        return("ok","Espaço em disco",f"{pct}% usado. Saudável.","Limpar mesmo assim","limpar")
+    except Exception: return("ok","Espaço em disco","Não consegui medir.",None,None)
+def c_temp():
+    zs=glob.glob("/sys/class/thermal/thermal_zone*/temp")
+    temps=[]
+    for z in zs:
+        try: temps.append(int(open(z).read())/1000)
+        except Exception: pass
+    if not temps: return("ok","Temperatura","Sem sensores legíveis neste equipamento.",None,None)
+    mx=max(temps)
+    if mx>=90: return("erro","Temperatura",f"{mx:.0f}°C — muito quente, pode perder desempenho (throttling). Verifique ventilação/pasta térmica.",None,None)
+    if mx>=80: return("aviso","Temperatura",f"{mx:.0f}°C — esquentando. Fique de olho na ventilação.",None,None)
+    return("ok","Temperatura",f"{mx:.0f}°C — temperatura saudável.",None,None)
+def c_smart():
+    disk=glob.glob("/dev/nvme0n1")+glob.glob("/dev/sda")
+    if not disk or not shutil.which("smartctl"): return("ok","Saúde do disco (SMART)","Avaliação completa precisa de permissão — rode pela TI, se quiser.",None,None)
+    return("ok","Saúde do disco (SMART)","Disponível. Clique pra verificar (pede senha).","Verificar","smart")
+CHECKS=[c_bateria,c_disco,c_temp,c_smart]
+class Reparar(Adw.Application):
+    def __init__(self):super().__init__(application_id="br.com.guataos.Reparar")
+    def do_activate(self):
+        css=Gtk.CssProvider();css.load_from_data(CSS.encode());Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(),css,1000)
+        self.win=Adw.ApplicationWindow(application=self);self.win.set_title("Reparar");self.win.set_default_size(680,660);self.win.add_css_class("janela")
+        tv=Adw.ToolbarView();hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True);hb.set_title_widget(Gtk.Label(label="🔧 Reparar"));tv.add_top_bar(hb);self.win.set_content(tv)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin_top=18,margin_start=24,margin_end=24,margin_bottom=20);tv.set_content(root)
+        t=Gtk.Label(label="Reparar antes de trocar",xalign=0);t.add_css_class("titulo");root.append(t)
+        s=Gtk.Label(label="O jeito Guatá: a gente conserta o que dá, estende a vida do equipamento e evita descarte.",xalign=0);s.add_css_class("sub");s.set_wrap(True);root.append(s)
+        self.box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin_top=10);root.append(self.box)
+        for fn in CHECKS:
+            try:st,nome,det,flab,fcmd=fn()
+            except Exception:st,nome,det,flab,fcmd=("ok","?","",None,None)
+            self.box.append(self._item(st,nome,det,flab,fcmd))
+        self.win.present()
+    def _item(self,st,nome,det,flab,fcmd):
+        card=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=12);card.add_css_class("item")
+        col=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=2,hexpand=True)
+        top=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=10)
+        n=Gtk.Label(label=nome,xalign=0);n.add_css_class("n");top.append(n)
+        bd=Gtk.Label(label={"ok":"OK","aviso":"Atenção","erro":"Reparar"}[st]);bd.add_css_class("badge");bd.add_css_class(st);bd.set_valign(Gtk.Align.CENTER);top.append(bd)
+        col.append(top)
+        d=Gtk.Label(label=det,xalign=0);d.add_css_class("d");d.set_wrap(True);col.append(d);card.append(col)
+        if flab and fcmd:
+            fb=Gtk.Button(label=flab);fb.add_css_class("fix");fb.set_valign(Gtk.Align.CENTER);fb.connect("clicked",self._fix,fcmd,card);card.append(fb)
+        return card
+    def _fix(self,_b,cmd,card):
+        if cmd=="limpar":
+            threading.Thread(target=self._limpar,daemon=True).start()
+            self._dlg("Limpando…","Removendo cache e pacotes antigos com segurança. Pode pedir senha.")
+        elif cmd=="smart":
+            subprocess.Popen(["sh","-c","pkexec smartctl -H /dev/nvme0n1 2>/dev/null || pkexec smartctl -H /dev/sda"])
+    def _limpar(self):
+        subprocess.run(["pkexec","sh","-c","apt-get clean; apt-get autoremove -y; journalctl --vacuum-time=7d"],capture_output=True)
+    def _dlg(self,h,b):
+        d=Adw.MessageDialog(transient_for=self.win,heading=h,body=b);d.add_response("ok","Ok");d.present()
+if __name__=="__main__":Reparar().run(None)

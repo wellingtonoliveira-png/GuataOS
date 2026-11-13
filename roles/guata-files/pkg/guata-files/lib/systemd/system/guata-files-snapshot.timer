@@ -1,0 +1,8 @@
+[Unit]
+Description=Guatá Files — snapshot diário (01:00)
+[Timer]
+OnCalendar=*-*-* 01:00:00
+Persistent=true
+RandomizedDelaySec=900
+[Install]
+WantedBy=timers.target

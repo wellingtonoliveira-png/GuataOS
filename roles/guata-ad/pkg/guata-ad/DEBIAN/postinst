@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+systemctl mask samba-ad-dc smbd nmbd winbind >/dev/null 2>&1 || true
+chmod +x /usr/local/sbin/guata-ad-* /usr/local/bin/guata-ad 2>/dev/null || true
+mkdir -p /etc/guata-ad
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl enable guata-ad-web >/dev/null 2>&1 || true
+# se já tem domínio, sobe o painel web agora
+if [ -f /etc/guata-ad/provisionado ]; then
+  systemctl restart guata-ad-web >/dev/null 2>&1 || true
+else
+cat <<'MSG'
+
+  ┌──────────────────────────────────────────────────────────┐
+  │   Guatá AD instalado!  Para criar o seu domínio:          │
+  │        sudo guata-ad                                       │
+  │   Depois, o painel BONITO abre no navegador:              │
+  │        http://<ip-do-servidor>                             │
+  └──────────────────────────────────────────────────────────┘
+
+MSG
+fi
+exit 0

@@ -1,0 +1,8 @@
+[Unit]
+Description=Atualização automática do Guatá OS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/guata-update-run

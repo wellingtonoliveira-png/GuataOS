@@ -1,0 +1,860 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caderno da Mãe</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FF6B00">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Caderno da Mãe">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+:root{
+  --primary:#FF6B00; --primary-dark:#E05300; --primary-light:#FFF3EB;
+  --gold:#FFC700; --gold-dark:#F0B800;
+  --green:#00A868; --green-light:#E8F8F1;
+  --ink:#111827; --muted:#4B5563; --subtle:#9CA3AF;
+  --surface:#FFFFFF; --bg:#F8F9FA; --line:#F1F2F4; --line2:#E5E7EB;
+  --sans:'Plus Jakarta Sans',system-ui,sans-serif; --body:'Inter','Plus Jakarta Sans',sans-serif;
+  --sh-xs:0 1px 2px rgba(17,24,39,.04); --sh:0 4px 16px -4px rgba(17,24,39,.08); --sh-lg:0 10px 30px -8px rgba(17,24,39,.15);
+}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;display:flex;flex-direction:column;overflow:hidden}
+h1,h2,h3{font-family:var(--sans);font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:var(--body);font-size:14px}
+.material-symbols-outlined{font-size:22px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;line-height:0}
+.material-symbols-outlined>svg{width:1em;height:1em;display:block;fill:currentColor}
+.wrap{flex:1;overflow-y:auto;overflow-x:hidden}
+.wrap::-webkit-scrollbar{display:none}
+
+/* header */
+.hdr{flex:none;background:#fffffff2;backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:30}
+.hdr .logo{width:38px;height:38px;border-radius:12px;background:var(--primary-light);color:var(--primary);display:grid;place-items:center}
+.hdr .logo .material-symbols-outlined{font-size:21px}
+.hdr .tt{font-family:var(--sans);font-size:17px;font-weight:800;line-height:1}
+.hdr .sub{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary);margin-top:3px}
+.hdr .mae{margin-left:auto;width:40px;height:40px;border-radius:999px;background:var(--primary-light);display:grid;place-items:center;font-size:20px;border:2px solid #FFE4CC}
+
+.pagina{padding:16px 16px 96px;max-width:860px;margin:0 auto}
+
+/* greeting hero */
+.saud{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.saud .eyebrow{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:5px}
+.saud .eyebrow .material-symbols-outlined{font-size:14px;color:var(--gold)}
+.saud h1{font-size:25px;margin-top:5px}
+.saud p.lead{font-size:13px;color:var(--muted);margin-top:4px}
+.pill-count{flex:none;display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--line2);border-radius:999px;padding:6px 12px;color:var(--green);font-weight:800;font-size:12px;box-shadow:var(--sh-xs)}
+.pill-count .material-symbols-outlined{font-size:15px}
+
+/* search */
+.busca{position:relative;margin:14px 0}
+.busca input{width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:16px;padding:13px 44px;font-size:14px;box-shadow:var(--sh-xs)}
+.busca input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(255,107,0,.12)}
+.busca .mi-l{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--subtle)}
+.busca .mi-r{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--ink)}
+
+/* filter pills */
+.pills{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;background:var(--surface);border:1px solid var(--line2);border-radius:999px;padding:8px 15px;font-size:13px;font-weight:700;color:var(--muted);box-shadow:var(--sh-xs)}
+.pill .material-symbols-outlined{font-size:16px}
+.pill.on{background:var(--gold);border-color:var(--gold-dark);color:var(--ink);font-weight:800}
+
+/* section head */
+.sh{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 12px}
+.sh .t{display:flex;align-items:center;gap:7px;font-family:var(--sans);font-size:16px;font-weight:800}
+.sh .t .material-symbols-outlined{font-size:19px;color:var(--primary)}
+.sh .link{font-size:12px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:2px}
+
+/* recipe grid */
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.rc{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--sh-xs);cursor:pointer;display:flex;flex-direction:column;transition:transform .14s,box-shadow .14s}
+.rc:active{transform:scale(.98)}
+.rc:hover{box-shadow:var(--sh)}
+.rc .capa{height:120px;background:var(--bg) center/cover no-repeat;position:relative;display:grid;place-items:center;font-size:34px;color:#cfd3d8}
+.rc .badge{position:absolute;top:8px;left:8px;display:flex;align-items:center;gap:4px;background:#ffffffee;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800;color:var(--ink)}
+.rc .badge.g{background:var(--gold);border-color:var(--gold-dark)}
+.rc .badge .material-symbols-outlined{font-size:12px}
+.rc .heart{position:absolute;top:7px;right:7px;width:28px;height:28px;border-radius:999px;background:#ffffffdd;display:grid;place-items:center;color:var(--primary)}
+.rc .heart .material-symbols-outlined{font-size:16px}
+.rc .corpo{padding:11px 12px;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:9px}
+.rc .cat{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--subtle)}
+.rc h3{font-family:var(--sans);font-size:14px;font-weight:800;line-height:1.25;color:var(--ink)}
+.rc .rodape{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 9px;display:flex;align-items:center;justify-content:space-between;color:var(--muted)}
+.rc .rodape .t{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:600}
+.rc .rodape .t .material-symbols-outlined{font-size:13px;color:var(--subtle)}
+.rc .rodape .p{font-size:11px;font-weight:800;color:var(--ink)}
+
+.vazio{text-align:center;color:var(--muted);padding:50px 20px}
+.vazio .material-symbols-outlined{font-size:46px;color:var(--subtle)}
+.vazio b{display:block;font-family:var(--sans);font-size:17px;font-weight:800;color:var(--ink);margin:10px 0 4px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--primary);color:#fff;font-family:var(--sans);font-weight:800;font-size:14px;padding:12px 18px;border-radius:14px;box-shadow:var(--sh-xs)}
+.btn:hover{background:var(--primary-dark)}
+.btn .material-symbols-outlined{font-size:19px}
+.btn.gold{background:var(--gold);color:var(--ink)}.btn.gold:hover{background:var(--gold-dark)}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line2)}
+.btn.ghost:hover{background:var(--bg)}
+.btn.green{background:var(--green)}.btn.green:hover{filter:brightness(.95)}
+.fab{position:fixed;right:16px;bottom:88px;z-index:35;display:flex;align-items:center;gap:8px;background:var(--gold);color:var(--ink);font-family:var(--sans);font-weight:800;font-size:13px;padding:13px 18px;border-radius:999px;box-shadow:var(--sh-lg)}
+.fab:active{transform:scale(.96)}
+
+/* bottom nav */
+nav{position:fixed;bottom:0;left:0;right:0;z-index:40;background:#fffffff5;backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;height:72px;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--subtle);font-family:var(--sans);font-weight:700;font-size:10.5px}
+nav button .material-symbols-outlined{font-size:24px}
+nav button.on{color:var(--primary);font-weight:800}
+nav button.on .material-symbols-outlined{color:var(--primary)}
+nav button.scan .ico{width:42px;height:42px;margin-top:-10px;border-radius:999px;background:var(--gold);color:var(--ink);display:grid;place-items:center;box-shadow:var(--sh)}
+nav button.scan .ico .material-symbols-outlined{font-size:22px;color:var(--ink)}
+
+/* ver */
+.ver-topo{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.icon-btn{width:40px;height:40px;border-radius:12px;background:var(--surface);border:1px solid var(--line2);display:grid;place-items:center;color:var(--ink)}
+.ver-capa{height:220px;border-radius:18px;background:var(--bg) center/cover no-repeat;display:grid;place-items:center;font-size:54px;color:#cfd3d8;margin-bottom:16px}
+.ver h1{font-size:28px}
+.metarow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700}
+.chip .material-symbols-outlined{font-size:14px}
+.chip.t{background:var(--primary-light);color:var(--primary)}
+.chip.g{background:var(--green-light);color:var(--green)}
+.ver-acoes{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:22px}
+.sec-h{font-family:var(--sans);font-size:18px;font-weight:800;margin:22px 0 12px;display:flex;align-items:center;gap:7px}
+.sec-h .material-symbols-outlined{font-size:19px;color:var(--primary)}
+ul.ing{list-style:none;display:flex;flex-direction:column;gap:10px}
+ul.ing li{display:flex;gap:11px;align-items:flex-start;font-size:15px;color:#1f2937}
+ul.ing li .material-symbols-outlined{color:var(--green);font-size:20px;flex:none}
+ol.pas{list-style:none;counter-reset:p;display:flex;flex-direction:column;gap:16px}
+ol.pas li{counter-increment:p;display:flex;gap:13px;font-size:15px;line-height:1.6;color:#1f2937}
+ol.pas li::before{content:counter(p);flex:none;width:28px;height:28px;border-radius:999px;background:var(--primary-light);color:var(--primary);font-family:var(--sans);font-weight:800;font-size:13px;display:grid;place-items:center}
+
+/* form */
+.campo{margin-bottom:15px}
+.campo label{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.campo input,.campo textarea{width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:13px;padding:12px 14px;line-height:1.5}
+.campo textarea{min-height:120px;resize:vertical}
+.campo input:focus,.campo textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(255,107,0,.12)}
+.campo .dica{font-size:12px;color:var(--subtle);margin-top:5px}
+.fotoprev{height:150px;border-radius:14px;border:1.5px dashed var(--line2);background:var(--bg) var(--f,none) center/cover no-repeat;display:grid;place-items:center;color:var(--muted);cursor:pointer;margin-bottom:15px;text-align:center;padding:10px;font-weight:600}
+
+/* digitalizar */
+.scan-box{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh);padding:28px 22px;text-align:center;margin:18px 0}
+.scan-ic{width:86px;height:86px;margin:0 auto 16px;border-radius:22px;background:var(--primary-light);color:var(--primary);display:grid;place-items:center}
+.scan-ic .material-symbols-outlined{font-size:42px}
+.scan-box h3{font-family:var(--sans);font-size:20px;font-weight:800}
+.scan-feat{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px 0 20px}
+
+/* importar */
+.bcard{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--sh)}
+.bcard .bcapa{height:170px;background:var(--bg) center/cover no-repeat}
+.bcard .bcorpo{padding:16px 18px}
+.bstatus{text-align:center;color:var(--muted);padding:30px 14px}
+
+/* cozinha */
+#cozinha{position:fixed;inset:0;z-index:60;background:linear-gradient(160deg,#1a2230,#111827);color:#fff;display:none;flex-direction:column}
+#cozinha.on{display:flex}
+#cozinha .top{display:flex;align-items:center;justify-content:space-between;padding:16px 18px}
+#cozinha .passo-n{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9fb3c8}
+#cozinha .corpo{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:20px;text-align:center}
+#cozinha .txt{font-family:var(--sans);font-size:26px;font-weight:700;line-height:1.3;max-width:640px}
+.timer{position:relative;width:200px;height:200px}
+.timer svg{transform:rotate(-90deg)}
+.timer .num{position:absolute;inset:0;display:grid;place-items:center;font-size:44px;font-weight:800;font-variant-numeric:tabular-nums}
+.timer .cap{position:absolute;bottom:-24px;left:0;right:0;text-align:center;color:#9fb3c8;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.timer-ctl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.ck{background:#ffffff1a;color:#fff;border:1px solid #ffffff2e;border-radius:999px;padding:9px 15px;font-weight:700;font-size:13px}
+.ck.g{background:var(--gold);color:var(--ink);border-color:transparent}
+#cozinha .dots{display:flex;gap:6px;justify-content:center;padding:4px}
+#cozinha .dots i{width:7px;height:7px;border-radius:999px;background:#ffffff33}
+#cozinha .dots i.on{background:var(--gold)}
+#cozinha .nav2{display:flex;gap:10px;justify-content:center;padding:14px 18px 26px}
+
+.ajuda-item{display:flex;flex-direction:column;gap:2px;padding:12px 0;border-top:1px solid var(--line)}
+.ajuda-item b{font-size:14.5px}
+.ajuda-item span{font-size:13.5px;color:var(--muted);line-height:1.55}
+.upd-bar{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--green-light);border-bottom:1px solid #bfe9d6;padding:10px 16px;color:#055c3a;font-size:13px;font-weight:700}
+.upd-bar a{background:var(--green);color:#fff;border-radius:999px;padding:7px 14px;font-weight:800;text-decoration:none;font-size:12.5px;white-space:nowrap}
+.upd-bar .x{color:#055c3a;font-size:18px;cursor:pointer;background:none;border:none}
+#fotoLoad{position:fixed;inset:0;z-index:80;display:grid;place-items:center;text-align:center;background:#111827e0;color:#fff;padding:30px;font-size:16px}
+  .obs-area{width:100%;min-height:92px;resize:vertical;border:1.5px dashed var(--line,#e6ded0);border-radius:14px;padding:12px 14px;font-family:inherit;font-size:15px;color:inherit;background:rgba(0,0,0,.02);box-sizing:border-box;margin-top:4px}
+  .obs-area:focus{outline:none;border-color:var(--gold,#e0a400);border-style:solid;background:rgba(224,164,0,.05)}
+.ia-acoes{display:flex;gap:9px;flex-wrap:wrap;margin:2px 2px 14px}
+.ia-acoes .btn{flex:1;min-width:46%}
+/* Lista de compras */
+.compras-add{display:flex;gap:8px;align-items:center;margin:4px 0 12px}
+.compras-add input{flex:1;background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:13px 14px;font-family:var(--body);font-size:15px;color:var(--ink);box-shadow:var(--sh-xs)}
+.compras-add .btn{padding:12px 15px}
+.voz-btn{flex:none;width:48px;height:48px;border-radius:999px;background:var(--primary);color:#fff;display:grid;place-items:center;box-shadow:var(--sh)}
+.voz-btn .material-symbols-outlined,.voz-btn svg{font-size:22px;width:22px;height:22px;fill:currentColor}
+.voz-btn.rec{background:var(--green);animation:pulseRec 1s infinite}
+@keyframes pulseRec{0%{box-shadow:0 0 0 0 rgba(0,168,104,.5)}70%{box-shadow:0 0 0 13px rgba(0,168,104,0)}100%{box-shadow:0 0 0 0 rgba(0,168,104,0)}}
+.compras-barras{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.compras-lista{list-style:none;display:flex;flex-direction:column;gap:8px}
+.ci{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:13px 14px;box-shadow:var(--sh-xs);cursor:pointer;transition:background .15s,border-color .15s}
+.ci .ck-box{flex:none;width:26px;height:26px;border-radius:999px;border:2px solid var(--line2);display:grid;place-items:center;color:#fff}
+.ci .ck-box .material-symbols-outlined,.ci .ck-box svg{font-size:18px;width:18px;height:18px;fill:#fff}
+.ci.ok{border-color:var(--green-light)}
+.ci.ok .ck-box{background:var(--green);border-color:var(--green)}
+.ci-txt{flex:1;font-size:15px;font-weight:600;color:var(--ink)}
+.ci.ok .ci-txt{text-decoration:line-through;color:var(--subtle);font-weight:500}
+.ci-x{flex:none;color:var(--subtle);width:30px;height:30px;display:grid;place-items:center;border-radius:8px}
+.ci-x .material-symbols-outlined,.ci-x svg{font-size:18px;width:18px;height:18px;fill:currentColor}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:999px;font-family:var(--sans);font-weight:700;font-size:13px;box-shadow:var(--sh-lg);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:60;max-width:88%;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* opções de busca (várias receitas) */
+.opt{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:10px;margin-bottom:10px;box-shadow:var(--sh-xs);cursor:pointer}
+.opt-capa{flex:none;width:58px;height:58px;border-radius:11px;background:var(--primary-light) center/cover no-repeat;display:grid;place-items:center;color:var(--primary)}
+.opt-capa .material-symbols-outlined,.opt-capa svg{font-size:26px;width:26px;height:26px;fill:currentColor}
+.opt-txt{flex:1;min-width:0}
+.opt-txt h3{font-family:var(--sans);font-size:15.5px;font-weight:800;color:var(--ink);margin:0 0 3px;line-height:1.2}
+.opt-meta{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
+.opt-meta .material-symbols-outlined,.opt-meta svg{font-size:14px;width:14px;height:14px;fill:currentColor;vertical-align:-.15em}
+.iabox{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+.iabox.on{display:flex}
+.iabox-card{background:var(--surface,#fff);width:100%;max-width:560px;max-height:90vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+.iabox-top{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--line2,#eee)}
+.iabox-top b{font-size:18px}
+.iabox-x{border:none;background:none;font-size:22px;color:var(--muted,#999);cursor:pointer;line-height:1}
+.iabox-body{padding:16px 18px 24px;overflow-y:auto}
+.ia-q{font-weight:800;margin:0 0 12px;font-size:16px}
+.ia-opts{display:flex;flex-wrap:wrap;gap:9px}
+.ia-chip{padding:11px 17px;border-radius:999px;border:1px solid var(--line2,#ddd);background:var(--surface,#fff);font-weight:700;font-size:15px;cursor:pointer}
+.ia-ta{width:100%;min-height:92px;border:1px solid var(--line2,#ddd);border-radius:14px;padding:12px 14px;font-size:16px;font-family:inherit;outline:none}
+.ia-inrow{display:flex;gap:8px}.ia-inrow input{flex:1;min-width:0;border:1px solid var(--line2,#ddd);border-radius:12px;padding:12px 14px;font-size:16px;outline:none}
+.ia-check{display:flex;flex-direction:column;gap:8px;max-height:42vh;overflow:auto;margin-bottom:4px}
+.ia-check label{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--line2,#eee);border-radius:12px;font-size:15.5px}
+.ia-check input{width:20px;height:20px;flex:0 0 auto}
+.ia-res{font-size:15.5px;line-height:1.65}
+.ia-load{padding:28px 0;text-align:center;color:var(--muted,#888);font-weight:700}
+.ia-sug{border:1px solid var(--line2,#eee);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--surface,#fff)}
+.ia-sug>b{font-size:16px;color:var(--ink,#222)}
+.ia-sug-s{font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#888);margin:10px 0 4px}
+.ia-sug ul,.ia-sug ol{margin:0;padding-left:20px}
+.ia-sug li{margin:3px 0;font-size:14.5px;line-height:1.4}
+</style></head>
+<body>
+
+<header class="hdr">
+  <div class="logo"><span class="material-symbols-outlined">menu_book</span></div>
+  <div>
+    <div class="tt">Caderno da Mãe</div>
+    <div class="sub" id="hdrSub">Receitas</div>
+  </div>
+  <button class="mae" onclick="abrirAjuda()" title="Ajustes, backup e IA" style="cursor:pointer;border:2px solid #FFE4CC;font-size:19px">⚙</button>
+</header>
+<div id="updBar" class="upd-bar hidden"><span id="updTxt">✨ Tem uma versão nova do Caderno!</span><span style="display:flex;gap:8px;align-items:center"><a id="updLink" href="#">Baixar</a><button class="x" onclick="el('updBar').classList.add('hidden')">✕</button></span></div>
+
+<div class="wrap" id="wrap">
+  <!-- RECEITAS -->
+  <section id="tab-receitas" class="pagina">
+    <div class="saud">
+      <div>
+        <div class="eyebrow"><span class="material-symbols-outlined">local_florist</span> Tradição viva em família</div>
+        <h1 id="saudTitulo">Bom proveito, família!</h1>
+        <p class="lead">O perfume da cozinha da mãe, guardado pras próximas gerações.</p>
+      </div>
+      <div class="pill-count"><span class="material-symbols-outlined">auto_stories</span><span id="contReceitas">0</span></div>
+    </div>
+    <div class="busca">
+      <span class="material-symbols-outlined mi-l">search</span>
+      <input id="busca" placeholder="Buscar receita, ingrediente…" oninput="filtrar()">
+    </div>
+    <div class="pills" id="pills">
+      <button class="pill on" data-f="todas" onclick="setFiltro('todas')">Todas</button>
+      <button class="pill" data-f="foto" onclick="setFiltro('foto')"><span class="material-symbols-outlined">draw</span>Com foto</button>
+      <button class="pill" data-f="fav" onclick="setFiltro('fav')"><span class="material-symbols-outlined">star</span>Favoritas</button>
+      <button class="pill" data-f="web" onclick="setFiltro('web')"><span class="material-symbols-outlined">language</span>Da internet</button>
+    </div>
+    <div class="ia-acoes"><button class="btn ghost" onclick="aiComOqueTenho()"><span class="material-symbols-outlined">restaurant</span> Com o que eu tenho</button><button class="btn ghost" onclick="aiCompras()"><span class="material-symbols-outlined">shopping_cart</span> Lista de compras</button></div><div class="sh"><div class="t"><span class="material-symbols-outlined">family_restroom</span>Guardadas com carinho</div></div>
+    <div class="grade" id="gReceitas"></div>
+    <div class="vazio hidden" id="vazioReceitas"><span class="material-symbols-outlined">restaurant</span><b>Ainda não tem receitas.</b>Toque no + e guarde a primeira da mamãe. 💛</div>
+  </section>
+
+  <!-- DIGITALIZAR -->
+  <section id="tab-digitalizar" class="pagina hidden">
+    <h1 style="font-size:24px;margin:6px 2px">Digitalizar receita</h1>
+    <p class="lead" style="margin:0 2px">Tire uma foto de uma receita escrita à mão — a IA lê a letra e transcreve pra você revisar.</p>
+    <div class="scan-box">
+      <div class="scan-ic"><span class="material-symbols-outlined">draw</span></div>
+      <h3>Caligrafia da família</h3>
+      <p style="color:var(--muted);margin:6px 0 2px">Funciona com letra de mão, cartões antigos e páginas de caderno.</p>
+      <div class="scan-feat">
+        <span class="chip g"><span class="material-symbols-outlined">verified</span> Lê manuscrito</span>
+        <span class="chip t"><span class="material-symbols-outlined">history_edu</span> Receitas antigas</span>
+      </div>
+      <button class="btn" onclick="fotoReceita('manuscrito')"><span class="material-symbols-outlined">photo_camera</span> Escanear receita</button>
+    </div>
+    <p style="text-align:center;color:var(--subtle);font-size:13px">Dica: mantenha a receita bem iluminada e sem sombras pra IA ler com precisão.</p>
+  </section>
+
+  <!-- IMPORTAR -->
+  <section id="tab-importar" class="pagina hidden">
+    <h1 style="font-size:24px;margin:6px 2px">Importar da internet</h1>
+    <p class="lead" style="margin:0 2px 14px">Buscamos nos melhores sites e trazemos a receita limpa, sem anúncios.</p>
+    <div class="busca">
+      <span class="material-symbols-outlined mi-l">search</span>
+      <input id="bq" placeholder="Ex.: bolo de fubá, strogonoff, pão de queijo…" onkeydown="if(event.key==='Enter')fazerBusca()">
+    </div>
+    <button class="btn" style="width:100%" onclick="fazerBusca()"><span class="material-symbols-outlined">language</span> Buscar receita</button>
+    <div class="bstatus hidden" id="bstatus"></div>
+    <div id="bresult" class="hidden" style="margin-top:16px"></div>
+  </section>
+
+  <!-- FAVORITOS -->
+  <section id="tab-favoritos" class="pagina hidden">
+    <h1 style="font-size:24px;margin:6px 2px 14px">Favoritas</h1>
+    <div class="grade" id="gFavoritos"></div>
+    <div class="vazio hidden" id="vazioFav"><span class="material-symbols-outlined">star</span><b>Nenhuma favorita ainda.</b>Abra uma receita e toque na estrela.</div>
+  </section>
+
+  <!-- LISTA DE COMPRAS -->
+  <section id="tab-compras" class="pagina hidden">
+    <div class="saud">
+      <div>
+        <div class="eyebrow"><span class="material-symbols-outlined">shopping_cart</span> Pra levar ao mercado</div>
+        <h1>Lista de compras</h1>
+        <p class="lead">Fale ou escreva. No mercado, toque pra marcar o que já pegou.</p>
+      </div>
+      <div class="pill-count"><span class="material-symbols-outlined">check</span><span id="comprasCount"></span></div>
+    </div>
+    <div class="compras-add">
+      <button id="vozBtn" class="voz-btn" onclick="vozCompras()" aria-label="Ditar lista"><span class="material-symbols-outlined">mic</span></button>
+      <input id="comprasIn" placeholder="Ex.: limão, arroz, 2 tomates…" onkeydown="if(event.key==='Enter')addComprasInput()">
+      <button class="btn" onclick="addComprasInput()" aria-label="Adicionar"><span class="material-symbols-outlined">add</span></button>
+    </div>
+    <div class="compras-barras hidden" id="comprasBarras">
+      <button class="pill" onclick="limparMarcados()"><span class="material-symbols-outlined">check</span>Tirar os marcados</button>
+      <button class="pill" onclick="compartilharCompras()"><span class="material-symbols-outlined">share</span>Compartilhar</button>
+      <button class="pill" onclick="limparCompras()"><span class="material-symbols-outlined">delete</span>Limpar tudo</button>
+    </div>
+    <ul class="compras-lista" id="listaCompras"></ul>
+    <div class="vazio" id="vazioCompras"><span class="material-symbols-outlined">shopping_cart</span><b>Sua lista está vazia.</b>Toque no microfone e fale "limão, arroz, açúcar" — ou escreva acima.</div>
+  </section>
+
+
+  <!-- AJUDA / COMO USAR -->
+  <section id="ajuda" class="pagina hidden">
+    <div class="ver-topo"><button class="icon-btn" onclick="voltarAba()"><span class="material-symbols-outlined">arrow_back</span></button><h2 style="font-size:22px">Ajustes</h2></div>
+    <div class="scan-box" style="text-align:left;padding:20px">
+      <h3 style="margin-bottom:6px">💾 Backup das suas receitas</h3>
+      <p style="color:var(--muted);margin-bottom:14px">Suas receitas ficam só neste aparelho. Faça um backup pra não perder se trocar de celular — e pra mandar pra família.</p>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn" onclick="exportar()"><span class="material-symbols-outlined">arrow_back</span> Exportar / Compartilhar</button>
+        <button class="btn ghost" onclick="el('impin').click()"><span class="material-symbols-outlined">add</span> Importar backup</button>
+      </div>
+      <input type="file" id="impin" accept="application/json,.json" class="hidden" onchange="importarArquivo(event)">
+      <div id="bkMsg" style="margin-top:10px;font-size:13px;color:var(--green);font-weight:700"></div>
+    </div>
+    <div class="scan-box" style="text-align:left;padding:20px">
+      <h3 style="margin-bottom:10px">📖 O Caderno da Mãe</h3>
+      <p style="color:var(--muted);margin-bottom:14px">Um lugar pra guardar e cozinhar as receitas da família — tudo fica salvo no seu aparelho, funciona sem internet.</p>
+      <div class="ajuda-item"><b>➕ Guardar uma receita</b><span>Toque no botão <b>+ Nova receita</b>. Dá pra pôr foto, tempo, ingredientes e o modo de preparo.</span></div>
+      <div class="ajuda-item"><b>👩‍🍳 Modo Cozinha</b><span>Abra a receita e toque em <b>Modo Cozinha</b>: os passos aparecem um a um e, se o passo começar com "20 min", vira um <b>cronômetro</b> na hora.</span></div>
+      <div class="ajuda-item"><b>📷 Digitalizar (grátis)</b><span>Fotografe uma receita escrita ou impressa — o app <b>lê o texto</b> e preenche o formulário pra você revisar. Dica: boa luz e sem sombra.</span></div>
+      <div class="ajuda-item"><b>⭐ Favoritos</b><span>Abra a receita e toque na estrela pra achar rapidinho depois.</span></div>
+    </div>
+    <h3 style="font-size:19px;margin:22px 2px 10px">✨ Leitor inteligente (opcional, grátis)</h3>
+    <div class="scan-box" style="text-align:left;padding:20px">
+      <p style="color:var(--muted);margin-bottom:14px">O scanner grátis já lê textos. Para ler a <b>letra de mão</b> da família com mais capricho, ative o leitor inteligente do Google — é <b>grátis</b>, sem cartão, e fica só no seu celular.</p>
+      <a class="btn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="width:100%;margin-bottom:16px"><span class="material-symbols-outlined">language</span> Pegar minha chave grátis (Google)</a>
+      <ol style="color:var(--muted);font-size:14px;line-height:2;padding-left:20px;margin-bottom:16px">
+        <li>Toque no botão laranja acima.</li>
+        <li>Entre com sua conta <b>Google</b> (a mesma do Gmail).</li>
+        <li>Toque em <b>"Criar chave de API"</b>.</li>
+        <li>Toque em <b>copiar</b> (a chave começa com <b>AIza…</b>).</li>
+        <li>Volte aqui, <b>cole embaixo</b> e toque em Ativar. 💛</li>
+      </ol>
+      <div class="campo"><label>Cole sua chave aqui</label><input id="iaKey" type="password" placeholder="AIza..."></div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn" onclick="salvarIA()"><span class="material-symbols-outlined">check</span> Ativar leitor</button>
+        <button class="btn ghost" onclick="desligarIA()">Desligar</button>
+      </div>
+      <div id="iaMsg" style="margin-top:12px;font-size:13.5px;font-weight:700;color:var(--green)"></div>
+      <details style="margin-top:16px"><summary style="cursor:pointer;color:var(--subtle);font-size:13px;font-weight:700">Opções avançadas (outro provedor)</summary>
+        <div class="campo" style="margin-top:10px"><label>Provedor</label>
+          <select id="iaProv" style="width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:13px;padding:12px 14px">
+            <option value="gemini">Gemini (Google) — grátis</option>
+            <option value="claude">Claude (Anthropic)</option>
+            <option value="openai">OpenAI (GPT)</option>
+          </select></div>
+      </details>
+    </div>
+    <p style="text-align:center;color:var(--subtle);font-size:12px;margin-top:18px">Feito com 💛 pelo Guatá OS · guataos.com.br</p>
+  </section>
+
+  <!-- VER -->
+  <section id="ver" class="pagina hidden">
+    <div class="ver-topo"><button class="icon-btn" onclick="voltarAba()"><span class="material-symbols-outlined">arrow_back</span></button></div>
+    <div class="ver-capa" id="verCapa"><span class="material-symbols-outlined" style="font-size:54px">restaurant</span></div>
+    <h1 id="verTitulo"></h1>
+    <div class="metarow" id="verMeta"></div>
+    <div class="ver-acoes">
+      <button class="btn gold" onclick="cozinhar()"><span class="material-symbols-outlined">restaurant</span> Modo Cozinha</button>
+      <button class="btn ghost" id="btnFav" onclick="toggleFav(verId)"><span class="material-symbols-outlined">star</span> Favoritar</button>
+      <button class="btn ghost" onclick="editar()"><span class="material-symbols-outlined">edit</span> Editar</button>
+    </div>
+    <div class="sec-h"><span class="material-symbols-outlined">auto_awesome</span>Assistente da cozinha</div>
+    <div class="ver-acoes">
+      <button class="btn ghost" onclick="aiPorcoes()"><span class="material-symbols-outlined">family_restroom</span> Porções</button>
+      <button class="btn ghost" onclick="aiSubstituir()"><span class="material-symbols-outlined">swap_horiz</span> Substituir</button>
+      <button class="btn ghost" onclick="aiAdaptar()"><span class="material-symbols-outlined">local_florist</span> Adaptar</button>
+    </div>
+    <div class="sec-h"><span class="material-symbols-outlined">restaurant</span>Ingredientes</div><ul id="verIng" class="ing"></ul>
+    <button class="btn ghost" style="width:100%;margin-top:2px" onclick="receitaParaCompras()"><span class="material-symbols-outlined">shopping_cart</span> Adicionar à lista de compras</button>
+    <div class="sec-h"><span class="material-symbols-outlined">menu_book</span>Modo de preparo</div><ol id="verPas" class="pas"></ol>
+    <div class="sec-h"><span class="material-symbols-outlined">edit_note</span>Minhas observações</div>
+    <textarea id="verObs" class="obs-area" placeholder="Anote o seu toque: ponto da massa, troca de ingrediente, o tempo do SEU forno…" oninput="salvarObs()"></textarea>
+  </section>
+
+  <!-- FORM -->
+  <section id="form" class="pagina hidden">
+    <div class="ver-topo"><button class="icon-btn" onclick="voltarAba()"><span class="material-symbols-outlined">arrow_back</span></button><h2 id="formTitulo" style="font-size:22px">Nova receita</h2></div>
+    <div class="fotoprev" id="fotoprev" onclick="document.getElementById('fotoin').click()">📷 Toque para escolher uma foto</div>
+    <input type="file" id="fotoin" accept="image/*" class="hidden" onchange="carregaFoto(event)">
+    <input type="file" id="ocrin" accept="image/*" capture="environment" class="hidden" onchange="ocrEscolhido(event)">
+    <div class="campo"><label>Nome da receita</label><input id="fTitulo" placeholder="Ex.: Bolo de fubá da vovó"></div>
+    <div class="campo"><label>Tempo</label><input id="fTempo" placeholder="Ex.: 50 minutos"></div>
+    <div class="campo"><label>Ingredientes</label><textarea id="fIng" placeholder="Um por linha:&#10;2 xícaras de fubá&#10;3 ovos"></textarea><div class="dica">Um ingrediente por linha.</div></div>
+    <div class="campo"><label>Modo de preparo</label><textarea id="fPas" placeholder="Um passo por linha. Comece com &quot;X min&quot; pra virar cronômetro, ex.:&#10;Bata os ovos com o açúcar&#10;20 min no forno a 180°"></textarea><div class="dica">Se o passo começar com "X min", vira cronômetro no Modo Cozinha. ⏱️</div></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn" onclick="salvar()"><span class="material-symbols-outlined">check</span> Salvar receita</button>
+      <button class="btn ghost" id="btnExcluir" style="display:none" onclick="excluir()"><span class="material-symbols-outlined">delete</span> Excluir</button>
+    </div>
+  </section>
+</div>
+
+<button class="fab" id="fab" onclick="novaReceita()"><span class="material-symbols-outlined">add</span>Nova receita</button>
+
+<nav>
+  <button id="nav-receitas" class="on" onclick="aba('receitas')"><span class="material-symbols-outlined">menu_book</span>Receitas</button>
+  <button id="nav-digitalizar" class="scan" onclick="aba('digitalizar')"><span class="ico"><span class="material-symbols-outlined">document_scanner</span></span>Digitalizar</button>
+  <button id="nav-importar" onclick="aba('importar')"><span class="material-symbols-outlined">language</span>Importar</button>
+  <button id="nav-favoritos" onclick="aba('favoritos')"><span class="material-symbols-outlined">favorite</span>Favoritos</button>
+  <button id="nav-compras" onclick="aba('compras')"><span class="material-symbols-outlined">shopping_cart</span>Compras</button>
+</nav>
+
+<!-- COZINHA -->
+<div id="cozinha">
+  <div class="top"><span class="passo-n" id="czN"></span><button class="ck" onclick="sairCozinha()">✕ Sair</button></div>
+  <div class="corpo">
+    <div class="txt" id="czTxt"></div>
+    <div id="czTimerWrap" class="timer hidden">
+      <svg width="200" height="200"><circle cx="100" cy="100" r="88" fill="none" stroke="#ffffff22" stroke-width="12"/>
+      <circle id="czArc" cx="100" cy="100" r="88" fill="none" stroke="#FFC700" stroke-width="12" stroke-linecap="round" stroke-dasharray="553" stroke-dashoffset="0"/></svg>
+      <div class="num" id="czNum">00:00</div><div class="cap">cronômetro</div>
+    </div>
+    <div class="timer-ctl hidden" id="czTimerCtl">
+      <button class="ck" onclick="addMin(1)">+1 min</button>
+      <button class="ck" onclick="addMin(5)">+5 min</button>
+      <button class="ck" onclick="addMin(10)">+10 min</button>
+      <button class="ck g" id="czPlay" onclick="toggleTimer()">▶ Iniciar</button>
+      <button class="ck" onclick="zerarTimer()">Zerar</button>
+    </div>
+  </div>
+  <div class="nav2"><button class="ck" onclick="lerPasso()">Ler o passo</button><button class="ck" id="czAuto" onclick="toggleLerAuto(this)">Ler sozinho: não</button></div>
+  <div class="dots" id="czDots"></div>
+  <div class="nav2"><button class="ck" onclick="passo(-1)">← Anterior</button><button class="ck" onclick="passo(1)">Próximo →</button></div>
+</div>
+
+<script>
+const ICONS={
+ "mic":"<path d=\"M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm-40 320v-123q-104-14-172-93t-68-184h80q0 83 58.5 141.5T480-320q83 0 141.5-58.5T680-520h80q0 105-68 184t-172 93v123h-80Zm40-360q17 0 28.5-11.5T520-520v-240q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760v240q0 17 11.5 28.5T480-480Z\"/>",
+ "share":"<path d=\"M720-80q-50 0-85-35t-35-85q0-7 1-14.5t3-13.5L322-392q-17 15-38 23.5t-44 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q23 0 44 8.5t38 23.5l282-164q-2-6-3-13.5t-1-14.5q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-23 0-44-8.5T658-672L376-508q2 6 3 13.5t1 14.5q0 7-1 14.5t-3 13.5l282 164q17-15 38-23.5t44-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Z\"/>",
+ "shopping_cart":"<path d=\"M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM208-800h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm116 280h274l116-200H246l78 200Z\"/>",
+ "auto_awesome":"<path d=\"M480-80 400-280 200-360l200-80 80-200 80 200 200 80-200 80-80 200ZM790-500l-40-100-100-40 100-40 40-100 40 100 100 40-100 40-40 100Z\"/>",
+ "swap_horiz":"<path d=\"M280-160 80-360l200-200 56 57-103 103h607v80H233l103 103-56 57Zm400-240-56-57 103-103H120v-80h607L624-743l56-57 200 200-200 200Z\"/>",
+  "menu_book":"<path d=\"M560-564v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-600q-38 0-73 9.5T560-564Zm0 220v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-380q-38 0-73 9t-67 27Zm0-110v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-490q-38 0-73 9.5T560-454ZM260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z\"/>",
+  "local_florist":"<path d=\"M480-600q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm-70.5 218.5Q378-403 364-438q-5 0-9 .5t-9 .5q-52 0-89-37t-37-89q0-21 7-40.5t21-36.5q-13-17-20-36.5t-7-40.5q0-52 36.5-89t88.5-37q5 0 9 .5t9 .5q14-35 45.5-56.5T480-920q39 0 70.5 21.5T596-842q5 0 9-.5t9-.5q52 0 88.5 37t36.5 89q0 21-6.5 40.5T712-640q13 17 20 36.5t7 40.5q0 52-36.5 89T614-437q-5 0-9-.5t-9-.5q-14 35-45.5 56.5T480-360q-39 0-70.5-21.5ZM480-80q0-74 28.5-139.5T586-334q49-49 114.5-77.5T840-440q0 74-28.5 139.5T734-186q-49 49-114.5 77.5T480-80Zm98-98q57-21 100-64t64-100q-57 21-100 64t-64 100Zm-98 98q0-74-28.5-139.5T374-334q-49-49-114.5-77.5T120-440q0 74 28.5 139.5T226-186q49 49 114.5 77.5T480-80Zm-98-98q-57-21-100-64t-64-100q57 21 100 64t64 100Zm196 0Zm-196 0Zm232-339q19 0 32.5-13.5T660-563q0-14-7.5-24.5T633-604l-35-17q-2 11-6 21.5t-9 19.5q-5 9-12 17t-15 15l32 23q5 4 11.5 6t14.5 2Zm-16-142 35-17q12-6 19-17t7-24q0-19-13-32.5T614-763q-8 0-14 2t-12 6l-33 23q8 7 15.5 15t12.5 17q5 9 9 19.5t6 21.5Zm-159-93q10-4 20-6t21-2q11 0 21 2t20 6l5-44q2-18-12.5-31T480-840q-19 0-33.5 13T434-796l5 44Zm41 312q19 0 33.5-13t12.5-31l-5-44q-10 4-20 6t-21 2q-11 0-21-2t-20-6l-5 44q-2 18 12.5 31t33.5 13ZM362-659q2-11 6-21.5t9-19.5q5-9 12-17t15-15l-32-23q-5-4-11.5-6t-14.5-2q-19 0-32.5 13.5T300-717q0 13 7.5 24t19.5 17l35 17Zm-16 141q8 0 14-1.5t12-6.5l33-22q-8-7-15.5-15T377-580q-5-9-9-19.5t-6-21.5l-35 17q-12 6-19 17t-7 24q1 19 13.5 32t31.5 13Zm237-62Zm0-120Zm-103-60Zm0 240ZM377-700Zm0 120Z\"/>",
+  "auto_stories":"<path d=\"M480-160q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740v484q51-32 107-48t113-16q36 0 70.5 6t69.5 18v-480q15 5 29.5 10.5T898-752q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59Zm80-200v-380l200-200v400L560-360Zm-160 65v-396q-33-14-68.5-21.5T260-720q-37 0-72 7t-68 21v397q35-13 69.5-19t70.5-6q36 0 70.5 6t69.5 19Zm0 0v-396 396Z\"/>",
+  "search":"<path d=\"M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z\"/>",
+  "draw":"<path d=\"M160-120v-170l527-526q12-12 27-18t30-6q16 0 30.5 6t25.5 18l56 56q12 11 18 25.5t6 30.5q0 15-6 30t-18 27L330-120H160Zm80-80h56l393-392-28-29-29-28-392 393v56Zm560-503-57-57 57 57Zm-139 82-29-28 57 57-28-29ZM560-120q74 0 137-37t63-103q0-36-19-62t-51-45l-59 59q23 10 36 22t13 26q0 23-36.5 41.5T560-200q-17 0-28.5 11.5T520-160q0 17 11.5 28.5T560-120ZM183-426l60-60q-20-8-31.5-16.5T200-520q0-12 18-24t76-37q88-38 117-69t29-70q0-55-44-87.5T280-840q-45 0-80.5 16T145-785q-11 13-9 29t15 26q13 11 29 9t27-13q14-14 31-20t42-6q41 0 60.5 12t19.5 28q0 14-17.5 25.5T262-654q-80 35-111 63.5T120-520q0 32 17 54.5t46 39.5Z\"/>",
+  "star":"<path d=\"m354-287 126-76 126 77-33-144 111-96-146-13-58-136-58 135-146 13 111 97-33 143ZM233-120l65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Zm247-350Z\"/>",
+  "language":"<path d=\"M325-111.5q-73-31.5-127.5-86t-86-127.5Q80-398 80-480.5t31.5-155q31.5-72.5 86-127t127.5-86Q398-880 480.5-880t155 31.5q72.5 31.5 127 86t86 127Q880-563 880-480.5T848.5-325q-31.5 73-86 127.5t-127 86Q563-80 480.5-80T325-111.5ZM480-162q26-36 45-75t31-83H404q12 44 31 83t45 75Zm-104-16q-18-33-31.5-68.5T322-320H204q29 50 72.5 87t99.5 55Zm208 0q56-18 99.5-55t72.5-87H638q-9 38-22.5 73.5T584-178ZM170-400h136q-3-20-4.5-39.5T300-480q0-21 1.5-40.5T306-560H170q-5 20-7.5 39.5T160-480q0 21 2.5 40.5T170-400Zm216 0h188q3-20 4.5-39.5T580-480q0-21-1.5-40.5T574-560H386q-3 20-4.5 39.5T380-480q0 21 1.5 40.5T386-400Zm268 0h136q5-20 7.5-39.5T800-480q0-21-2.5-40.5T790-560H654q3 20 4.5 39.5T660-480q0 21-1.5 40.5T654-400Zm-16-240h118q-29-50-72.5-87T584-782q18 33 31.5 68.5T638-640Zm-234 0h152q-12-44-31-83t-45-75q-26 36-45 75t-31 83Zm-200 0h118q9-38 22.5-73.5T376-782q-56 18-99.5 55T204-640Z\"/>",
+  "family_restroom":"<path d=\"M720-720q-33 0-56.5-23.5T640-800q0-33 23.5-56.5T720-880q33 0 56.5 23.5T800-800q0 33-23.5 56.5T720-720ZM680-80v-320q0-40-20.5-72T607-522l35-103q8-25 29.5-40t48.5-15q27 0 48.5 15t29.5 40l102 305H800v240H680ZM457.5-517.5Q440-535 440-560t17.5-42.5Q475-620 500-620t42.5 17.5Q560-585 560-560t-17.5 42.5Q525-500 500-500t-42.5-17.5ZM220-720q-33 0-56.5-23.5T140-800q0-33 23.5-56.5T220-880q33 0 56.5 23.5T300-800q0 33-23.5 56.5T220-720ZM140-80v-280H80v-240q0-33 23.5-56.5T160-680h120q33 0 56.5 23.5T360-600v240h-60v280H140Zm300 0v-160h-40v-160q0-25 17.5-42.5T460-460h80q25 0 42.5 17.5T600-400v160h-40v160H440Z\"/>",
+  "restaurant":"<path d=\"M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T360-446v366h-80Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z\"/>",
+  "schedule":"<path d=\"m612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z\"/>",
+  "document_scanner":"<path d=\"M80-720v-200h200v80H160v120H80Zm720 0v-120H680v-80h200v200h-80ZM80-40v-200h80v120h120v80H80Zm600 0v-80h120v-120h80v200H680ZM280-240h400v-480H280v480Zm0 80q-33 0-56.5-23.5T200-240v-480q0-33 23.5-56.5T280-800h400q33 0 56.5 23.5T760-720v480q0 33-23.5 56.5T680-160H280Zm80-400h240v-80H360v80Zm0 120h240v-80H360v80Zm0 120h240v-80H360v80Zm-80 80v-480 480Z\"/>",
+  "favorite":"<path d=\"m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Zm0-108q96-86 158-147.5t98-107q36-45.5 50-81t14-70.5q0-60-40-100t-100-40q-47 0-87 26.5T518-680h-76q-15-41-55-67.5T300-774q-60 0-100 40t-40 100q0 35 14 70.5t50 81q36 45.5 98 107T480-228Zm0-273Z\"/>",
+  "photo_camera":"<path d=\"M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z\"/>",
+  "verified":"<path d=\"m344-60-76-128-144-32 14-148-98-112 98-112-14-148 144-32 76-128 136 58 136-58 76 128 144 32-14 148 98 112-98 112 14 148-144 32-76 128-136-58-136 58Zm34-102 102-44 104 44 56-96 110-26-10-112 74-84-74-86 10-112-110-24-58-96-102 44-104-44-56 96-110 24 10 112-74 86 74 84-10 114 110 24 58 96Zm102-318Zm-42 142 226-226-56-58-170 170-86-84-56 56 142 142Z\"/>",
+  "history_edu":"<path d=\"M320-160q-33 0-56.5-23.5T240-240v-120h120v-90q-35-2-66.5-15.5T236-506v-44h-46L60-680q36-46 89-65t107-19q27 0 52.5 4t51.5 15v-55h480v520q0 50-35 85t-85 35H320Zm120-200h240v80q0 17 11.5 28.5T720-240q17 0 28.5-11.5T760-280v-440H440v24l240 240v56h-56L510-514l-8 8q-14 14-29.5 25T440-464v104ZM224-630h92v86q12 8 25 11t27 3q23 0 41.5-7t36.5-25l8-8-56-56q-29-29-65-43.5T256-684q-20 0-38 3t-36 9l42 42Zm376 350H320v40h286q-3-9-4.5-19t-1.5-21Zm-280 40v-40 40Z\"/>",
+  "arrow_back":"<path d=\"m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z\"/>",
+  "edit":"<path d=\"M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z\"/>",
+  "check":"<path d=\"M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z\"/>",
+  "delete":"<path d=\"M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z\"/>",
+  "add":"<path d=\"M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z\"/>",
+  "close":"<path d=\"m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z\"/>",
+};
+function iconify(root){(root||document).querySelectorAll('.material-symbols-outlined').forEach(function(s){
+  if(s.firstElementChild)return; var n=(s.textContent||'').trim();
+  if(ICONS[n]) s.innerHTML='<svg viewBox="0 -960 960 960" aria-hidden="true">'+ICONS[n]+'</svg>';
+});}
+
+const DB="caderno-mae-receitas";
+let receitas=JSON.parse(localStorage.getItem(DB)||"[]");
+let abaAtual="receitas", filtro="todas", verId=null, edid=null, fotoData=null, fonteAtual="";
+function salvarDB(){localStorage.setItem(DB,JSON.stringify(receitas))}
+function el(id){return document.getElementById(id)}
+function esc(s){return (s||"").replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))}
+/* valida foto antes de injetar em CSS/HTML (bloqueia XSS de backup/busca importados) */
+function fotoSafe(f){return (typeof f==="string"&&/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]*$/.test(f))?f:""}
+const TABS=["receitas","digitalizar","importar","favoritos","compras"], SUBS=["ver","form","ajuda"];
+const SUBT={receitas:"Receitas",digitalizar:"Digitalizar",importar:"Importar",favoritos:"Favoritos",compras:"Lista de compras"};
+
+function aba(nome){
+  abaAtual=nome;
+  TABS.forEach(t=>{el("tab-"+t).classList.toggle("hidden",t!==nome);el("nav-"+t).classList.toggle("on",t===nome)});
+  SUBS.forEach(s=>el(s).classList.add("hidden"));
+  el("hdrSub").textContent=SUBT[nome]||"";
+  el("fab").classList.toggle("hidden",nome!=="receitas"&&nome!=="favoritos");
+  el("wrap").scrollTop=0;
+  if(nome==="receitas")renderReceitas();
+  if(nome==="favoritos")renderFavoritos();
+  if(nome==="compras")renderCompras();
+}
+function voltarAba(){SUBS.forEach(s=>el(s).classList.add("hidden"));el("tab-"+abaAtual).classList.remove("hidden");el("fab").classList.toggle("hidden",abaAtual!=="receitas"&&abaAtual!=="favoritos");el("wrap").scrollTop=0}
+function abrirSub(id){TABS.forEach(t=>el("tab-"+t).classList.add("hidden"));SUBS.forEach(s=>el(s).classList.toggle("hidden",s!==id));el("fab").classList.add("hidden");el("wrap").scrollTop=0}
+
+function cardReceita(r){
+  const fs=fotoSafe(r.foto);const capa=fs?`style="background-image:url('${fs}')"`:"";
+  const ic=r.foto?"":`<span class="material-symbols-outlined" style="font-size:34px">restaurant</span>`;
+  const badge=r.foto?`<span class="badge"><span class="material-symbols-outlined">draw</span> Com foto</span>`:(r.fonte?`<span class="badge"><span class="material-symbols-outlined">language</span> Da web</span>`:"");
+  const heart=r.fav?`<span class="heart"><span class="material-symbols-outlined">favorite</span></span>`:"";
+  const np=(r.passos||[]).length;
+  const cat=r.fonte?"Da internet":(r.foto?"Foto / manuscrito":"Da família");
+  return `<div class="rc" onclick="verReceita('${esc(r.id)}')">
+    <div class="capa" ${capa}>${ic}${badge}${heart}</div>
+    <div class="corpo">
+      <div><div class="cat">${esc(cat)}</div><h3>${esc(r.titulo||"Sem nome")}</h3></div>
+      <div class="rodape"><span class="t"><span class="material-symbols-outlined">schedule</span>${esc(r.tempo||"—")}</span><span class="p">${np} passo${np===1?'':'s'}</span></div>
+    </div></div>`;
+}
+function listaFiltrada(){
+  let l=receitas.slice();
+  const q=(el("busca")?.value||"").toLowerCase().trim();
+  if(filtro==="fav")l=l.filter(r=>r.fav);
+  else if(filtro==="foto")l=l.filter(r=>r.foto);
+  else if(filtro==="web")l=l.filter(r=>r.fonte);
+  if(q)l=l.filter(r=>(r.titulo||"").toLowerCase().includes(q)||(r.ingredientes||[]).join(" ").toLowerCase().includes(q));
+  return l;
+}
+function renderReceitas(){
+  const l=listaFiltrada();
+  el("gReceitas").innerHTML=l.map(cardReceita).join("");iconify(el("gReceitas"));
+  const q=(el("busca")?.value||"").trim();
+  const vz=el("vazioReceitas");
+  vz.classList.toggle("hidden",l.length>0);
+  if(l.length===0){
+    if(q){
+      const qs=esc(q);
+      vz.innerHTML=`<span class="material-symbols-outlined">search</span><b>Nada salvo com "${qs}".</b>Quer que eu busque essa receita na internet?<div style="margin-top:16px"><button class="btn" onclick="buscarNaWeb(this.dataset.q)" data-q="${qs}"><span class="material-symbols-outlined">language</span> Buscar na internet</button></div>`;
+    }else{
+      vz.innerHTML=`<span class="material-symbols-outlined">restaurant</span><b>Ainda não tem receitas.</b>Toque no + e guarde a primeira da mamãe. 💛`;
+    }
+    iconify(vz);
+  }
+  el("contReceitas").textContent=receitas.length+(receitas.length===1?" relíquia":" relíquias");
+}
+function buscarNaWeb(q){aba("importar");el("bq").value=q;fazerBusca();}
+function setFiltro(f){filtro=f;[...document.querySelectorAll('#pills .pill')].forEach(p=>p.classList.toggle('on',p.dataset.f===f));renderReceitas()}
+function filtrar(){renderReceitas()}
+function renderFavoritos(){const favs=receitas.filter(r=>r.fav);el("gFavoritos").innerHTML=favs.map(cardReceita).join("");iconify(el("gFavoritos"));el("vazioFav").classList.toggle("hidden",favs.length>0)}
+
+function verReceita(id){const r=receitas.find(x=>x.id===id);if(!r)return;verId=id;
+  {const fs=fotoSafe(r.foto);el("verCapa").style.backgroundImage=fs?`url('${fs}')`:"";el("verCapa").innerHTML=fs?"":`<span class="material-symbols-outlined" style="font-size:54px">restaurant</span>`;}
+  el("verTitulo").textContent=r.titulo||"Sem nome";
+  el("verMeta").innerHTML=(r.tempo?`<span class="chip t"><span class="material-symbols-outlined">schedule</span>${esc(r.tempo)}</span>`:"")+(r.fonte?`<span class="chip g"><span class="material-symbols-outlined">language</span>fonte salva</span>`:"");
+  el("verIng").innerHTML=(r.ingredientes||[]).map(i=>`<li><span class="material-symbols-outlined">check</span>${esc(i)}</li>`).join("")||"<li>—</li>";
+  el("verPas").innerHTML=(r.passos||[]).map(p=>`<li>${esc(p)}</li>`).join("")||"<li>—</li>";
+  if(el("verObs"))el("verObs").value=r.obs||"";
+  atualizaBtnFav(r);abrirSub("ver");iconify(el("ver"));
+}
+function salvarObs(){const r=receitas.find(x=>x.id===verId);if(!r)return;r.obs=el("verObs").value;salvarDB();}
+function atualizaBtnFav(r){el("btnFav").innerHTML=r.fav?`<span class="material-symbols-outlined">star</span> Favorita`:`<span class="material-symbols-outlined">star</span> Favoritar`;el("btnFav").classList.toggle("gold",!!r.fav);iconify(el("btnFav"))}
+function toggleFav(id){const r=receitas.find(x=>x.id===id);if(!r)return;r.fav=!r.fav;salvarDB();atualizaBtnFav(r)}
+
+function novaReceita(){edid=null;fotoData=null;fonteAtual="";el("formTitulo").textContent="Nova receita";el("fTitulo").value="";el("fTempo").value="";el("fIng").value="";el("fPas").value="";el("fotoprev").style.setProperty("--f","none");el("fotoprev").textContent="📷 Toque para escolher uma foto";el("btnExcluir").style.display="none";abrirSub("form")}
+function editar(){const r=receitas.find(x=>x.id===verId);if(!r)return;edid=r.id;fotoData=r.foto||null;fonteAtual=r.fonte||"";el("formTitulo").textContent="Editar receita";el("fTitulo").value=r.titulo||"";el("fTempo").value=r.tempo||"";el("fIng").value=(r.ingredientes||[]).join("\n");el("fPas").value=(r.passos||[]).join("\n");el("fotoprev").style.setProperty("--f",r.foto?`url('${r.foto}')`:"none");el("fotoprev").textContent=r.foto?"":"📷 Toque para trocar a foto";el("btnExcluir").style.display="inline-flex";abrirSub("form")}
+function carregaFoto(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>{fotoData=ev.target.result;el("fotoprev").style.setProperty("--f",`url('${fotoData}')`);el("fotoprev").textContent=""};rd.readAsDataURL(f)}
+function salvar(){const t=el("fTitulo").value.trim();if(!t){alert("Dê um nome pra receita. 💛");return}
+  const ing=el("fIng").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  const pas=el("fPas").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(edid){const r=receitas.find(x=>x.id===edid);Object.assign(r,{titulo:t,tempo:el("fTempo").value.trim(),ingredientes:ing,passos:pas,foto:fotoData,fonte:fonteAtual})}
+  else receitas.unshift({id:String(Date.now()),titulo:t,tempo:el("fTempo").value.trim(),ingredientes:ing,passos:pas,foto:fotoData,fonte:fonteAtual,fav:false});
+  salvarDB();aba("receitas")}
+function excluir(){if(confirm("Apagar esta receita?")){receitas=receitas.filter(x=>x.id!==edid);salvarDB();aba("receitas")}}
+
+/* FOTO / MANUSCRITO -> IA */
+
+function exportar(){
+  const dados=JSON.stringify({app:"caderno-da-mae",v:1,data:new Date().toISOString(),receitas:receitas},null,2);
+  const blob=new Blob([dados],{type:"application/json"});
+  const nome="caderno-da-mae-backup.json";
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[new File([blob],nome,{type:"application/json"})]})){
+    navigator.share({files:[new File([blob],nome,{type:"application/json"})],title:"Backup do Caderno da Mãe"}).catch(()=>baixarBlob(blob,nome));
+  } else baixarBlob(blob,nome);
+  el("bkMsg").textContent="✓ Backup gerado ("+receitas.length+" receitas).";
+}
+function baixarBlob(blob,nome){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();a.remove();}
+function importarArquivo(e){const f=e.target.files[0];if(!f)return;e.target.value="";const rd=new FileReader();
+  rd.onload=ev=>{try{const d=JSON.parse(ev.target.result);const lista=Array.isArray(d)?d:(d.receitas||[]);
+    if(!lista.length){el("bkMsg").textContent="Arquivo sem receitas.";return;}
+    const ids=new Set(receitas.map(r=>r.id));let add=0;
+    lista.forEach((r,ix)=>{if(r&&r.titulo){r.id=String(Date.now())+'-'+ix+'-'+Math.floor(Math.random()*999);receitas.unshift(r);add++;}});
+    salvarDB();el("bkMsg").textContent="✓ "+add+" receita(s) importada(s)!";renderReceitas();
+  }catch(err){el("bkMsg").textContent="Não consegui ler esse arquivo de backup."}};
+  rd.readAsText(f);}
+
+const IAKEY="caderno-ia";
+function iaCfg(){try{return JSON.parse(localStorage.getItem(IAKEY)||"{}")}catch(e){return {}}}
+function abrirAjuda(){const c=iaCfg();el("iaKey").value=c.key||"";if(el("iaProv"))el("iaProv").value=c.prov||"gemini";el("iaMsg").textContent="";abrirSub("ajuda")}
+function salvarIA(){const key=el("iaKey").value.trim();const prov=(el("iaProv")&&el("iaProv").value)||"gemini";if(!key){el("iaMsg").style.color="#c0392b";el("iaMsg").textContent="Cole sua chave primeiro (toque no botão laranja pra pegar). 💛";return;}localStorage.setItem(IAKEY,JSON.stringify({prov,key}));el("iaMsg").style.color="var(--green)";el("iaMsg").textContent="✓ Leitor inteligente ativado! Agora o 📷 Digitalizar lê a letra de mão. 🎉"}
+function desligarIA(){localStorage.removeItem(IAKEY);el("iaKey").value="";el("iaMsg").style.color="var(--muted)";el("iaMsg").textContent="Desligado — usando o scanner grátis (OCR)."}
+function iaVisaoWeb(b64,mime){
+  const c=iaCfg(); if(!c.prov||!c.key) return Promise.reject("sem-ia");
+  const prompt="Esta é a foto de uma receita (manuscrita ou impressa). Transcreva e organize. Responda SOMENTE JSON {\"nome\":\"\",\"tempo\":\"\",\"ingredientes\":[],\"passos\":[]}. Em pt-BR. Nos passos, se houver tempo comece com 'X min'.";
+  if(c.prov==="claude"){
+    return fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":c.key,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-5",max_tokens:1200,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image",source:{type:"base64",media_type:mime,data:b64}}]}]})}).then(r=>r.json()).then(d=>(d.content||[]).map(x=>x.text||"").join(""));
+  }
+  if(c.prov==="gemini"){
+    return fetch("https://guataos.com.br/ia",{method:"POST",headers:{"content-type":"application/json","X-Api-Key":c.key},body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt},{inlineData:{mimeType:mime,data:b64}}]}],generationConfig:{maxOutputTokens:1200}})}).then(r=>r.json()).then(d=>{if(d.error)throw new Error(d.error.message||"Erro Gemini");return ((d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[]).map(p=>p.text||"").join("")});
+  }
+  return fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","Authorization":"Bearer "+c.key},body:JSON.stringify({model:"gpt-4o-mini",max_tokens:1200,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:"data:"+mime+";base64,"+b64}}]}]})}).then(r=>r.json()).then(d=>{if(d.error)throw new Error(d.error.message);return d.choices[0].message.content});
+}
+function jsonDe(t){try{return JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1))}catch(e){return null}}
+
+function fotoReceita(modo){el("ocrin").click()}
+function preencheRevisao(nome,tempo,ing,pas){novaReceita();el("formTitulo").textContent="Revise o que eu li 📷";el("fTitulo").value=nome||"";el("fTempo").value=tempo||"";el("fIng").value=(ing||[]).join("\n");el("fPas").value=(pas||[]).join("\n");if(fotoData){el("fotoprev").style.setProperty("--f",`url('${fotoData}')`);el("fotoprev").textContent=""}}
+function ocrEscolhido(e){const f=e.target.files[0];if(!f)return;e.target.value="";fotoProcessando();
+  const mime=f.type||"image/jpeg";
+  const rd=new FileReader();rd.onload=ev=>{fotoData=ev.target.result;
+    const c=iaCfg();
+    if(c.prov&&c.key){ // IA de visão (turbo)
+      const b64=(ev.target.result.split(",")[1]||"");
+      iaVisaoWeb(b64,mime).then(t=>{const dl=el("fotoLoad");if(dl)dl.remove();const d=jsonDe(t||"");if(!d){alert("A IA não leu direito. Tente outra foto. 💛");return}preencheRevisao(d.nome,d.tempo,d.ingredientes,d.passos)})
+        .catch(e=>{const dl=el("fotoLoad");if(dl)dl.remove();alert("IA: "+((e&&e.message)||e)+"\nConfira sua chave em Como usar.")});
+    } else { // OCR grátis
+      Tesseract.recognize(f,"por").then(({data})=>{const dl=el("fotoLoad");if(dl)dl.remove();const linhas=((data&&data.text)||"").split("\n").map(s=>s.trim()).filter(Boolean);preencheRevisao(linhas[0]||"",null,linhas.slice(1),null)})
+        .catch(()=>{const dl=el("fotoLoad");if(dl)dl.remove();alert("Não consegui ler a imagem. Tente uma foto mais nítida e bem iluminada. 💛")});
+    }
+  };rd.readAsDataURL(f)}
+function fotoProcessando(){let d=el("fotoLoad");if(d)return;d=document.createElement("div");d.id="fotoLoad";d.innerHTML="📷 Lendo a receita…<br><small style='opacity:.8'>Leva alguns segundos. 💛</small>";document.body.appendChild(d)}
+function receberFoto(rec){const dl=el("fotoLoad");if(dl)dl.remove();if(!rec||rec.erro){alert(rec&&rec.erro?rec.erro:"Não deu pra ler a receita da foto.");return}
+  novaReceita();el("formTitulo").textContent="Revise a receita 📷";el("fTitulo").value=rec.nome||"";el("fTempo").value=rec.tempo||"";el("fIng").value=(rec.ingredientes||[]).join("\n");el("fPas").value=(rec.passos||[]).join("\n");
+  if(rec.foto){fotoData=rec.foto;el("fotoprev").style.setProperty("--f",`url('${rec.foto}')`);el("fotoprev").textContent=""}}
+
+/* MODO COZINHA */
+let czPassos=[],czIdx=0,czTime=0,czLeft=0,czTimer=null,czRunning=false;
+function cozinhar(){const r=receitas.find(x=>x.id===verId);if(!r||!(r.passos||[]).length){alert("Essa receita não tem passos ainda.");return}czPassos=r.passos;czIdx=0;el("cozinha").classList.add("on");el("czDots").innerHTML=czPassos.map(()=>"<i></i>").join("");renderPasso()}
+function sairCozinha(){pararTimer();try{speechSynthesis.cancel()}catch(e){}el("cozinha").classList.remove("on")}
+function passo(d){const n=czIdx+d;if(n<0||n>=czPassos.length)return;czIdx=n;renderPasso()}
+function minutosDoPasso(txt){const m=txt.match(/^\s*(\d+)\s*(min|minuto|minutos|m)\b/i);if(m)return parseInt(m[1]);const h=txt.match(/^\s*(\d+)\s*(h|hora|horas)\b/i);if(h)return parseInt(h[1])*60;return 0}
+function renderPasso(){pararTimer();const p=czPassos[czIdx];el("czTxt").textContent=p;if(lerAuto)setTimeout(lerPasso,160);el("czN").textContent=`Passo ${czIdx+1} de ${czPassos.length}`;
+  [...el("czDots").children].forEach((d,i)=>d.classList.toggle("on",i===czIdx));
+  el("czTimerWrap").classList.remove("hidden");el("czTimerCtl").classList.remove("hidden");
+  const min=minutosDoPasso(p);if(min>0){czTime=min*60;czLeft=czTime;el("czPlay").textContent="▶ Iniciar "+min+" min"}else{czTime=0;czLeft=0;el("czPlay").textContent="▶ Iniciar"}updTimer()}
+function addMin(n){if(czRunning)return;czLeft=Math.max(0,czLeft+n*60);czTime=czLeft;updTimer();el("czPlay").textContent=czLeft>0?("▶ Iniciar "+Math.round(czLeft/60)+" min"):"▶ Iniciar"}
+function zerarTimer(){pararTimer();czLeft=0;czTime=0;updTimer();el("czPlay").textContent="▶ Iniciar"}
+function toggleTimer(){if(czRunning)pararTimer();else iniciarTimer()}
+function iniciarTimer(){if(czLeft<=0)return;czRunning=true;el("czPlay").textContent="⏸ Pausar";czTimer=setInterval(()=>{czLeft--;updTimer();if(czLeft<=0){pararTimer();alarme()}},1000)}
+function pararTimer(){czRunning=false;if(czTimer){clearInterval(czTimer);czTimer=null}if(el("czPlay"))el("czPlay").textContent="▶ Continuar"}
+function updTimer(){const m=Math.floor(czLeft/60),s=czLeft%60;el("czNum").textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;const frac=czTime?czLeft/czTime:0;el("czArc").style.strokeDashoffset=553*(1-frac)}
+function alarme(){el("czNum").textContent="Pronto!";
+  try{const ac=new(window.AudioContext||window.webkitAudioContext)();const seq=[0,0.18,0.36,0.95,1.13,1.31];const fr=[660,880,1046,660,880,1046];
+    seq.forEach((t,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type="sine";o.frequency.value=fr[i];o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(0.0001,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(0.35,ac.currentTime+t+0.03);g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+t+0.5);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+0.55)})}catch(e){}
+  try{const u=new SpeechSynthesisUtterance("Pronto! A receita terminou.");u.lang="pt-BR";u.rate=0.95;u.pitch=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}
+  if(navigator.vibrate)navigator.vibrate([250,120,250,120,350])}
+
+/* IMPORTAR WEB */
+let buscaAtual=null, buscaResultados=[];
+function fazerBusca(){const q=el("bq").value.trim();if(!q)return;
+  el("bstatus").classList.remove("hidden");el("bresult").classList.add("hidden");
+  el("bstatus").innerHTML=`<span class="material-symbols-outlined" style="vertical-align:-.2em">search</span> Procurando <b>"${esc(q)}"</b> nos melhores sites…<br><small>Leva alguns segundos, folheando a internet sem anúncios.</small>`;
+  iconify(el("bstatus"));
+  fetch("https://guataos.com.br/caderno/api/receita?q="+encodeURIComponent(q))
+    .then(r=>r.json()).then(data=>receberBusca(data))
+    .catch(()=>{el("bstatus").innerHTML="Sem conexão agora. Tente de novo com internet."})}
+/* aceita {resultados:[...]} (novo) ou um objeto único (compatível com a API antiga) */
+function receberBusca(data){
+  var lista=Array.isArray(data&&data.resultados)?data.resultados:((data&&data.titulo)?[data]:[]);
+  lista=lista.filter(function(r){return r&&r.titulo});
+  if(!lista.length){el("bstatus").classList.remove("hidden");el("bstatus").innerHTML="Não achei uma receita boa pra isso. Tente outro nome.";el("bresult").classList.add("hidden");return}
+  buscaResultados=lista;el("bstatus").classList.add("hidden");el("bresult").classList.remove("hidden");
+  if(lista.length===1){mostrarResultado(0);return}
+  el("bresult").innerHTML='<div class="sh"><div class="t"><span class="material-symbols-outlined">menu_book</span>'+lista.length+' receitas encontradas — toque pra abrir</div></div>'
+    +lista.map(function(r,i){var dom=r.fonte?r.fonte.replace(/^https?:\/\//,'').split('/')[0]:"";var fs=fotoSafe(r.foto);
+      return '<div class="opt" onclick="mostrarResultado('+i+')"><div class="opt-capa"'+(fs?' style="background-image:url(\''+fs+'\')"':'')+'>'+(fs?'':'<span class="material-symbols-outlined">restaurant</span>')+'</div>'
+        +'<div class="opt-txt"><h3>'+esc(r.titulo)+'</h3><div class="opt-meta">'+(r.tempo?'<span class="material-symbols-outlined">schedule</span>'+esc(r.tempo)+' · ':'')+esc(dom)+'</div></div></div>'}).join("");
+  iconify(el("bresult"));el("wrap").scrollTop=0;
+}
+function mostrarResultado(i){var rec=buscaResultados[i];if(!rec)return;buscaAtual=rec;
+  var dom=rec.fonte?rec.fonte.replace(/^https?:\/\//,'').split('/')[0]:"";var fs=fotoSafe(rec.foto);
+  var volta=buscaResultados.length>1?'<button class="btn ghost" style="margin-bottom:10px" onclick="receberBusca({resultados:buscaResultados})"><span class="material-symbols-outlined">arrow_back</span> Ver as outras opções</button>':'';
+  el("bresult").innerHTML=volta+'<div class="bcard">'+(fs?'<div class="bcapa" style="background-image:url(\''+fs+'\')"></div>':'')+'<div class="bcorpo">'
+    +'<h1 style="font-size:24px">'+esc(rec.titulo)+'</h1>'
+    +'<div class="metarow">'+(rec.tempo?'<span class="chip t"><span class="material-symbols-outlined">schedule</span>'+esc(rec.tempo)+'</span>':'')+(dom?'<span class="chip g"><span class="material-symbols-outlined">language</span>'+esc(dom)+'</span>':'')+'</div>'
+    +'<div class="sec-h" style="font-size:16px"><span class="material-symbols-outlined">restaurant</span>Ingredientes</div><ul class="ing">'+(rec.ingredientes||[]).map(function(x){return '<li><span class="material-symbols-outlined">check</span>'+esc(x)+'</li>'}).join("")+'</ul>'
+    +'<div class="sec-h" style="font-size:16px"><span class="material-symbols-outlined">menu_book</span>Modo de preparo</div><ol class="pas">'+(rec.passos||[]).map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ol>'
+    +'<button class="btn" style="width:100%;margin-top:16px" onclick="salvarDaBusca()"><span class="material-symbols-outlined">check</span> Guardar no meu caderno</button></div></div>';
+  iconify(el("bresult"));el("wrap").scrollTop=0;
+}
+function salvarDaBusca(){if(!buscaAtual)return;receitas.unshift({id:String(Date.now()),titulo:buscaAtual.titulo,tempo:buscaAtual.tempo||"",ingredientes:buscaAtual.ingredientes||[],passos:buscaAtual.passos||[],foto:fotoSafe(buscaAtual.foto)||null,fonte:buscaAtual.fonte||"",fav:false});salvarDB();aba("receitas")}
+
+renderReceitas();
+iconify();
+
+const APP_VERSION=5; // sobe a cada release (bate com version.json "code")
+function checarAtualizacao(){
+  fetch("https://guataos.com.br/caderno/version.json?t="+Date.now()).then(r=>r.json()).then(v=>{
+    if(v&&v.code&&v.code>APP_VERSION){
+      el("updTxt").textContent="✨ Nova versão ("+(v.nome||"")+") — "+(v.notas||"melhorias");
+      el("updLink").href="https://guataos.com.br/caderno/"+(v.apk||"caderno-da-mae.apk");
+      el("updBar").classList.remove("hidden");
+    }
+  }).catch(()=>{});
+}
+setTimeout(checarAtualizacao,1500);
+
+/* ===== Assistente da Cozinha (IA de texto + voz) ===== */
+var lerAuto=false, iaUltimaAdapt="", iaSugestoes=[];
+function lerPasso(){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance((czPassos&&czPassos[czIdx])||"");u.lang="pt-BR";u.rate=.98;speechSynthesis.speak(u)}catch(e){}}
+function toggleLerAuto(b){lerAuto=!lerAuto;b.textContent="Ler sozinho: "+(lerAuto?"sim":"não");if(lerAuto)lerPasso();else{try{speechSynthesis.cancel()}catch(e){}}}
+function _iaReq(prompt){var c=iaCfg();
+  if(c.prov==="claude")return fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":c.key,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-5",max_tokens:1400,messages:[{role:"user",content:prompt}]})}).then(r=>r.json()).then(d=>{if(d.error)throw new Error(d.error.message);return (d.content||[]).map(x=>x.text||"").join("")});
+  if(c.prov==="openai")return fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","Authorization":"Bearer "+c.key},body:JSON.stringify({model:"gpt-4o-mini",max_tokens:1400,messages:[{role:"user",content:prompt}]})}).then(r=>r.json()).then(d=>{if(d.error)throw new Error(d.error.message);return d.choices[0].message.content});
+  return fetch("https://guataos.com.br/ia",{method:"POST",headers:{"content-type":"application/json","X-Api-Key":c.key},body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1400}})}).then(r=>r.json()).then(d=>{if(d.error)throw new Error(d.error.message||"Erro Gemini");return ((d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[]).map(p=>p.text||"").join("")});
+}
+function iaTexto(prompt){if(!iaCfg().key)return Promise.reject(new Error("sem-ia"));var n=0;function go(){return _iaReq(prompt).catch(function(e){var m=String((e&&e.message)||e);if(n>=3||/API key|invalid|not valid|quota|permission/i.test(m))throw e;n++;var b=document.getElementById('iaBoxBody');if(b&&b.querySelector('.ia-load'))b.innerHTML='<div class="ia-load">Conexão devagar… tentando de novo ('+n+'/3)</div>';return new Promise(function(r){setTimeout(r,n*1200)}).then(go)})}return go();}
+function fmtIA(t){return esc(t||"").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^[\-\*]\s+/gm,"• ").replace(/\n/g,"<br>")}
+function precisaIA(){if(iaCfg().key)return true;alert("Pra usar o assistente, ative a IA grátis (é de graça) em \"Como usar\".");abrirAjuda();return false}
+function iaBoxOpen(t){el("iaBoxTit").textContent=t;el("iaBoxBody").innerHTML="";el("iaBox").classList.add("on")}
+function iaBoxClose(){el("iaBox").classList.remove("on");try{speechSynthesis.cancel()}catch(e){}}
+function iaBoxHtml(h){el("iaBoxBody").innerHTML=h;iconify(el("iaBoxBody"))}
+function iaBoxLoad(m){el("iaBoxBody").innerHTML='<div class="ia-load">'+(m||"Pensando…")+'</div>'}
+function iaBoxErr(e){iaBoxHtml('<div class="ia-res">Não consegui agora.<br><small style="color:var(--muted)">'+esc(String((e&&e.message)||e))+'</small></div>')}
+
+/* 1) Cozinhar com o que tenho */
+function aiComOqueTenho(){if(!precisaIA())return;iaBoxOpen("Com o que eu tenho");
+  iaBoxHtml('<p class="ia-q">O que você tem em casa?</p><textarea id="iaTenhoIn" class="ia-ta" placeholder="Ex.: ovos, farinha, banana, leite"></textarea><button class="btn" style="margin-top:10px;width:100%" onclick="aiComOqueTenhoGo()"><span class="material-symbols-outlined">search</span> Sugerir receitas</button>')}
+function _parseReceitas(txt){var blocks=String(txt||"").split(/\n\s*-{3,}\s*\n/);var out=[];
+  blocks.forEach(function(b){if(!/NOME:/i.test(b))return;
+    var nome=((b.match(/NOME:\s*(.+)/i)||[])[1]||"").trim();
+    var ingB=((b.split(/INGREDIENTES:/i)[1]||"").split(/PREPARO:/i)[0]||"");
+    var pasB=(b.split(/PREPARO:/i)[1]||"");
+    var ing=ingB.split("\n").map(function(x){return x.replace(/^[\-\*•]\s*/,"").trim()}).filter(Boolean);
+    var pas=pasB.split("\n").map(function(x){return x.replace(/^[\-\*•]\s*/,"").replace(/^\d+[\.\)]\s*/,"").trim()}).filter(Boolean);
+    if(nome&&(ing.length||pas.length))out.push({nome:nome,ing:ing,pas:pas})});
+  return out;}
+function aiComOqueTenhoGo(){var t=(el("iaTenhoIn").value||"").trim();if(!t)return;iaBoxLoad("Pensando em receitas…");
+  iaTexto("Tenho em casa: "+t+". Sugira de 2 a 3 receitas simples e caseiras que dá pra fazer com isso (pode usar básicos: sal, óleo, água). Em português simples. Separe cada receita com uma linha contendo só \"---\". Para CADA receita responda EXATAMENTE:\nNOME: ...\nINGREDIENTES:\n(um ingrediente por linha)\nPREPARO:\n(um passo por linha)")
+   .then(function(r){iaSugestoes=_parseReceitas(r);
+     if(!iaSugestoes.length){iaBoxHtml('<div class="ia-res">'+fmtIA(r)+'</div>');return}
+     var h="";iaSugestoes.forEach(function(rc,i){h+='<div class="ia-sug"><b>'+esc(rc.nome)+'</b>';
+       if(rc.ing.length)h+='<div class="ia-sug-s">Ingredientes</div><ul>'+rc.ing.map(function(x){return "<li>"+esc(x)+"</li>"}).join("")+'</ul>';
+       if(rc.pas.length)h+='<div class="ia-sug-s">Preparo</div><ol>'+rc.pas.map(function(x){return "<li>"+esc(x)+"</li>"}).join("")+'</ol>';
+       h+='<button class="btn" style="margin-top:8px" onclick="aiSalvarSugestao('+i+')"><span class="material-symbols-outlined">add</span> Salvar esta receita</button></div>'});
+     iaBoxHtml(h);
+   }).catch(iaBoxErr)}
+function aiSalvarSugestao(i){var rc=iaSugestoes[i];if(!rc)return;iaBoxClose();preencheRevisao(rc.nome,null,rc.ing,rc.pas);el("formTitulo").textContent="Revise e salve a receita"}
+
+/* 2) Ajustar porções */
+function aiPorcoes(){if(!precisaIA())return;var r=receitas.find(x=>x.id===verId);if(!r)return;iaBoxOpen("Ajustar porções");
+  iaBoxHtml('<p class="ia-q">Pra quantas porções?</p><div class="ia-opts">'+[2,4,6,8,10,12].map(n=>'<button class="ia-chip" onclick="aiPorcoesGo('+n+')">'+n+'</button>').join("")+'</div>')}
+function aiPorcoesGo(n){var r=receitas.find(x=>x.id===verId);if(!r)return;iaBoxLoad("Recalculando pra "+n+" porções…");
+  iaTexto('Recalcule as quantidades dos ingredientes para '+n+' porções. Receita: "'+r.titulo+'". Ingredientes originais:\n'+(r.ingredientes||[]).join("\n")+'\n\nResponda SOMENTE a lista de ingredientes ajustada, um por linha, com as novas quantidades. Em português.')
+   .then(t=>iaBoxHtml('<div class="ia-res"><b>Ingredientes para '+n+' porções</b><br><br>'+fmtIA(t)+'</div>')).catch(iaBoxErr)}
+
+/* 3) Substituições */
+function aiSubstituir(){if(!precisaIA())return;var r=receitas.find(x=>x.id===verId);if(!r)return;iaBoxOpen("Substituir ingrediente");
+  iaBoxHtml('<p class="ia-q">Qual ingrediente está faltando?</p><div class="ia-inrow"><input id="iaSubIn" placeholder="Ex.: fermento, leite, ovo"><button class="btn" onclick="aiSubstituirGo()">Buscar</button></div>')}
+function aiSubstituirGo(){var r=receitas.find(x=>x.id===verId);var ing=(el("iaSubIn").value||"").trim();if(!ing)return;iaBoxLoad("Procurando um bom substituto…");
+  iaTexto('Na receita "'+r.titulo+'", a pessoa não tem "'+ing+'". Sugira de 1 a 3 substitutos caseiros simples, com a proporção/quantidade equivalente e uma observação curta de sabor ou textura. Em português, claro e curto.')
+   .then(t=>iaBoxHtml('<div class="ia-res">'+fmtIA(t)+'</div>')).catch(iaBoxErr)}
+
+/* 4) Adaptar (saudável/sem lactose/sem glúten/vegana/menos açúcar) */
+function aiAdaptar(){if(!precisaIA())return;var r=receitas.find(x=>x.id===verId);if(!r)return;iaBoxOpen("Adaptar receita");
+  var ops=[["Mais saudável","mais saudável e leve"],["Sem lactose","sem lactose"],["Sem glúten","sem glúten"],["Vegana","vegana"],["Menos açúcar","com menos açúcar"]];
+  iaBoxHtml('<p class="ia-q">Como adaptar "'+esc(r.titulo)+'"?</p><div class="ia-opts">'+ops.map(o=>'<button class="ia-chip" onclick="aiAdaptarGo(\''+o[1]+'\')">'+o[0]+'</button>').join("")+'</div>')}
+function aiAdaptarGo(modo){var r=receitas.find(x=>x.id===verId);if(!r)return;iaBoxLoad("Adaptando a receita…");
+  iaTexto('Adapte esta receita para ser '+modo+', mantendo o resultado gostoso e caseiro. Receita "'+r.titulo+'".\nIngredientes:\n'+(r.ingredientes||[]).join("\n")+'\nModo de preparo:\n'+(r.passos||[]).join("\n")+'\n\nResponda em português EXATAMENTE neste formato:\nNOME: ...\nINGREDIENTES:\n(um por linha)\nPREPARO:\n(um passo por linha)')
+   .then(t=>{iaUltimaAdapt=t;iaBoxHtml('<div class="ia-res">'+fmtIA(t)+'</div><button class="btn" style="margin-top:14px;width:100%" onclick="aiSalvarAdapt()"><span class="material-symbols-outlined">add</span> Salvar como nova receita</button>')}).catch(iaBoxErr)}
+function aiSalvarAdapt(){var t=iaUltimaAdapt||"";var nome=((t.match(/NOME:\s*(.+)/i)||[])[1]||"Receita adaptada").trim();
+  var ingBlock=((t.split(/INGREDIENTES:/i)[1]||"").split(/PREPARO:/i)[0]||"");
+  var pasBlock=(t.split(/PREPARO:/i)[1]||"");
+  var ing=ingBlock.split("\n").map(x=>x.replace(/^[\-\*•]\s*/,"").trim()).filter(Boolean);
+  var pas=pasBlock.split("\n").map(x=>x.replace(/^[\-\*•]\s*/,"").replace(/^\d+[\.\)]\s*/,"").trim()).filter(Boolean);
+  iaBoxClose();preencheRevisao(nome,null,ing,pas);el("formTitulo").textContent="Revise a receita adaptada"}
+
+/* 5) LISTA DE COMPRAS — determinística (puxa os ingredientes EXATOS; nada se perde) */
+const DBC="caderno-mae-compras";
+let compras=JSON.parse(localStorage.getItem(DBC)||"[]"); // [{id,texto,feito}]
+function salvarCompras(){localStorage.setItem(DBC,JSON.stringify(compras))}
+/* quebra uma fala/texto em itens: por linha, vírgula, ponto-e-vírgula e " e " */
+function parseItens(str){return (str||"").split(/[\n,;]+|\s+e\s+/i).map(function(s){return s.replace(/^[\-\*•–\d\.\)\s]+/,"").trim()}).filter(Boolean)}
+function addCompras(str){var itens=parseItens(str),add=0;
+  itens.forEach(function(p){if(!compras.some(function(c){return c.texto.toLowerCase()===p.toLowerCase()})){compras.push({id:String(Date.now())+Math.random().toString(36).slice(2,6),texto:p,feito:false});add++}});
+  if(add){salvarCompras();if(abaAtual==="compras")renderCompras()}return add}
+function renderCompras(){
+  var pend=compras.filter(function(c){return !c.feito}).length,tot=compras.length;
+  el("comprasCount").textContent=tot?(pend+" a comprar"):"";
+  el("vazioCompras").classList.toggle("hidden",tot>0);
+  el("comprasBarras").classList.toggle("hidden",tot===0);
+  el("listaCompras").innerHTML=compras.map(function(c){return '<li class="ci'+(c.feito?' ok':'')+'" onclick="toggleCompra(\''+c.id+'\')">'
+    +'<span class="ck-box"><span class="material-symbols-outlined">'+(c.feito?'check':'')+'</span></span>'
+    +'<span class="ci-txt">'+esc(c.texto)+'</span>'
+    +'<button class="ci-x" onclick="event.stopPropagation();rmCompra(\''+c.id+'\')" aria-label="Remover"><span class="material-symbols-outlined">close</span></button></li>'}).join("");
+  iconify(el("tab-compras"));
+}
+function toggleCompra(id){var c=compras.find(function(x){return x.id===id});if(!c)return;c.feito=!c.feito;salvarCompras();renderCompras()}
+function rmCompra(id){compras=compras.filter(function(x){return x.id!==id});salvarCompras();renderCompras()}
+function addComprasInput(){var v=el("comprasIn").value;var n=addCompras(v);el("comprasIn").value="";if(abaAtual!=="compras")aba("compras");else renderCompras();if(n)toast(n+(n===1?" item na lista":" itens na lista"))}
+function limparMarcados(){compras=compras.filter(function(c){return !c.feito});salvarCompras();renderCompras()}
+function limparCompras(){if(compras.length&&confirm("Limpar a lista inteira?")){compras=[];salvarCompras();renderCompras()}}
+function compartilharCompras(){if(!compras.length){toast("A lista está vazia");return}
+  var txt="Lista de compras\n\n"+compras.map(function(c){return (c.feito?"[x] ":"[ ] ")+c.texto}).join("\n");
+  if(navigator.share){navigator.share({title:"Lista de compras",text:txt}).catch(function(){})}
+  else if(navigator.clipboard){navigator.clipboard.writeText(txt);toast("Lista copiada")}else{toast("Não deu pra compartilhar")}}
+function vozCompras(){var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast("Seu aparelho não deixa ditar — pode escrever");el("comprasIn").focus();return}
+  var rec=new SR();rec.lang="pt-BR";rec.interimResults=false;rec.maxAlternatives=1;
+  el("vozBtn").classList.add("rec");
+  rec.onresult=function(e){var t=(e.results[0][0].transcript||"");
+    t=t.replace(/^\s*(anota[r]?|adiciona[r]?|p(õ|o)e|coloca|bota)\s*(a|na|aí|ai)?\s*(minha\s*)?(lista)?( de compras)?\s*[:,]?\s*/i,"");
+    var n=addCompras(t);if(abaAtual!=="compras")aba("compras");else renderCompras();
+    toast(n?("Anotei: "+t):"Nada novo pra anotar")};
+  rec.onerror=function(){toast("Não consegui ouvir, tenta de novo")};
+  rec.onend=function(){el("vozBtn").classList.remove("rec")};
+  try{rec.start()}catch(e){}}
+/* adicionar os ingredientes de UMA receita (determinístico, nada falta) */
+function receitaParaCompras(id){var r=receitas.find(function(x){return x.id===(id||verId)});if(!r)return;
+  var n=addCompras((r.ingredientes||[]).join("\n"));
+  toast(n?(n+" itens de \""+(r.titulo||"receita")+"\" na lista"):"Já estavam na lista")}
+/* montar a lista da semana a partir de várias receitas (determinístico) */
+function aiCompras(){if(!receitas.length){alert("Guarde algumas receitas primeiro.");return}
+  iaBoxOpen("Lista de compras da semana");
+  iaBoxHtml('<p class="ia-q">Escolha as receitas da semana:</p><div class="ia-check">'+receitas.map(function(r){return '<label><input type="checkbox" value="'+r.id+'"> '+esc(r.titulo)+'</label>'}).join("")+'</div><button class="btn" style="margin-top:12px;width:100%" onclick="comprasDaSemana()"><span class="material-symbols-outlined">shopping_cart</span> Montar lista</button>');
+  iconify(el("iaBoxBody"))}
+function comprasDaSemana(){var ids=[].slice.call(el("iaBoxBody").querySelectorAll("input:checked")).map(function(i){return i.value});
+  if(!ids.length){alert("Selecione pelo menos uma receita.");return}
+  var rs=receitas.filter(function(r){return ids.indexOf(r.id)>-1}),total=0;
+  rs.forEach(function(r){total+=addCompras((r.ingredientes||[]).join("\n"))});
+  iaBoxClose();aba("compras");
+  toast(total+" itens de "+rs.length+" receita"+(rs.length===1?"":"s")+" na lista")}
+/* toast simples */
+function toast(msg){var t=el("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";document.body.appendChild(t)}t.textContent=msg;t.classList.add("on");clearTimeout(window.__tt);window.__tt=setTimeout(function(){t.classList.remove("on")},2200)}
+
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+<div class="iabox" id="iaBox">
+  <div class="iabox-card">
+    <div class="iabox-top"><b id="iaBoxTit">Assistente</b><button class="iabox-x" onclick="iaBoxClose()">&times;</button></div>
+    <div class="iabox-body" id="iaBoxBody"></div>
+  </div>
+</div>
+</body></html>

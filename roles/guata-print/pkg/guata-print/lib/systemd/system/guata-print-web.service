@@ -1,0 +1,15 @@
+[Unit]
+Description=Guata Print — painel web
+After=network-online.target cups.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/sbin/guata-print-web
+Restart=on-failure
+RestartSec=3
+User=root
+NoNewPrivileges=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+#!/bin/sh
+# ─────────────────────────────────────────────────────────────────────────────
+# Branding do Guatá, aplicado DENTRO do sistema em construção (chroot):
+#  • torna a Caixa de Ferramentas (Pajé) executável;
+#  • aplica o VOCABULÁRIO: renomeia os apps do GNOME para os nomes Guatá;
+#  • compila os padrões (wallpaper, tema escuro, favoritos da dock).
+# ─────────────────────────────────────────────────────────────────────────────
+set -e
+
+# 1) Pajé e scripts "clicar e usar"
+chmod 0755 /usr/local/bin/ocara /usr/local/bin/guata-primeiros-passos /usr/local/bin/paje /usr/local/bin/paje-clonar-disco /usr/local/bin/paje-gravar-usb /usr/local/bin/paje-criar-iso /usr/local/bin/paje-rede /usr/local/bin/paje-recuperar /usr/local/bin/entrar-dominio /usr/local/bin/guata-dominio-root /usr/local/bin/guata-dominio-sair-root 2>/dev/null || true
+
+# 2) Vocabulário — renomeia o app SE ele existir nesta imagem.
+renomear() {
+  f="/usr/share/applications/$1"
+  if [ -f "$f" ]; then
+    sed -i "s/^Name=.*/Name=$2/" "$f"
+    sed -i "s/^Name\[pt_BR\]=.*/Name[pt_BR]=$2/" "$f"
+  fi
+}
+renomear org.gnome.Settings.desktop     "Oca"         # Configurações
+renomear org.gnome.Console.desktop       "Nheengatu"   # Terminal
+renomear org.gnome.Terminal.desktop      "Nheengatu"
+renomear org.gnome.Nautilus.desktop      "Jacá"        # Arquivos
+renomear org.gnome.TextEditor.desktop    "Kuatiara"    # Editor
+renomear org.gnome.gedit.desktop         "Kuatiara"
+renomear org.gnome.Software.desktop      "Catálogo completo"   # loja completa por baixo
+renomear org.gnome.SystemMonitor.desktop "Tesãi"       # Saúde
+
+# 2b) Fora o "Welcome to GNOME" — quem dá boas-vindas é o Guatá (Primeiros Passos)
+apt-get purge -y gnome-tour >/dev/null 2>&1 || true
+
+# 3) Padrões do Guatá
+glib-compile-schemas /usr/share/glib-2.0/schemas || true
+
+echo "Branding Guatá aplicado."

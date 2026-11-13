@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">
+<wallpapers>
+  <wallpaper deleted="false"><name>Guatá — Amazônia</name><filename>/usr/share/backgrounds/guata/amazonia.svg</filename><options>zoom</options></wallpaper>
+  <wallpaper deleted="false"><name>Guatá — Cerrado</name><filename>/usr/share/backgrounds/guata/cerrado.svg</filename><options>zoom</options></wallpaper>
+  <wallpaper deleted="false"><name>Guatá — Caatinga</name><filename>/usr/share/backgrounds/guata/caatinga.svg</filename><options>zoom</options></wallpaper>
+  <wallpaper deleted="false"><name>Guatá — Mata Atlântica</name><filename>/usr/share/backgrounds/guata/mataatlantica.svg</filename><options>zoom</options></wallpaper>
+  <wallpaper deleted="false"><name>Guatá — Pampa</name><filename>/usr/share/backgrounds/guata/pampa.svg</filename><options>zoom</options></wallpaper>
+  <wallpaper deleted="false"><name>Guatá — Pantanal</name><filename>/usr/share/backgrounds/guata/pantanal.svg</filename><options>zoom</options></wallpaper>
+</wallpapers>

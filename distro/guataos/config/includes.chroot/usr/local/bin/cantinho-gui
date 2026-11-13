@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Meu Cantinho — lar acolhedor do guataOS (edição Aconchego).
+Pensado p/ crianças (ex.: Gui, 11a, autismo nv1 — e também João, Maria...):
+esperto e capaz, nada de infantilizar. Baixa carga sensorial, som protegido,
+3 mundos do que a criança ama. Saúda pelo nome do usuário logado.
+"""
+import gi, os, subprocess, shutil, datetime, pwd, socket
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, GLib, Gdk
+
+HOME = os.path.expanduser("~")
+PASTA_FILMES   = os.path.join(HOME, "Cineminha")
+PASTA_ESCRITOS = os.path.join(HOME, "Meus Escritos")
+ICONES = "/usr/share/icons/guata"
+
+def primeiro_nome():
+    """nome do usuário logado (GECOS > login), só o primeiro nome."""
+    try:
+        g = pwd.getpwuid(os.getuid()).pw_gecos.split(",")[0].strip()
+        if g:
+            return g.split()[0]
+    except Exception:
+        pass
+    try:
+        return (os.getlogin() or "amigo").split()[0].capitalize()
+    except Exception:
+        return "amigo"
+
+def tem_internet():
+    try:
+        socket.setdefaulttimeout(1.5)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("1.1.1.1", 53))
+        return True
+    except Exception:
+        return False
+
+CSS = """
+.fundo { background: #f6efe3; }
+headerbar { background: #f0e7d7; box-shadow: none; border: none; min-height: 44px; }
+headerbar .title { font-weight: 800; color: #5a4f3c; }
+.titulo { font-size: 30px; font-weight: 800; color: #3b3326; }
+.sub { font-size: 16px; color: #8a7d68; }
+.relogio { font-size: 15px; color: #8a7d68; font-weight: 600; }
+.mundo { background: #ffffff; border-radius: 26px; border: 2px solid #ece2cf; padding: 30px; }
+.mundo:hover { background: #fffdf8; }
+.mundo-emoji { font-size: 60px; }
+.mundo-nome { font-size: 24px; font-weight: 800; color: #3b3326; }
+.mundo-desc { font-size: 14px; color: #8a7d68; }
+.cine:hover  { border-color: #d9a94e; }
+.escrever:hover { border-color: #7db37d; }
+.mundo3:hover { border-color: #6f9fd0; }
+.barra { background: #efe6d6; border-radius: 22px; padding: 14px 18px; }
+.som-btn { font-size: 20px; font-weight: 800; min-width: 60px; min-height: 54px; border-radius: 15px; background: #fff; border: 2px solid #e0d4bd; color:#3b3326; }
+.som-btn:hover { background: #fffdf8; }
+.som-nivel { font-size: 18px; font-weight: 800; color: #5a4f3c; min-width: 66px; }
+.ajuda { font-size: 18px; font-weight: 800; color: #fff; background: #c98a3c; border-radius: 15px; padding: 12px 22px; border: none; }
+.ajuda:hover { background: #b87a2f; }
+.quieto { font-size: 15px; font-weight: 700; color: #5a4f3c; }
+"""
+
+def vol_atual():
+    try:
+        if shutil.which("wpctl"):
+            out = subprocess.check_output(["wpctl","get-volume","@DEFAULT_AUDIO_SINK@"], text=True)
+            return int(round(float(out.strip().split(":")[1])*100))
+        if shutil.which("pactl"):
+            out = subprocess.check_output(["pactl","get-sink-volume","@DEFAULT_SINK@"], text=True)
+            return int(out.split("/")[1].strip().replace("%",""))
+    except Exception:
+        pass
+    return None
+
+def set_vol(pct):
+    pct = max(0, min(80, pct))  # TETO 80% — proteção sonora
+    try:
+        if shutil.which("wpctl"):
+            subprocess.run(["wpctl","set-volume","@DEFAULT_AUDIO_SINK@", f"{pct/100:.2f}"])
+        elif shutil.which("pactl"):
+            subprocess.run(["pactl","set-sink-volume","@DEFAULT_SINK@", f"{pct}%"])
+    except Exception:
+        pass
+
+class Cantinho(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="br.com.guataos.MeuCantinho")
+
+    def do_activate(self):
+        css = Gtk.CssProvider(); css.load_from_data(CSS.encode("utf-8"))
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        self.nome = primeiro_nome()
+        win = Adw.ApplicationWindow(application=self)
+        win.set_title("Meu Cantinho")
+        win.set_default_size(1100, 720)
+        win.add_css_class("fundo")
+
+        # ToolbarView dá a barra de título COM botão fechar
+        tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar()
+        hb.set_show_end_title_buttons(True)   # botão fechar visível
+        leaf = os.path.join(ICONES, "guata-icone-64.png")
+        if os.path.exists(leaf):
+            ic = Gtk.Image.new_from_file(leaf); ic.set_pixel_size(26); hb.pack_start(ic)
+        title = Gtk.Label(label="Meu Cantinho"); title.add_css_class("title")
+        hb.set_title_widget(title)
+        tv.add_top_bar(hb)
+        win.set_content(tv)
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        tv.set_content(root)
+
+        # topo
+        topo = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14,
+                       margin_top=18, margin_start=34, margin_end=34, margin_bottom=4)
+        cap = os.path.join(ICONES, "mascote-acenando.png")
+        if os.path.exists(cap):
+            img = Gtk.Image.new_from_file(cap); img.set_pixel_size(60); topo.append(img)
+        tb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        ola = Gtk.Label(label=f"Oi, {self.nome} 🌱", xalign=0); ola.add_css_class("titulo")
+        sub = Gtk.Label(label="Que bom te ver. O que você quer fazer hoje?", xalign=0); sub.add_css_class("sub")
+        tb.append(ola); tb.append(sub); topo.append(tb)
+        self.relogio = Gtk.Label(); self.relogio.add_css_class("relogio"); self.relogio.set_valign(Gtk.Align.START)
+        topo.append(self.relogio)
+        root.append(topo)
+        self._tick(); GLib.timeout_add_seconds(20, self._tick)
+
+        # mundos
+        grid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=22, hexpand=True, vexpand=True,
+                       margin_start=34, margin_end=34, margin_top=14, margin_bottom=8, homogeneous=True)
+        grid.append(self._mundo("🎬","Cineminha","Seus desenhos e filmes, só os bons.","cine", self.abrir_cineminha))
+        grid.append(self._mundo("✍️","Escrever","Suas histórias, ideias e textos.","escrever", self.abrir_escrever))
+        grid.append(self._mundo("🏛️","O Mundo","Como as coisas funcionam de verdade.","mundo3", self.abrir_mundo))
+        root.append(grid)
+
+        # barra de som + ajuda
+        barra = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12,
+                        margin_start=34, margin_end=34, margin_bottom=22)
+        barra.add_css_class("barra")
+        lab = Gtk.Label(label="🔊 Som"); lab.add_css_class("quieto"); barra.append(lab)
+        bminus = Gtk.Button(label="➖"); bminus.add_css_class("som-btn"); bminus.connect("clicked", self.som_menos)
+        self.som_lbl = Gtk.Label(); self.som_lbl.add_css_class("som-nivel")
+        bplus = Gtk.Button(label="➕"); bplus.add_css_class("som-btn"); bplus.connect("clicked", self.som_mais)
+        bmute = Gtk.Button(label="🤫"); bmute.add_css_class("som-btn"); bmute.connect("clicked", self.som_mute)
+        barra.append(bminus); barra.append(self.som_lbl); barra.append(bplus); barra.append(bmute)
+        barra.append(Gtk.Box(hexpand=True))
+        ajuda = Gtk.Button(label="🤝 Preciso de ajuda"); ajuda.add_css_class("ajuda"); ajuda.connect("clicked", self.pedir_ajuda)
+        barra.append(ajuda)
+        root.append(barra)
+        self._atualiza_som(); GLib.timeout_add_seconds(5, self._atualiza_som)
+
+        win.present()
+        self._boas_vindas()
+
+    def _boas_vindas(self):
+        f = "/usr/share/sounds/guata/cantinho-boas-vindas.oga"
+        if not os.path.exists(f): return
+        for cmd in (["canberra-gtk-play","-f",f], ["paplay",f], ["ffplay","-nodisp","-autoexit","-loglevel","quiet",f]):
+            if shutil.which(cmd[0]):
+                try: subprocess.Popen(cmd); break
+                except Exception: continue
+
+    def _mundo(self, emoji, nome, desc, klass, cb):
+        b = Gtk.Button(); b.add_css_class("mundo"); b.add_css_class(klass)
+        b.set_hexpand(True); b.set_vexpand(True); b.connect("clicked", cb)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); box.set_valign(Gtk.Align.CENTER)
+        e = Gtk.Label(label=emoji); e.add_css_class("mundo-emoji")
+        n = Gtk.Label(label=nome); n.add_css_class("mundo-nome")
+        d = Gtk.Label(label=desc); d.add_css_class("mundo-desc"); d.set_wrap(True); d.set_justify(Gtk.Justification.CENTER)
+        box.append(e); box.append(n); box.append(d); b.set_child(box)
+        return b
+
+    def _tick(self, *_):
+        ag = datetime.datetime.now()
+        dias = ["segunda","terça","quarta","quinta","sexta","sábado","domingo"]
+        self.relogio.set_label(f"{dias[ag.weekday()]} · {ag.strftime('%H:%M')}")
+        return True
+
+    def _atualiza_som(self, *_):
+        v = vol_atual(); self.som_lbl.set_label(f"{v}%" if v is not None else "—"); return True
+
+    def som_menos(self, *_): set_vol((vol_atual() or 30)-10); self._atualiza_som()
+    def som_mais(self, *_): set_vol((vol_atual() or 30)+10); self._atualiza_som()
+    def som_mute(self, *_): set_vol(0); self._atualiza_som()
+
+    def _abrir(self, *cmds):
+        for c in cmds:
+            try: subprocess.Popen(c); return True
+            except Exception: continue
+        return False
+
+    def _aviso(self, titulo, corpo):
+        dlg = Adw.MessageDialog(transient_for=self.get_active_window(), heading=titulo, body=corpo)
+        dlg.add_response("ok", "Está bem"); dlg.present()
+
+    def abrir_cineminha(self, *_):
+        os.makedirs(PASTA_FILMES, exist_ok=True)
+        cat = "/usr/share/cantinho-gui/cineminha.html"
+        if os.path.exists(cat): self._abrir(["xdg-open", cat])
+        else: self._abrir(["celluloid", PASTA_FILMES], ["vlc", PASTA_FILMES], ["xdg-open", PASTA_FILMES])
+
+    def abrir_escrever(self, *_):
+        os.makedirs(PASTA_ESCRITOS, exist_ok=True)
+        # editor "caderno" próprio do Guatá; fallbacks se faltar
+        if not self._abrir(["caderno"], ["gnome-text-editor", PASTA_ESCRITOS],
+                           ["gedit", PASTA_ESCRITOS], ["xdg-open", PASTA_ESCRITOS]):
+            self._aviso("Hmm…", "Não consegui abrir o editor agora. Tenta de novo daqui a pouco?")
+
+    def abrir_mundo(self, *_):
+        cat = "/usr/share/cantinho-gui/o-mundo.html"
+        if not tem_internet():
+            self._aviso("Sem internet 🌐", "O Mundo precisa de internet pra abrir as páginas.\nQuando estiver conectado, volta aqui!")
+            return
+        if os.path.exists(cat): self._abrir(["xdg-open", cat])
+
+    def pedir_ajuda(self, *_):
+        try:
+            d = os.path.join(HOME, ".cantinho"); os.makedirs(d, exist_ok=True)
+            with open(os.path.join(d, "pedidos-ajuda.log"), "a") as f:
+                f.write(datetime.datetime.now().isoformat() + " pediu ajuda\n")
+        except Exception: pass
+        self._aviso(f"Tudo bem, {self.nome} 💛",
+                    "Já estou avisando o responsável pra te ajudar.\nPode respirar — você não está sozinho.")
+
+if __name__ == "__main__":
+    Cantinho().run(None)

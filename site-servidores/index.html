@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecossistema Guatá — Servidores soberanos</title>
+<meta name="description" content="Backup, domínio (AD) e arquivos — o poder dos grandes sistemas, de graça, aberto e seu. Um ecossistema brasileiro.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2050%2050%27%3E%3Cpath%20d=%27M44%206%20C%2020%206%2C%206%2022%2C%206%2046%20C%2010%2046%2C%2014%2045.4%2C%2018%2044.2%20C%2017%2036%2C%2020%2027%2C%2027%2020%20C%2024%2029%2C%2023%2037%2C%2023.6%2042%20C%2033%2037%2C%2044%2027%2C%2044%206%20Z%27%20fill=%27%232f8f66%27/%3E%3C/svg%3E">
+<style>
+  @font-face{font-family:'Montserrat';font-weight:400;font-display:swap;src:url('assets/Montserrat-Regular.ttf') format('truetype')}
+  @font-face{font-family:'Montserrat';font-weight:600;font-display:swap;src:url('assets/Montserrat-SemiBold.ttf') format('truetype')}
+  @font-face{font-family:'Montserrat';font-weight:800;font-display:swap;src:url('assets/Montserrat-Bold.ttf') format('truetype')}
+
+  :root{
+    --mata:#04150e; --mata2:#081f14; --card:#0d2418; --card2:#112c1d; --linha:#1d3a29;
+    --ink:#e8f3ec; --suave:#9fbcac; --forte:#ffffff;
+    --jade:#4fb286; --jade2:#2f8f66; --musgo:#17694c; --jade-s:#102a1e;
+    --sol:#f0a65c; --ceu:#5aa9e6;
+    --raio:20px; --sombra:0 24px 60px -24px rgba(0,0,0,.6); --sombra-s:0 10px 30px -16px rgba(0,0,0,.5);
+  }
+  @media(prefers-color-scheme:light){
+    :root{--mata:#eef4ef;--mata2:#e6efe8;--card:#ffffff;--card2:#f2f7f3;--linha:#dde7e0;
+      --ink:#17271e;--suave:#5f7668;--forte:#0c1b13;--jade:#2f8f66;--jade2:#17694c;--musgo:#0f6b4c;--jade-s:#e7f3ec;--sombra:0 24px 60px -30px rgba(16,50,33,.28);--sombra-s:0 10px 30px -18px rgba(16,50,33,.2)}
+  }
+  :root[data-theme=dark]{--mata:#04150e;--mata2:#081f14;--card:#0d2418;--card2:#112c1d;--linha:#1d3a29;--ink:#e8f3ec;--suave:#9fbcac;--forte:#fff;--jade:#4fb286;--jade2:#2f8f66;--musgo:#17694c;--jade-s:#102a1e;--sombra:0 24px 60px -24px rgba(0,0,0,.6)}
+  :root[data-theme=light]{--mata:#eef4ef;--mata2:#e6efe8;--card:#fff;--card2:#f2f7f3;--linha:#dde7e0;--ink:#17271e;--suave:#5f7668;--forte:#0c1b13;--jade:#2f8f66;--jade2:#17694c;--musgo:#0f6b4c;--jade-s:#e7f3ec;--sombra:0 24px 60px -30px rgba(16,50,33,.28)}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--mata);color:var(--ink);font-family:'Montserrat',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+  h1,h2,h3{color:var(--forte);line-height:1.1;text-wrap:balance;margin:0}
+  a{color:inherit}
+  .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--mata) 86%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--linha)}
+  .nav{display:flex;align-items:center;gap:16px;height:64px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;color:var(--forte);text-decoration:none}
+  .brand .leaf{width:26px;height:26px;fill:var(--jade);stroke:none}
+  .brand .os{color:var(--jade);font-weight:800}
+  .nav .sp{flex:1}
+  .nav .lk{color:var(--suave);text-decoration:none;font-weight:600;font-size:14.5px;padding:8px 12px;border-radius:10px}
+  .nav .lk:hover{color:var(--forte);background:var(--card2)}
+  .toggle{background:var(--card);border:1px solid var(--linha);width:40px;height:40px;border-radius:11px;display:grid;place-items:center;cursor:pointer;color:var(--suave)}
+
+  /* hero */
+  header{padding:clamp(44px,8vw,96px) 0 clamp(30px,5vw,56px);position:relative;overflow:hidden}
+  .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--jade);background:var(--jade-s);border:1px solid var(--linha);padding:7px 14px;border-radius:999px}
+  .hero h1{font-size:clamp(34px,5.2vw,58px);margin:20px 0 0;letter-spacing:-.02em}
+  .hero h1 em{font-style:normal;color:var(--jade);display:block}
+  .hero p.lead{font-size:clamp(16px,2vw,19px);color:var(--suave);max-width:38ch;margin:18px 0 0}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+  .btn{display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:15px;border-radius:13px;padding:13px 22px;border:1.5px solid var(--linha);background:var(--card);color:var(--forte);cursor:pointer;text-decoration:none;transition:transform .12s ease}
+  .btn:hover{transform:translateY(-2px)}
+  .btn.pri{background:linear-gradient(135deg,var(--jade),var(--jade2));border-color:transparent;color:#04150e}
+  .hero-art{position:relative;display:grid;place-items:center}
+  .hero-art img{width:min(100%,520px);filter:drop-shadow(0 30px 50px rgba(0,0,0,.45))}
+  .glow{position:absolute;inset:auto;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,rgba(79,178,134,.35),transparent 65%);filter:blur(10px);z-index:-1}
+
+  /* thesis */
+  .thesis{background:var(--mata2);border-top:1px solid var(--linha);border-bottom:1px solid var(--linha)}
+  .thesis .wrap{padding:clamp(34px,5vw,56px) 22px;text-align:center}
+  .thesis h2{font-size:clamp(22px,3.3vw,32px);max-width:22ch;margin:0 auto;letter-spacing:-.01em}
+  .thesis p{color:var(--suave);max-width:60ch;margin:16px auto 0;font-size:16.5px}
+
+  /* produtos */
+  .sec{padding:clamp(44px,7vw,80px) 0}
+  .sec-h{text-align:center;margin-bottom:40px}
+  .sec-h h2{font-size:clamp(26px,3.6vw,38px);letter-spacing:-.02em}
+  .sec-h p{color:var(--suave);margin:12px auto 0;max-width:52ch}
+  .prod{display:grid;gap:26px}
+  .pcard{background:var(--card);border:1px solid var(--linha);border-radius:26px;padding:clamp(24px,3vw,38px);box-shadow:var(--sombra-s);display:grid;grid-template-columns:120px 1fr;gap:26px;align-items:start;position:relative;overflow:hidden}
+  .pcard::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--accent,var(--jade))}
+  .pcard .logo{width:112px;height:112px;border-radius:24px;background:var(--card2);border:1px solid var(--linha);display:grid;place-items:center;padding:12px}
+  .pcard .logo img{width:100%;height:100%;object-fit:contain}
+  .pcard h3{font-size:clamp(21px,2.6vw,27px);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .tag{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--jade-s);color:var(--jade);border:1px solid var(--linha)}
+  .tag.soon{color:var(--sol);background:color-mix(in srgb,var(--sol) 14%,transparent)}
+  .pcard .sub{color:var(--suave);margin:8px 0 0;font-size:16px}
+  .blist{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:9px}
+  .blist li{display:flex;gap:10px;align-items:flex-start;font-size:14.8px;color:var(--ink)}
+  .blist .ic{color:var(--jade);flex:0 0 auto;margin-top:4px;width:18px;height:18px}
+  .pactions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:22px}
+  .meta{color:var(--suave);font-size:13px;font-weight:600}
+  .code{display:flex;align-items:center;gap:10px;background:var(--mata);border:1px solid var(--linha);border-radius:12px;padding:11px 14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;color:var(--jade);overflow-x:auto;margin-top:14px}
+  .code code{white-space:nowrap}
+  .copy{margin-left:auto;background:var(--card2);border:1px solid var(--linha);color:var(--suave);border-radius:9px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:0 0 auto}
+  .copy:hover{color:var(--forte)}
+
+  /* como instalar */
+  .ways{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:8px}
+  .way{background:var(--card);border:1px solid var(--linha);border-radius:20px;padding:26px}
+  .way .n{width:40px;height:40px;border-radius:12px;background:var(--jade-s);color:var(--jade);display:grid;place-items:center;font-weight:800;border:1px solid var(--linha)}
+  .way h3{margin:14px 0 0;font-size:19px}
+  .way p{color:var(--suave);margin:8px 0 0;font-size:15px}
+
+  footer{border-top:1px solid var(--linha);background:var(--mata2);padding:48px 0;margin-top:40px}
+  .foot{display:grid;grid-template-columns:1.2fr 1fr;gap:30px;align-items:start}
+  .foot p{color:var(--suave);font-size:14px;margin:10px 0 0}
+  .pix{background:var(--card);border:1px dashed var(--linha);border-radius:16px;padding:18px 20px}
+  .pix b{color:var(--forte)}
+  .pixkey{font-family:ui-monospace,monospace;color:var(--jade);font-size:14px;margin-top:6px;word-break:break-all}
+  .sello{display:inline-flex;align-items:center;gap:8px;color:var(--suave);font-size:13px;font-weight:600;margin-top:18px}
+
+  @media(max-width:820px){
+    .hero{grid-template-columns:1fr;text-align:center}.hero .eyebrow{margin:0 auto}.hero p.lead{margin-left:auto;margin-right:auto}.cta{justify-content:center}
+    .hero-art{order:-1}
+    .pcard{grid-template-columns:1fr;text-align:center}.pcard .logo{margin:0 auto}.blist{text-align:left}.pactions{justify-content:center}
+    .ways{grid-template-columns:1fr}.foot{grid-template-columns:1fr}
+    .nav .lk{display:none}
+  }
+</style>
+</head>
+<body>
+<nav><div class="wrap nav">
+  <a class="brand" href="/"><svg class="leaf" viewBox="0 0 50 50"><path d="M44 6 C 20 6, 6 22, 6 46 C 10 46, 14 45.4, 18 44.2 C 17 36, 20 27, 27 20 C 24 29, 23 37, 23.6 42 C 33 37, 44 27, 44 6 Z"/></svg>Guatá<span class="os">Servidores</span></a>
+  <span class="sp"></span>
+  <a class="lk" href="#produtos">Produtos</a>
+  <a class="lk" href="#instalar">Como instalar</a>
+  <a class="lk" href="/">guataOS</a>
+  <button class="toggle" id="tgl" aria-label="Tema"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6l1.5 1.5M16.5 16.5L18 18M18 6l-1.5 1.5M7.5 16.5L6 18"/><circle cx="12" cy="12" r="4"/></svg></button>
+</div></nav>
+
+<header><div class="wrap hero">
+  <div>
+    <span class="eyebrow"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2M4 7h16M4 7v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7"/></svg> ecossistema soberano</span>
+    <h1>O poder dos grandes sistemas.<em>De graça, aberto e seu.</em></h1>
+    <p class="lead">Backup, domínio e arquivos para a sua empresa — com motores livres de verdade, vestidos de fácil, bonito e brasileiro. Sem licença, sem amarra, sem segredo.</p>
+    <div class="cta">
+      <a class="btn pri" href="#produtos">Ver os produtos <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn" href="#instalar">Como instalar</a>
+    </div>
+  </div>
+  <div class="hero-art"><div class="glow"></div><img src="assets/mascote-samba.png" alt="Capivara do Guatá tocando samba, ao lado de um servidor"></div>
+</div></header>
+
+<section class="thesis"><div class="wrap">
+  <h2>A gente pega o motor mais poderoso e tira o medo dele.</h2>
+  <p>Active Directory, servidor de backup, servidor de arquivos — tecnologias que rodam as maiores empresas do mundo. O problema nunca foi o poder: foi a dificuldade. O Guatá veste esses motores livres com assistentes em português, passo a passo, sem uma linha de comando. Você instala, abre e usa.</p>
+</div></section>
+
+<section class="sec" id="produtos"><div class="wrap">
+  <div class="sec-h">
+    <h2>Três servidores. Uma só família.</h2>
+    <p>Todos conversam entre si: o mesmo login vale no backup, no domínio e nos arquivos.</p>
+  </div>
+  <div class="prod">
+
+    <!-- AD -->
+    <article class="pcard" style="--accent:#4fb286">
+      <div class="logo"><img src="assets/logo-ad.png" alt="Guatá AD"></div>
+      <div>
+        <h3>Guatá ID <span class="tag">novo · pronto</span></h3>
+        <p class="sub">O cérebro da rede: um Active Directory completo e aberto (Samba AD DC). Login único, usuários, grupos e senhas para todos os computadores.</p>
+        <ul class="blist">
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Assistente cria o domínio em ~3 minutos — você só responde perguntas simples.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Kerberos, LDAP e DNS prontos, sem configurar nada à mão.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Painel em português para criar usuários, grupos e resetar senhas.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Windows, Linux e o próprio guataOS entram no domínio.</li>
+        </ul>
+        <div class="code"><code>sudo apt install guata-id &amp;&amp; sudo guata-id</code><button class="copy" data-c="sudo apt install guata-id &amp;&amp; sudo guata-id">copiar</button></div>
+        <div class="pactions">
+          <a class="btn pri" href="/guata-ad-1.0.iso" download>Baixar ISO (servidor) <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+          <span class="meta">314 MB · BIOS + UEFI · pendrive bootável</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- BackupOS -->
+    <article class="pcard" style="--accent:#5aa9e6">
+      <div class="logo"><img src="assets/logo-backupos.png" alt="Guatá BackupOS"></div>
+      <div>
+        <h3>Guatá BackupOS <span class="tag">pronto</span></h3>
+        <p class="sub">A rede de segurança da empresa. Um servidor de backup dedicado, com cópias verificadas, criptografadas e à prova de ransomware.</p>
+        <ul class="blist">
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Instala do pendrive como um sistema próprio — sem conhecer o motor por trás.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Backup de servidores, máquinas virtuais e computadores da equipe.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Agentes para Windows e Linux: a cópia parte do computador, criptografada.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Restauração simples quando o pior acontece.</li>
+        </ul>
+        <div class="pactions">
+          <a class="btn pri" href="/guata-backupos-1.1.iso" download>Baixar ISO (servidor) <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+          <span class="meta">1,5 GB · BIOS + UEFI · instalável no disco</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Files -->
+    <article class="pcard" style="--accent:#f0a65c">
+      <div class="logo"><img src="assets/logo-files.png" alt="Guatá Files"></div>
+      <div>
+        <h3>Guatá Files <span class="tag">novo · pronto</span></h3>
+        <p class="sub">O servidor de arquivos da empresa. Pastas compartilhadas com níveis de acesso por grupo — e a tranquilidade de voltar no tempo.</p>
+        <ul class="blist">
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Níveis de acesso (tiers): Leitura, Edição e Total — por pasta, por grupo.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Camadas Público → Interno → Confidencial → Restrito, com grupos aninhados.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Entra no domínio Guatá AD (usa seus grupos) ou roda em modo simples.</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Snapshots: "voltar no tempo" e proteção contra ransomware.</li>
+        </ul>
+        <div class="code"><code>sudo apt install guata-files &amp;&amp; sudo guata-files</code><button class="copy" data-c="sudo apt install guata-files &amp;&amp; sudo guata-files">copiar</button></div>
+        <div class="pactions">
+          <a class="btn pri" href="/guata-files-1.0.iso" download>Baixar ISO (servidor) <svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></a>
+          <span class="meta">BIOS + UEFI · pendrive bootável</span>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</div></section>
+
+<section class="sec" id="instalar" style="padding-top:0"><div class="wrap">
+  <div class="sec-h">
+    <h2>Dois jeitos de instalar. Você escolhe.</h2>
+    <p>O mesmo produto, do jeito que ficar melhor pra você.</p>
+  </div>
+  <div class="ways">
+    <div class="way">
+      <div class="n">1</div>
+      <h3>Já tenho um Linux (jeito rápido)</h3>
+      <p>Num Debian 13 ou no próprio guataOS, um comando instala tudo e abre o assistente. Perfeito para quem já tem a máquina rodando. É o modelo "um comando e pronto".</p>
+      <div class="code"><code>sudo apt install guata-ad</code><button class="copy" data-c="sudo apt install guata-ad">copiar</button></div>
+    </div>
+    <div class="way">
+      <div class="n">2</div>
+      <h3>Quero uma máquina só pra isso (ISO)</h3>
+      <p>Baixe a ISO, grave num pendrive e instale no servidor. Ele vira um aparelho dedicado: liga, o assistente aparece e cria tudo. Ideal para servidor de verdade.</p>
+      <div class="code"><code>Baixar ISO → gravar pendrive → ligar o servidor</code></div>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap foot">
+  <div>
+    <a class="brand" href="/"><svg class="leaf" viewBox="0 0 50 50"><path d="M44 6 C 20 6, 6 22, 6 46 C 10 46, 14 45.4, 18 44.2 C 17 36, 20 27, 27 20 C 24 29, 23 37, 23.6 42 C 33 37, 44 27, 44 6 Z"/></svg>Guatá<span class="os">Servidores</span></a>
+    <p>Software livre e soberano, feito no Brasil. Grátis para usar, estudar e compartilhar. Sem rastreio, sem licença, sem amarra — seus dados são seus.</p>
+    <span class="sello"><svg class="ic" viewBox="0 0 24 24" style="color:var(--jade)"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg> um produto Wellsystem</span>
+  </div>
+  <div class="pix">
+    <b>Gostou? Apoie com um PIX.</b>
+    <p>O Guatá é grátis e sempre será. Se ele te ajudou, uma doação mantém o projeto de pé.</p>
+    <div class="pixkey">CNPJ 61.371.238/0001-18</div>
+  </div>
+</div></footer>
+
+<script>
+  (function(){
+    var root=document.documentElement, t=document.getElementById('tgl');
+    t.addEventListener('click',function(){
+      var cur=root.getAttribute('data-theme')|| (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+      root.setAttribute('data-theme', cur==='dark'?'light':'dark');
+    });
+    document.querySelectorAll('.copy').forEach(function(b){
+      b.addEventListener('click',function(){
+        navigator.clipboard.writeText(b.getAttribute('data-c')).then(function(){
+          var o=b.textContent;b.textContent='copiado!';setTimeout(function(){b.textContent=o},1400);
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>

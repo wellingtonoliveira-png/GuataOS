@@ -1,0 +1,14 @@
+Package: guata-files
+Version: 1.9.2
+Section: net
+Priority: optional
+Architecture: all
+Depends: samba, smbclient, winbind, libnss-winbind, libpam-winbind, krb5-user, acl, attr, chrony, whiptail, python3, openssl
+Recommends: samba-vfs-modules, clamav, clamav-daemon, ntfs-3g, cifs-utils
+Maintainer: Wellsystem / Guatá <wellington@sopremabrasil.com.br>
+Homepage: https://guataos.com.br
+Description: Guatá Files — servidor de arquivos soberano com níveis de acesso (tiers)
+ Pastas compartilhadas com níveis de acesso por grupo (Leitura, Edição, Total),
+ camadas Público/Interno/Confidencial/Restrito e "voltar no tempo" (snapshots).
+ Entra no domínio Guatá AD ou roda em modo simples. Fácil como um app.
+ Um produto Wellsystem.

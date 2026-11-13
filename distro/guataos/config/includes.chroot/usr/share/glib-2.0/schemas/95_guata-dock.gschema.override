@@ -1,0 +1,15 @@
+[org.gnome.shell.extensions.dash-to-dock]
+transparency-mode='FIXED'
+background-opacity=0.28
+customize-alphas=true
+min-alpha=0.18
+max-alpha=0.45
+apply-custom-theme=false
+custom-background-color=true
+background-color='#0f2a1c'
+dash-max-icon-size=46
+show-apps-at-top=false
+running-indicator-style='DOTS'
+dock-fixed=true
+autohide=false
+intellihide=false

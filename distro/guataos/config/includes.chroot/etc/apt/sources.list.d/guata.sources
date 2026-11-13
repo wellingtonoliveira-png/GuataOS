@@ -1,0 +1,5 @@
+Types: deb
+URIs: https://guataos.com.br/repo
+Suites: stable
+Components: main
+Signed-By: /etc/apt/keyrings/guata-archive-keyring.gpg

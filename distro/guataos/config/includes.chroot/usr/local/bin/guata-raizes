@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Raízes — painel ambiental PESSOAL. Mostra o que dá pra medir (kWh estimado,
+temperatura, bateria, tempo ligado). NUNCA inventa CO2 ou 'árvores salvas'."""
+import gi, subprocess, glob, os, shutil
+gi.require_version("Gtk","4.0"); gi.require_version("Adw","1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+ICON="/usr/share/icons/guata"
+CSS="""
+.janela{background:#eef3ea}.janela{background:#f6f3ec}
+headerbar{background:#efe7d7;border:none;box-shadow:none}headerbar .title{font-weight:850;color:#5a4f3c}
+.titulo{font-size:24px;font-weight:850;color:#13231c}.sub{color:#7f8c7e;font-size:14px}
+.m{background:#fff;border:1px solid #e6ded0;border-radius:18px;padding:18px}
+.m .ic{font-size:26px}.m .l{font-size:12px;font-weight:800;letter-spacing:.05em;color:#7f8c7e;margin-top:6px}
+.m .v{font-size:26px;font-weight:850;color:#13231c}.m .d{font-size:12px;color:#7f8c7e}
+.m.verde{background:linear-gradient(140deg,#e4f2ea,#fff)}
+.nota{background:#e4f2ea;border-radius:12px;padding:12px 15px;color:#26332a;font-size:12.5px}
+@media(prefers-color-scheme:dark){.janela{background:#0a120d}.janela{background:#0e1712}headerbar{background:#152219}
+ .titulo{color:#fff}.sub,.m .l,.m .d{color:#8ea89c}.m{background:#14201a;border-color:#233029}.m .v{color:#e7f1ec}
+ .m.verde{background:linear-gradient(140deg,#16271e,#14201a)}.nota{background:#16271e;color:#cfe}}
+"""
+def rd(path):
+    try:return open(path).read().strip()
+    except Exception:return None
+def power_now_w():
+    # potência instantânea (W) da bateria, se descarregando
+    for p in glob.glob("/sys/class/power_supply/BAT*/power_now"):
+        v=rd(p)
+        if v and int(v)>0:return int(v)/1_000_000
+    # energy via current*voltage
+    cs=glob.glob("/sys/class/power_supply/BAT*/current_now");vs=glob.glob("/sys/class/power_supply/BAT*/voltage_now")
+    if cs and vs:
+        c=rd(cs[0]);v=rd(vs[0])
+        if c and v and int(c)>0:return int(c)*int(v)/1e12
+    return None
+class Raizes(Adw.Application):
+    def __init__(self):super().__init__(application_id="br.com.guataos.Raizes")
+    def do_activate(self):
+        css=Gtk.CssProvider();css.load_from_data(CSS.encode());Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(),css,1000)
+        self.win=Adw.ApplicationWindow(application=self);self.win.set_title("Raízes");self.win.set_default_size(680,620);self.win.add_css_class("janela")
+        tv=Adw.ToolbarView();hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True);hb.set_title_widget(Gtk.Label(label="🌱 Raízes"));tv.add_top_bar(hb);self.win.set_content(tv)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin_top=18,margin_start=24,margin_end=24,margin_bottom=20);tv.set_content(root)
+        head=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=14)
+        cap=os.path.join(ICON,"mascote-sentada.png")
+        if os.path.exists(cap):im=Gtk.Image.new_from_file(cap);im.set_pixel_size(64);head.append(im)
+        hv=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,valign=Gtk.Align.CENTER,hexpand=True)
+        t=Gtk.Label(label="As raízes do seu computador",xalign=0);t.add_css_class("titulo");hv.append(t)
+        s=Gtk.Label(label="O que dá pra medir de verdade sobre energia e saúde — sem inventar.",xalign=0);s.add_css_class("sub");s.set_wrap(True);hv.append(s)
+        head.append(hv);root.append(head)
+        grid=Gtk.FlowBox();grid.set_selection_mode(Gtk.SelectionMode.NONE);grid.set_max_children_per_line(2);grid.set_min_children_per_line(2);grid.set_column_spacing(12);grid.set_row_spacing(12);grid.set_homogeneous(True);grid.set_margin_top(10)
+        self.cards={}
+        for key,ic,l,verde in [("pot","⚡","CONSUMO AGORA",True),("kwh","🔌","ESTIMATIVA SEMANAL",True),("temp","🌡️","TEMPERATURA",False),("bat","🔋","BATERIA",False),("up","⏱️","LIGADO HÁ",False),("perfil","🌿","MODO DE ENERGIA",True)]:
+            grid.append(self._m(key,ic,l,verde))
+        root.append(grid)
+        nota=Gtk.Label(xalign=0);nota.add_css_class("nota");nota.set_wrap(True)
+        nota.set_markup("🌱 Tudo aqui é <b>estimativa honesta</b> a partir dos sensores do seu PC. Não transformamos em CO₂ nem em 'árvores salvas' — isso seria invenção. Se a empresa fornecer a metodologia, aí sim calculamos o CO₂e e mostramos a conta.")
+        nota.set_margin_top(12);root.append(nota)
+        self._carrega();self.win.present()
+    def _m(self,key,ic,l,verde):
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=1);box.add_css_class("m")
+        if verde:box.add_css_class("verde")
+        e=Gtk.Label(label=ic,xalign=0);e.add_css_class("ic");box.append(e)
+        ll=Gtk.Label(label=l,xalign=0);ll.add_css_class("l");box.append(ll)
+        v=Gtk.Label(label="…",xalign=0);v.add_css_class("v");box.append(v)
+        d=Gtk.Label(label="",xalign=0);d.add_css_class("d");d.set_wrap(True);box.append(d)
+        self.cards[key]=(v,d);return box
+    def _set(self,key,v,d=""):
+        if key in self.cards:self.cards[key][0].set_label(v);self.cards[key][1].set_label(d)
+    def _carrega(self):
+        w=power_now_w()
+        if w:self._set("pot",f"{w:.0f} W","na bateria, agora");self._set("kwh",f"~{w*8*5/1000:.1f} kWh","estimado (8h×5 dias)")
+        else:self._set("pot","—","na tomada (sem leitura de bateria)");self._set("kwh","—","sem dado de consumo")
+        zs=glob.glob("/sys/class/thermal/thermal_zone*/temp");temps=[int(rd(z))/1000 for z in zs if rd(z)]
+        self._set("temp",f"{max(temps):.0f}°C" if temps else "—","CPU" if temps else "sem sensor")
+        cap=rd(glob.glob("/sys/class/power_supply/BAT*/capacity")[0]) if glob.glob("/sys/class/power_supply/BAT*/capacity") else None
+        full=glob.glob("/sys/class/power_supply/BAT*/charge_full")+glob.glob("/sys/class/power_supply/BAT*/energy_full")
+        des=glob.glob("/sys/class/power_supply/BAT*/charge_full_design")+glob.glob("/sys/class/power_supply/BAT*/energy_full_design")
+        saude=""
+        if full and des:
+            try:saude=f"saúde {round(100*int(rd(full[0]))/int(rd(des[0])))}%"
+            except Exception:pass
+        self._set("bat",f"{cap}%" if cap else "—",saude if cap else "desktop?")
+        up=rd("/proc/uptime")
+        if up:
+            sec=float(up.split()[0]);h=int(sec//3600);m=int((sec%3600)//60)
+            self._set("up",f"{h}h {m}m","desde que ligou")
+        prof=subprocess.run(["powerprofilesctl","get"],capture_output=True,text=True) if shutil.which("powerprofilesctl") else None
+        mp={"power-saver":"🍃 Folha","balanced":"🌿 Equilíbrio","performance":"⚡ Potência"}
+        self._set("perfil",mp.get(prof.stdout.strip(),"—") if prof else "—","troque em Energia")
+if __name__=="__main__":Raizes().run(None)

@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Guatá Drivers — detecta a placa de vídeo e oferece instalar o driver
+# proprietário NVIDIA sob demanda (pós-instalação; compila via DKMS, pede reinício).
+# Intel/AMD já usam o driver aberto (Mesa) que vem no sistema.
+import gi, subprocess, threading, re
+gi.require_version("Gtk", "4.0"); gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+
+ICON = "/usr/share/icons/guata"
+
+
+def sh(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=15).stdout
+    except Exception:
+        return ""
+
+
+def detectar_gpus():
+    """Retorna lista de {vendor, nome, driver}."""
+    out = sh(["sh", "-c", "lspci -nnk | grep -iA3 -E 'VGA|3D|Display'"])
+    gpus = []
+    bloco = []
+    for ln in out.splitlines():
+        if re.search(r"VGA|3D|Display", ln, re.I) and "controller" in ln.lower():
+            if bloco:
+                gpus.append(_parse_bloco(bloco))
+            bloco = [ln]
+        else:
+            bloco.append(ln)
+    if bloco:
+        gpus.append(_parse_bloco(bloco))
+    return [g for g in gpus if g]
+
+
+def _parse_bloco(linhas):
+    cab = linhas[0]
+    nome = cab.split(":", 2)[-1].strip() if ":" in cab else cab.strip()
+    vendor = "outro"
+    low = cab.lower()
+    # Usa o ID de fabricante PCI (confiável); nomes só como reforço com tokens
+    # específicos — NADA de "ati" solto (casa em "compatible") nem "amd" solto.
+    if "[10de:" in low or "nvidia" in low:
+        vendor = "nvidia"
+    elif "[1002:" in low or "[1022:" in low or "radeon" in low or "advanced micro devices" in low or "amd/ati" in low:
+        vendor = "amd"
+    elif "[8086:" in low or "intel" in low:
+        vendor = "intel"
+    driver = ""
+    for ln in linhas[1:]:
+        m = re.search(r"Kernel driver in use:\s*(\S+)", ln)
+        if m:
+            driver = m.group(1)
+    return {"vendor": vendor, "nome": nome, "driver": driver}
+
+
+CSS = """
+.janela { background: linear-gradient(160deg,#0f3d28,#0a2a1c); }
+.cartao { background:#ffffff; border-radius:18px; padding:18px 20px; }
+.gpu-nome { font-weight:800; font-size:16px; color:#15321f; }
+.gpu-sub { color:#5b6b62; }
+.ok { color:#1f8f57; font-weight:700; }
+.aviso { color:#8a6d1a; }
+button.cta { background:#2f8f66; color:#fff; font-weight:700; border-radius:12px; padding:10px 16px; }
+button.cta:hover { background:#277a56; }
+.footer { color:rgba(255,255,255,.8); font-size:12px; }
+.log { font-family:monospace; font-size:11px; color:#cfe8da; }
+"""
+
+
+class Drivers(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="br.com.guataos.Drivers")
+        self.instalando = False
+
+    def do_activate(self):
+        prov = Gtk.CssProvider(); prov.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, 1000)
+
+        self.win = Adw.ApplicationWindow(application=self)
+        self.win.set_title("Guatá Drivers"); self.win.set_default_size(540, 640)
+        self.win.add_css_class("janela")
+
+        tv = Adw.ToolbarView(); hb = Adw.HeaderBar(); hb.add_css_class("flat")
+        hb.set_title_widget(Gtk.Label(label="Guatá Drivers"))
+        tv.add_top_bar(hb)
+
+        self.root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14,
+                            margin_top=16, margin_bottom=16, margin_start=18, margin_end=18)
+        intro = Gtk.Label(xalign=0, wrap=True)
+        intro.set_markup("<span color='#eaf4ee'>Encontrei estas placas no seu computador. "
+                         "Intel e AMD já usam o driver aberto (Mesa), que vem pronto. "
+                         "Para NVIDIA, dá pra instalar o driver proprietário (melhor desempenho em jogos/3D).</span>")
+        self.root.append(intro)
+
+        for gpu in detectar_gpus():
+            self.root.append(self._cartao(gpu))
+
+        foot = Gtk.Label(label="O driver proprietário é compilado para o seu kernel (DKMS) e pede um reinício.",
+                         wrap=True); foot.add_css_class("footer")
+        self.root.append(foot)
+
+        self.logv = Gtk.Label(xalign=0, wrap=True); self.logv.add_css_class("log")
+        self.root.append(self.logv)
+
+        sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_child(self.root)
+        tv.set_content(sc); self.win.set_content(tv); self.win.present()
+
+    def _cartao(self, gpu):
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6); card.add_css_class("cartao")
+        emoji = {"nvidia": "🟩", "amd": "🟥", "intel": "🟦"}.get(gpu["vendor"], "🖥️")
+        nome = Gtk.Label(label=f"{emoji} {gpu['nome']}", xalign=0, wrap=True); nome.add_css_class("gpu-nome")
+        card.append(nome)
+        drv = gpu["driver"] or "—"
+        sub = Gtk.Label(label=f"Driver em uso: {drv}", xalign=0); sub.add_css_class("gpu-sub")
+        card.append(sub)
+
+        if gpu["vendor"] == "nvidia":
+            if drv == "nvidia":
+                st = Gtk.Label(label="✓ Driver NVIDIA proprietário já ativo.", xalign=0); st.add_css_class("ok")
+                card.append(st)
+            else:
+                st = Gtk.Label(label="Usando o driver aberto (nouveau). Dá pra instalar o proprietário.",
+                               xalign=0, wrap=True); st.add_css_class("aviso")
+                card.append(st)
+                b = Gtk.Button(label="Instalar driver NVIDIA proprietário"); b.add_css_class("cta")
+                b.set_halign(Gtk.Align.START); b.set_margin_top(6)
+                b.connect("clicked", lambda _b, btn=b: self._instalar_nvidia(btn))
+                card.append(b)
+        else:
+            st = Gtk.Label(label="✓ Já otimizado com o driver aberto (Mesa). Nada a fazer.", xalign=0)
+            st.add_css_class("ok"); card.append(st)
+        return card
+
+    def _instalar_nvidia(self, btn):
+        if self.instalando:
+            return
+        self.instalando = True
+        btn.set_sensitive(False); btn.set_label("Instalando… (pode levar minutos)")
+        self.logv.set_text("Preparando instalação do driver NVIDIA…")
+        threading.Thread(target=self._instalar_bg, args=(btn,), daemon=True).start()
+
+    def _instalar_bg(self, btn):
+        cmd = ["pkexec", "sh", "-c",
+               "apt-get update && apt-get install -y linux-headers-amd64 nvidia-driver"]
+        ok = False
+        try:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            for line in p.stdout:
+                GLib.idle_add(self._log, line.rstrip())
+            p.wait(); ok = (p.returncode == 0)
+        except Exception as e:
+            GLib.idle_add(self._log, str(e))
+        GLib.idle_add(self._fim, ok, btn)
+
+    def _log(self, linha):
+        atual = self.logv.get_text().splitlines()[-12:]
+        atual.append(linha)
+        self.logv.set_text("\n".join(atual))
+        return False
+
+    def _fim(self, ok, btn):
+        self.instalando = False
+        if ok:
+            dlg = Adw.MessageDialog(transient_for=self.win, heading="Driver instalado 🎉",
+                                    body="O driver NVIDIA proprietário foi instalado. Reinicie o computador para ativar.")
+            dlg.add_response("depois", "Reiniciar depois")
+            dlg.add_response("reiniciar", "Reiniciar agora")
+            dlg.set_response_appearance("reiniciar", Adw.ResponseAppearance.SUGGESTED)
+            dlg.connect("response", lambda d, r: (subprocess.Popen(["pkexec", "reboot"]) if r == "reiniciar" else None, d.destroy()))
+            dlg.present()
+        else:
+            btn.set_sensitive(True); btn.set_label("Tentar de novo")
+            dlg = Adw.MessageDialog(transient_for=self.win, heading="Não deu certo",
+                                    body="A instalação falhou. Verifique a internet e tente de novo. "
+                                         "Seu vídeo continua funcionando com o driver aberto.")
+            dlg.add_response("ok", "Entendi"); dlg.present()
+        return False
+
+
+if __name__ == "__main__":
+    Drivers().run()

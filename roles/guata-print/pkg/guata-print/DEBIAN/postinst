@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+chmod 755 /usr/local/sbin/guata-print-* 2>/dev/null || true
+mkdir -p /etc/guata-print
+chmod 700 /etc/guata-print 2>/dev/null || true
+[ -f /etc/guata-print/config.json ] || echo '{"cotas":{},"custo_pb":0.10,"custo_cor":0.50,"compartilhar":true}' > /etc/guata-print/config.json
+# certificado TLS self-signed (painel cifrado)
+if [ ! -f /etc/guata-print/web-cert.pem ] && command -v openssl >/dev/null 2>&1; then
+  CN=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo guata-print)
+  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+    -keyout /etc/guata-print/web-key.pem -out /etc/guata-print/web-cert.pem \
+    -subj "/CN=${CN}" -addext "subjectAltName=DNS:${CN},DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1 || true
+  chmod 600 /etc/guata-print/web-key.pem 2>/dev/null || true
+fi
+# CUPS: habilita e compartilha
+systemctl enable --now cups >/dev/null 2>&1 || true
+cupsctl --share-printers --remote-any >/dev/null 2>&1 || true
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl enable guata-print-web >/dev/null 2>&1 || true
+systemctl restart guata-print-web >/dev/null 2>&1 || true
+if [ ! -f /etc/guata-print/configurado ]; then
+cat <<'MSG'
+
+  Guata Print instalado!
+  Abra no proprio servidor:  https://localhost:8083
+  (adicione sua impressora e compartilhe para a rede)
+  (certificado proprio - aceite o aviso do navegador na 1a vez)
+
+MSG
+fi
+update-desktop-database >/dev/null 2>&1 || true
+gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+exit 0

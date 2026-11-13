@@ -1,0 +1,13 @@
+Package: guata-server
+Version: 1.2.0
+Section: admin
+Priority: optional
+Architecture: all
+Depends: whiptail
+Maintainer: Wellsystem / Guatá <wellington@sopremabrasil.com.br>
+Homepage: https://guataos.com.br
+Description: Guatá Server — gerenciador de funções do servidor (estilo "Adicionar função")
+ Um só servidor, várias funções: Active Directory, Servidor de Arquivos e
+ Impressão. Adicione papéis com poucos cliques, cada um com seu assistente
+ em português. O jeito Guatá de montar a infraestrutura da empresa.
+ Um produto Wellsystem.

@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+# Instala o greeter do Guatá a partir do repo APT (dpkg-managed -> atualizável por apt).
+# O postinst do pacote troca o display-manager p/ LightDM (mantendo GDM de reserva).
+apt-get update 2>/dev/null || true
+if apt-get install -y guata-greeter; then
+  echo "[guata] guata-greeter instalado via repo (login OTA-atualizavel)."
+else
+  echo "!! FALHA ao instalar guata-greeter do repo — abortando build."
+  exit 1
+fi

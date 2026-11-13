@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Expedições Guatá — app educativo (5 Rs). Web nativo WebKit, offline."""
+import gi, os
+gi.require_version("Gtk","3.0"); gi.require_version("WebKit2","4.1")
+from gi.repository import Gtk, WebKit2
+HTML="file:///usr/share/expedicoes/index.html"
+DATA=os.path.expanduser("~/.local/share/expedicoes"); os.makedirs(DATA, exist_ok=True)
+def main():
+    win=Gtk.Window(title="Expedições Guatá"); win.set_default_size(620,820)
+    try: win.set_icon_from_file("/usr/share/icons/guata/app-expedicoes.png")
+    except Exception: pass
+    try:
+        dm=WebKit2.WebsiteDataManager(base_data_directory=DATA, base_cache_directory=os.path.join(DATA,"cache"))
+        ctx=WebKit2.WebContext.new_with_website_data_manager(dm)
+        wv=WebKit2.WebView.new_with_context(ctx)
+    except Exception:
+        wv=WebKit2.WebView()
+    wv.load_uri(HTML); win.add(wv); win.connect("destroy", Gtk.main_quit); win.show_all(); Gtk.main()
+if __name__=="__main__": main()

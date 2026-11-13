@@ -1,0 +1,15 @@
+#!/bin/bash
+# Executado como root (pkexec). Senha do admin vem pelo stdin (1ª linha).
+DOM="$1"; ADMIN="$2"
+read -r PASS
+export DEBIAN_FRONTEND=noninteractive
+timedatectl set-ntp true 2>/dev/null
+systemctl enable --now chrony 2>/dev/null
+printf '%s\n' "$PASS" | realm join --user="$ADMIN" "$DOM"
+RC=$?
+[ $RC -ne 0 ] && exit $RC
+realm permit --all 2>/dev/null
+pam-auth-update --enable mkhomedir 2>/dev/null || true
+systemctl enable --now oddjobd 2>/dev/null
+systemctl enable --now sssd 2>/dev/null
+exit 0

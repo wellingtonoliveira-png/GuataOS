@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Papéis de Parede
+Comment=Escolha o papel de parede do Guatá
+Exec=guata-wallpapers
+Icon=/usr/share/icons/guata/app-wallpapers.png
+Terminal=false
+Categories=Settings;DesktopSettings;
+StartupWMClass=br.com.guataos.Wallpapers

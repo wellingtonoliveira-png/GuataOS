@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Meu Cantinho
+Comment=Seu cantinho acolhedor — cinema, escrever e o mundo
+Exec=cantinho-gui
+Icon=/usr/share/icons/guata/app-cantinho.png
+Terminal=false
+Categories=Education;Utility;
+StartupWMClass=br.com.guataos.CantinhoDoGui

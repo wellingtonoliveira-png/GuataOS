@@ -1,0 +1,1845 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guatá ID — Painel do Domínio</title>
+<style>
+  :root{
+    --bg:#eef1f7; --card:#ffffff; --card2:#f4f6fb; --linha:#e2e6f0;
+    --ink:#1b2435; --suave:#5f6b85; --forte:#0f1626;
+    /* azul/indigo = AÇÃO (do mockup) */
+    --accent:#4f46e5; --accent2:#4338ca; --accent-s:#eef0fe;
+    /* verde = STATUS saudável */
+    --jade:#2f8f66; --jade2:#17694c; --jade-s:#e7f3ec;
+    --sol:#d98a2b; --sol-s:#f8eede; --ceu:#3f86c4; --ceu-s:#e6f0f9; --vermelho:#c0453a; --verm-s:#fbe9e7;
+    /* sidebar navy (sempre) */
+    --sb:#101c33; --sb2:#17243f; --sb-ink:#d4ddee; --sb-suave:#8293b2; --sb-linha:#233251;
+    --raio:16px; --sombra:0 18px 44px -26px rgba(20,30,60,.34); --sombra-s:0 8px 22px -16px rgba(20,30,60,.22);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;
+      --accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715;
+      --sombra:0 20px 50px -24px rgba(0,0,0,.6)}
+  }
+  :root[data-theme=dark]{--bg:#0a1120;--card:#121c31;--card2:#162138;--linha:#243451;--ink:#e6ecf7;--suave:#9aa8c4;--forte:#fff;--accent:#7c83ff;--accent2:#6366f1;--accent-s:#1b2342;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#122a1f;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715}
+  :root[data-theme=light]{--bg:#eef1f7;--card:#fff;--card2:#f4f6fb;--linha:#e2e6f0;--ink:#1b2435;--suave:#5f6b85;--forte:#0f1626;--accent:#4f46e5;--accent2:#4338ca;--accent-s:#eef0fe;--jade:#2f8f66;--jade2:#17694c;--jade-s:#e7f3ec}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button,input,select{font-family:inherit}
+  h1,h2,h3{margin:0;color:var(--forte);line-height:1.2}
+  .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .leaf{fill:var(--jade);stroke:none}
+
+  /* ---------- LOGIN ---------- */
+  #login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1100px 480px at 50% -10%,color-mix(in srgb,var(--jade) 20%,transparent),transparent)}
+  .loginbox{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);padding:36px 32px;width:min(410px,100%);text-align:center}
+  .loginbox .masc{width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 2px;filter:drop-shadow(0 10px 18px rgba(16,50,33,.18))}
+  .loginbox h1{font-size:23px}
+  .loginbox p{margin:2px 0 20px;color:var(--suave);font-size:14px}
+  .field{text-align:left;margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--suave);margin-bottom:6px}
+  .field .muted{font-weight:500}
+  input,select{width:100%;padding:11px 13px;border:1.5px solid var(--linha);border-radius:11px;background:var(--card2);color:var(--ink);font-size:14.5px;outline:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-s)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14.5px;border-radius:11px;padding:11px 16px;border:1.5px solid var(--linha);background:var(--card);color:var(--forte);cursor:pointer}
+  .btn:hover{filter:brightness(.99)}
+  .btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff}
+  .btn.sm{padding:7px 11px;font-size:12.5px;border-radius:9px}
+  .btn.block{width:100%}
+  .btn.ghost{background:var(--card2)}
+  .btn.danger{color:var(--vermelho);border-color:color-mix(in srgb,var(--vermelho) 35%,var(--linha))}
+  .btn.ok{color:var(--jade2);border-color:color-mix(in srgb,var(--jade) 40%,var(--linha))}
+
+  /* ---------- CONFIGURADOR ---------- */
+  #config{min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(170deg,var(--accent-s),var(--card2))}
+  .cfgcard{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);width:min(480px,100%);padding:30px 30px 26px}
+  .cfghead{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .cfghead img{width:54px;height:54px;object-fit:contain}
+  .cfghead b{color:var(--forte);font-size:18px;display:block;line-height:1}
+  .cfghead span{color:var(--accent);font-size:12.5px;font-weight:700}
+  .dots{display:flex;gap:6px;margin:14px 0 20px}
+  .dots i{height:5px;flex:1;border-radius:999px;background:var(--linha)}
+  .dots i.on{background:var(--accent)}
+  .cfgstep{display:none} .cfgstep.on{display:block}
+  .cfgstep h2{font-size:21px;margin-bottom:6px}
+  .cfgstep p.sub{color:var(--suave);font-size:14px;margin-bottom:18px}
+  .cfgnav{display:flex;gap:10px;margin-top:8px}.cfgnav .btn{flex:1}
+  .optcard{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:15px;border:1.5px solid var(--linha);border-radius:14px;background:var(--card2);cursor:pointer;margin-bottom:10px}
+  .optcard:hover{border-color:var(--accent)} .optcard .oi{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+  .optcard b{color:var(--forte);font-size:15px} .optcard p{color:var(--suave);font-size:12.8px;margin:2px 0 0}
+  .resumo{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:14px 16px;font-size:14px;margin-bottom:6px}
+  .resumo div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+  .resumo b{color:var(--forte)}
+  .prog{height:10px;background:var(--card2);border-radius:999px;overflow:hidden;margin:16px 0 8px}
+  .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .4s}
+  .done-ic{width:70px;height:70px;border-radius:50%;background:var(--jade-s);color:var(--jade2);display:grid;place-items:center;margin:4px auto 10px}
+  .url-box{background:var(--accent-s);border:1px solid var(--linha);border-radius:12px;padding:12px;text-align:center;font-weight:800;color:var(--accent);font-size:16px;margin:10px 0}
+
+  /* ---------- SHELL ---------- */
+  #app{display:none;min-height:100vh}
+  .shell{display:grid;grid-template-columns:262px 1fr;min-height:100vh}
+  aside{background:var(--sb);color:var(--sb-ink);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--sb-linha)}
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 18px 14px}
+  .brand img{width:40px;height:40px;object-fit:contain;border-radius:10px}
+  .brand b{color:#fff;font-size:17px;font-weight:800;line-height:1}
+  .brand small{display:block;color:var(--sb-suave);font-size:11.5px;margin-top:3px}
+  nav.menu{display:flex;flex-direction:column;gap:2px;padding:8px 12px;flex:1;overflow:auto}
+  .migroup{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sb-suave);padding:10px 13px 4px;opacity:.75}
+  .migroup:first-child{padding-top:4px}
+  .mi{display:flex;align-items:center;gap:12px;padding:8.5px 13px;border-radius:11px;color:var(--sb-ink);text-decoration:none;font-weight:600;font-size:14.5px;cursor:pointer;border:none;background:none;text-align:left;width:100%}
+  .mi .ic{width:19px;height:19px;color:var(--sb-suave)}
+  .mi:hover{background:rgba(255,255,255,.055)}
+  .mi.on{background:color-mix(in srgb,var(--accent) 24%,transparent);color:#fff}
+  .mi.on .ic{color:#aeb6ff}
+  .mi .soon{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sb-suave);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:999px}
+  .sb-foot{padding:10px 14px;border-top:1px solid var(--sb-linha)}
+  .sb-foot .masc{width:54px;display:block;margin:0 auto 6px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4))}
+  .saude-sb{background:var(--sb2);border:1px solid var(--sb-linha);border-radius:12px;padding:8px 11px;font-size:11.5px;color:var(--sb-suave)}
+  .saude-sb b{display:flex;align-items:center;gap:7px;color:#bfe8cf;font-size:12.5px}
+  .saude-sb .dot{width:8px;height:8px;border-radius:50%;background:#49d08b}
+
+  main{min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:12px;padding:16px 26px;border-bottom:1px solid var(--linha);background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+  .topbar h2{font-size:21px}.topbar .sp{flex:1}
+  .burger{display:none;background:var(--card);border:1px solid var(--linha);width:40px;height:40px;border-radius:11px;color:var(--ink);cursor:pointer;place-items:center}
+  .content{padding:24px 32px 60px;max-width:1500px;width:100%;margin:0 auto;box-sizing:border-box}
+
+  .view{display:none} .view.on{display:block}
+
+  /* dashboard */
+  .dom-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .dom-head .nome{font-size:24px;font-weight:800;color:var(--forte)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px}
+  .pill.on{background:var(--jade-s);color:var(--jade2)} .pill.off{background:var(--verm-s);color:var(--vermelho)}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .dom-head .sp{flex:1}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .stat{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);padding:17px 18px;box-shadow:var(--sombra-s)}
+  .stat .l{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--suave)}
+  .stat .l .ic{width:16px;height:16px;color:var(--accent)}
+  .stat .v{font-size:30px;font-weight:800;color:var(--forte);margin:4px 0 2px;line-height:1}
+  .stat .s{font-size:12.5px;color:var(--suave)}
+  .stat.alerta{cursor:pointer} .stat.alerta .v{color:var(--sol)}
+  .stat.alerta.zero .v{color:var(--jade2)}
+  .jgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .jcard{text-align:left;background:var(--card);border:1px solid var(--linha);border-radius:14px;padding:16px;box-shadow:var(--sombra-s);cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:transform .12s,border-color .12s}
+  .jcard:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .jcard .ji{font-size:22px;margin-bottom:4px}
+  .jcard b{color:var(--forte);font-size:15px} .jcard small{color:var(--suave);font-size:12.5px}
+  .jcard.alerta:hover{border-color:var(--vermelho)}
+  /* grupos cards */
+  .gtabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .gtab{padding:8px 14px;border-radius:10px;border:1px solid var(--linha);background:var(--card);color:var(--suave);font-weight:700;font-size:13.5px;cursor:pointer}
+  .gtab.on{background:var(--accent);border-color:transparent;color:#fff}
+  .gcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .gcard{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:18px;box-shadow:var(--sombra-s);display:flex;flex-direction:column;gap:14px}
+  .gchead{display:flex;align-items:flex-start;gap:12px}
+  .gcicon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-s);color:var(--accent)}
+  .gcicon.admin{background:var(--verm-s);color:var(--vermelho)} .gcicon.sistema{background:var(--card2);color:var(--suave)}
+  .gcname{font-weight:800;color:var(--forte);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gcdesc{color:var(--suave);font-size:13px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .gcbadge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:999px;background:var(--accent-s);color:var(--accent);white-space:nowrap}
+  .gcbadge.admin{background:var(--verm-s);color:var(--vermelho)} .gcbadge.sistema{background:var(--card2);color:var(--suave)}
+  .gcmembers{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:10px 14px}
+  .gcmembers b{font-size:17px;color:var(--forte)}
+  .gctech{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .gctech .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--suave);background:var(--card2);border:1px solid var(--linha);padding:3px 8px;border-radius:7px}
+  /* transparência técnica (CLI) */
+  .cli{background:var(--sb);border:1px solid var(--sb-linha);border-radius:14px;padding:14px 16px;margin-top:18px;overflow:auto}
+  .cli .clihead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#aeb6ff;margin-bottom:10px}
+  .cli pre{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#cfe3d8;white-space:pre-wrap;word-break:break-word;line-height:1.75}
+
+  /* painel */
+  .panel{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);box-shadow:var(--sombra-s);overflow:hidden;margin-bottom:18px}
+  .ph{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--linha);flex-wrap:wrap}
+  .ph h3{font-size:16px}.ph .sp{flex:1}
+  .busca{width:auto;min-width:180px;max-width:240px;padding:8px 12px;font-size:13.5px;border-radius:10px}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--linha)}
+  .row:last-child{border-bottom:none}
+  .row .av{width:38px;height:38px;border-radius:10px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;flex:0 0 auto}
+  .row .av.off{background:color-mix(in srgb,var(--suave) 20%,transparent);color:var(--suave)}
+  .row .nm{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .muted{color:var(--suave);font-size:12.7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .sp{flex:1;min-width:8px}
+  .empty{padding:34px 18px;text-align:center;color:var(--suave)}
+  .empty img{width:120px;opacity:.95;margin-bottom:6px}
+  .muted{color:var(--suave)} .small{font-size:12.5px}
+  .badge{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
+  .badge.off{background:var(--verm-s);color:var(--vermelho)}
+  .badge.alta{background:var(--verm-s);color:var(--vermelho)}
+  .badge.media{background:var(--sol-s);color:var(--sol)}
+  .badge.baixa{background:var(--ceu-s);color:var(--ceu)}
+  .badge.info{background:var(--jade-s);color:var(--jade2)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--accent-s);color:var(--accent);border:1px solid var(--linha);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+  .memrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--linha)}
+  .memrow:last-child{border:none}
+  /* ficha premium */
+  .modal.wide{width:min(560px,100%)}
+  .profhead{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+  .profphoto{width:84px;height:84px;border-radius:18px;background:var(--accent-s);display:grid;place-items:center;color:var(--accent);font-weight:800;font-size:30px;flex:0 0 auto;position:relative;overflow:hidden;cursor:pointer;border:1px solid var(--linha)}
+  .profphoto img{width:100%;height:100%;object-fit:cover}
+  .profphoto .cam{position:absolute;inset:auto 0 0 0;background:rgba(0,0,0,.58);color:#fff;font-size:9.5px;text-align:center;padding:3px 0;font-weight:700;letter-spacing:.03em}
+  .profhead h3{font-size:20px} .profhead .lg{color:var(--suave);font-size:13px;margin-top:2px}
+  .avimg{width:100%;height:100%;object-fit:cover;border-radius:10px}
+  .ptabs{display:flex;gap:2px;border-bottom:1px solid var(--linha);margin-bottom:16px}
+  .ptab{padding:9px 14px;font-weight:700;font-size:14px;color:var(--suave);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .ptab.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .ptabview{display:none} .ptabview.on{display:block}
+  .evbox{background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:2px 14px;margin-top:16px}
+  .evbox summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px;padding:12px 0;list-style:none}
+  .evbox summary::-webkit-details-marker{display:none}
+  .evbox summary::before{content:"▾ ";font-size:11px}
+  .evbox .memrow{padding:7px 0}
+  /* organograma */
+  .org,.org ul{list-style:none;margin:0;padding:0}
+  .org ul{position:relative;padding-top:22px;display:flex;justify-content:center;gap:4px}
+  .org li{position:relative;padding:22px 10px 0;text-align:center}
+  .org li::before,.org li::after{content:'';position:absolute;top:0;right:50%;border-top:2px solid var(--linha);width:50%;height:22px}
+  .org li::after{right:auto;left:50%;border-left:2px solid var(--linha)}
+  .org li:only-child::before,.org li:only-child::after{display:none}
+  .org li:only-child{padding-top:0}
+  .org li:first-child::before,.org li:last-child::after{border:0 none}
+  .org li:last-child::before{border-right:2px solid var(--linha);border-radius:0 6px 0 0}
+  .org li:first-child::after{border-radius:6px 0 0 0}
+  .org ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--linha);height:22px}
+  .org>ul{padding-top:0} .org>ul>li{padding-top:0}
+  .org>ul>li::before,.org>ul>li::after{display:none}
+  .orgnode{display:inline-flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--linha);border-radius:12px;padding:8px 14px 8px 8px;cursor:pointer}
+  .orgnode:hover{border-color:var(--accent);box-shadow:var(--sombra-s)}
+  .orgav{width:36px;height:36px;border-radius:9px;background:var(--accent-s);color:var(--accent);display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 auto}
+  .orgav img{width:100%;height:100%;object-fit:cover}
+  .orgnm{font-weight:700;font-size:14px;white-space:nowrap} .orgcg{font-size:11px;color:var(--suave);white-space:nowrap}
+
+  /* form grid (segurança) */
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+  .fgrid .field{margin:0}
+  .switch{display:flex;align-items:center;gap:10px;padding:10px 0}
+  .switch input{width:auto}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha)}
+  .toggle-row:last-child{border:none}
+  .sw{position:relative;width:44px;height:25px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw .sl{position:absolute;inset:0;background:var(--linha);border-radius:999px;transition:.2s;cursor:pointer}
+  .sw .sl:before{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .sl{background:var(--accent)}
+  .sw input:checked + .sl:before{transform:translateX(19px)}
+
+  /* modal + toast */
+  .mask{display:none;position:fixed;inset:0;background:rgba(6,20,13,.55);z-index:50;place-items:center;padding:18px;overflow:auto}
+  .mask.open{display:grid}
+  .modal{background:var(--card);border:1px solid var(--linha);border-radius:18px;box-shadow:var(--sombra);width:min(460px,100%);padding:24px;max-height:92vh;overflow:auto}
+  .modal h3{font-size:19px;margin-bottom:3px}.modal .sub{color:var(--suave);font-size:13.5px;margin-bottom:16px}
+  .modal .acts{display:flex;gap:10px;margin-top:20px}.modal .acts .btn{flex:1}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(18px);opacity:0;transition:.25s;background:var(--forte);color:var(--bg);padding:12px 20px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)} #toast.erro{background:var(--vermelho);color:#fff}
+  .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media(max-width:860px){
+    .shell{grid-template-columns:1fr}
+    aside{position:fixed;left:0;top:0;width:262px;z-index:40;transform:translateX(-100%);transition:.25s}
+    aside.open{transform:none}
+    .burger{display:grid}
+    .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+    .backdrop.open{display:block}
+    .fgrid{grid-template-columns:1fr}
+  }
+  .invh{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--linha)}
+  @media print{
+    body{background:#fff}
+    body *{visibility:hidden}
+    .printavel,.printavel *{visibility:visible}
+    .printavel{position:absolute;left:0;top:0;width:100%;padding:10px 18px;color:#000}
+    .printavel .muted{color:#555}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="mk" viewBox="0 0 50 50"><path class="leaf" d="M44 6 C 20 6, 6 22, 6 46 C 10 46, 14 45.4, 18 44.2 C 17 36, 20 27, 27 20 C 24 29, 23 37, 23.6 42 C 33 37, 44 27, 44 6 Z"/></symbol></svg>
+
+<!-- LOGIN -->
+<div id="login">
+  <form class="loginbox" id="loginForm">
+    <img class="masc" src="assets/mascote.png" alt="" onerror="this.style.display='none'">
+    <h1>Guatá ID</h1>
+    <p>Painel do domínio — entre com uma conta administradora</p>
+    <div class="field"><label>Usuário</label><input type="text" id="usuario" value="Administrator" autocomplete="username"></div>
+    <div class="field"><label>Senha</label><input type="password" id="senha" autocomplete="current-password" autofocus></div>
+    <button class="btn pri block" type="submit" id="btnEntrar">Entrar</button>
+  </form>
+</div>
+
+<!-- CONFIGURADOR -->
+<div id="config">
+  <div class="cfgcard">
+    <div class="cfghead"><img src="assets/mascote.png" alt="" onerror="this.style.display='none'"><div><b>Guatá ID</b><span>Configurador de Domínio</span></div></div>
+    <div class="dots" id="cfgDots"></div>
+
+    <div class="cfgstep on" data-step="0">
+      <h2>Vamos criar o seu domínio</h2>
+      <p class="sub">Em poucos passos este servidor vira o cérebro da sua rede: login único, usuários, grupos e permissões para todos os computadores da empresa.</p>
+      <button class="btn pri block" onclick="cfgIr(1)">Começar</button>
+    </div>
+
+    <div class="cfgstep" data-step="1">
+      <h2>Qual o nome do domínio?</h2>
+      <p class="sub">Use o padrão da empresa, terminando em <b>.local</b>.</p>
+      <div class="field"><label>Nome do domínio</label><input id="c_dom" placeholder="minhaempresa.local"></div>
+      <div class="field"><label>Nome curto (aparece no Windows)</label><input id="c_nb" placeholder="MINHAEMPRESA"></div>
+      <div class="cfgnav"><button class="btn ghost" onclick="cfgIr(0)">← Voltar</button><button class="btn pri" onclick="cfgValida(1)">Continuar</button></div>
+    </div>
+
+    <div class="cfgstep" data-step="2">
+      <h2>Senha do Administrador</h2>
+      <p class="sub">A chave-mestra da sua rede. Guarde bem.</p>
+      <div class="field"><label>Senha</label><input id="c_senha" type="password" placeholder="mínimo 8, com Maiúscula, minúscula e número"></div>
+      <div class="field"><label>Confirme a senha</label><input id="c_senha2" type="password" placeholder="repita a senha"></div>
+      <div class="cfgnav"><button class="btn ghost" onclick="cfgIr(1)">← Voltar</button><button class="btn pri" onclick="cfgValida(2)">Continuar</button></div>
+    </div>
+
+    <div class="cfgstep" data-step="3">
+      <h2>Rede do controlador</h2>
+      <p class="sub">Um servidor de domínio precisa de IP fixo.</p>
+      <div class="field"><label>IP fixo deste servidor</label><input id="c_ip" placeholder="192.168.0.10/24"></div>
+      <div class="field"><label>Gateway (roteador)</label><input id="c_gw" placeholder="192.168.0.1"></div>
+      <div class="field"><label>DNS para a internet</label><input id="c_dns" placeholder="1.1.1.1"></div>
+      <div class="field"><label>Nome deste servidor</label><input id="c_host" placeholder="dc01"></div>
+      <div class="cfgnav"><button class="btn ghost" onclick="cfgIr(2)">← Voltar</button><button class="btn pri" onclick="cfgRevisar()">Revisar</button></div>
+    </div>
+
+    <div class="cfgstep" data-step="4">
+      <h2>Tudo certo?</h2>
+      <p class="sub">Confira antes de criar o domínio.</p>
+      <div class="resumo" id="c_resumo"></div>
+      <div class="field muted small" style="margin-top:8px">Durante a criação a rede é ajustada — se a conexão cair, acesse o novo IP.</div>
+      <div class="cfgnav"><button class="btn ghost" onclick="cfgIr(3)">← Voltar</button><button class="btn pri" id="c_criar" onclick="cfgCriar()">Criar domínio</button></div>
+    </div>
+
+    <div class="cfgstep" data-step="5">
+      <h2 id="c_pct_t">Criando o seu domínio…</h2>
+      <p class="sub" id="c_etapa">Preparando…</p>
+      <div class="prog"><i id="c_prog"></i></div>
+    </div>
+
+    <div class="cfgstep" data-step="6" style="text-align:center">
+      <div class="done-ic"><svg class="ic" viewBox="0 0 24 24" style="width:34px;height:34px"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h2>Domínio criado!</h2>
+      <p class="sub" id="c_done_sub">Seu servidor de identidade está no ar.</p>
+      <div class="url-box" id="c_url">http://—</div>
+      <button class="btn pri block" onclick="location.reload()">Ir para o painel</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+ <div class="backdrop" id="backdrop" onclick="fecharMenu()"></div>
+ <div class="shell">
+  <aside id="aside">
+    <div class="brand">
+      <img src="assets/logo.png" alt="" onerror="this.outerHTML='<svg class=ic style=\'width:38px;height:38px\'><use href=#mk></use></svg>'">
+      <div><b>Guatá ID</b><small>identidade soberana</small></div>
+    </div>
+    <nav class="menu" id="menu">
+      <div class="migroup">Visão geral</div>
+      <button class="mi on" data-v="painel"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Painel</button>
+      <div class="migroup">Diretório</div>
+      <button class="mi" data-v="usuarios"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Pessoas</button>
+      <button class="mi" data-v="grupos"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 .01M23 21v-2a4 4 0 0 0-3-3.87"/></svg> Grupos</button>
+      <button class="mi" data-v="computadores"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Computadores</button>
+      <button class="mi" data-v="ous"><svg class="ic" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Unidades</button>
+      <button class="mi" data-v="organograma"><svg class="ic" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="5" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><path d="M12 8v4M6.5 16v-2h11v2M12 12v2"/></svg> Organograma</button>
+      <div class="migroup">Controle</div>
+      <button class="mi" data-v="seguranca"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg> Segurança</button>
+      <button class="mi" data-v="gpo"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg> Políticas</button>
+      <button class="mi" data-v="dns"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18A15 15 0 0 1 12 3"/></svg> Rede e DNS</button>
+      <div class="migroup">Sistema</div>
+      <button class="mi" data-v="saude"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Saúde</button>
+      <button class="mi" data-v="controladores"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="8" rx="1"/><rect x="3" y="13" width="18" height="8" rx="1"/><path d="M7 7h.01M7 17h.01"/></svg> Controladores</button>
+      <button class="mi" data-v="auditoria"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg> Auditoria</button>
+      <button class="mi" data-v="backup"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3 1.3 0 2.6-.1 3.7-.3"/><path d="M18 14v6M15 17l3 3 3-3"/></svg> Backup</button>
+    </nav>
+    <div class="sb-foot">
+      <div class="saude-sb"><b><span class="dot"></span> Domínio saudável</b><span id="sbSaude">carregando…</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <button class="burger" onclick="abrirMenu()"><svg class="ic" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+      <h2 id="tituloView">Painel</h2>
+      <span class="sp"></span>
+      <button class="btn sm ghost" id="btnSair"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sair</button>
+    </div>
+    <div class="content">
+
+      <!-- PAINEL -->
+      <section class="view on" data-view="painel">
+        <div class="dom-head">
+          <span class="nme nome" id="domNome">—</span>
+          <span class="pill on" id="domPill"><span class="dot"></span> Domínio saudável</span>
+          <span class="sp"></span>
+          <button class="btn ghost" onclick="abrirIngressar()">Ingressar máquina</button>
+          <button class="btn pri" onclick="abrirNovaPessoa()"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M12 5v14M5 12h14"/></svg> Pessoa</button>
+        </div>
+        <div class="cards" id="statCards"></div>
+        <div id="atencaoWrap" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin:26px 0 12px"><svg class="ic" viewBox="0 0 24 24" style="width:19px;height:19px;color:var(--sol)"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><h3 style="font-size:16px">Atenção operacional</h3><span class="badge alta" id="atencaoN" style="display:none"></span><span class="sp"></span><span class="muted small" id="backupInfo"></span></div>
+          <div class="panel" style="padding:4px 2px"><div id="atencaoLista"></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:26px 0 12px"><svg class="ic" viewBox="0 0 24 24" style="width:19px;height:19px;color:var(--jade)"><path d="M12 22V11M12 11C12 7 9 4 4 4c0 5 3 8 8 8zM12 12c0-4 3-7 8-7 0 5-3 7-8 7z"/></svg><h3 style="font-size:16px">Jornadas — tarefas guiadas</h3></div>
+        <div class="jgrid">
+          <button class="jcard" onclick="abrirNovaPessoa()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><b>Nova pessoa</b><small>Cria a conta e entrega os acessos</small></button>
+          <button class="jcard" onclick="abrirIngressar()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><b>Novo computador</b><small>Prepara uma estação pro domínio</small></button>
+          <button class="jcard" onclick="jornadaDepartamento()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01"/></svg></span><b>Novo departamento</b><small>Cria unidade, grupo e estrutura</small></button>
+          <button class="jcard" onclick="jornadaSaida()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></span><b>Pessoa saiu</b><small>Encerra acessos com segurança</small></button>
+          <button class="jcard alerta" onclick="jornadaComprometida()"><span class="ji"><svg class="ic" viewBox="0 0 24 24" style="width:24px;height:24px;color:var(--accent)"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><rect x="9.3" y="11" width="5.4" height="4.5" rx="1"/><path d="M10.3 11V9.5a1.7 1.7 0 0 1 3.4 0V11"/></svg></span><b>Conta comprometida</b><small>Bloqueia e troca a senha na hora</small></button>
+        </div>
+      </section>
+
+      <!-- USUÁRIOS -->
+      <section class="view" data-view="usuarios">
+        <div class="gtabs">
+          <button class="gtab on" data-f="todos" onclick="setFiltroPessoa('todos',this)">Todos</button>
+          <button class="gtab" data-f="ativos" onclick="setFiltroPessoa('ativos',this)">Ativos</button>
+          <button class="gtab" data-f="inativos" onclick="setFiltroPessoa('inativos',this)">Inativos</button>
+          <button class="gtab" data-f="admin" onclick="setFiltroPessoa('admin',this)">Administradores</button>
+          <span style="flex:1"></span>
+          <input class="busca" placeholder="Buscar pessoa…" oninput="filtroPessoaTexto=this.value;renderPessoas()">
+          <button class="btn sm" style="width:auto" onclick="abrirImportarPessoas()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg> Importar CSV</button>
+          <button class="btn sm pri" style="width:auto" onclick="abrirNovaPessoa()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Nova pessoa</button>
+        </div>
+        <div class="panel"><div id="listaUsuarios"><div class="empty">carregando…</div></div></div>
+      </section>
+
+      <!-- GRUPOS -->
+      <section class="view" data-view="grupos">
+        <div class="gtabs">
+          <button class="gtab on" data-f="todos" onclick="setFiltroGrupo('todos',this)">Todos</button>
+          <button class="gtab" data-f="dept" onclick="setFiltroGrupo('dept',this)">Departamentos</button>
+          <button class="gtab" data-f="admin" onclick="setFiltroGrupo('admin',this)">Administração</button>
+          <button class="gtab" data-f="sistema" onclick="setFiltroGrupo('sistema',this)">Sistema</button>
+          <span style="flex:1"></span>
+          <input class="busca" placeholder="Buscar grupo…" oninput="filtroGrupoTexto=this.value;renderGrupos()">
+          <button class="btn sm pri" style="width:auto" onclick="abrirCriarGrupo()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Novo grupo</button>
+        </div>
+        <div class="gcards" id="listaGrupos"><div class="empty">carregando…</div></div>
+      </section>
+
+      <!-- COMPUTADORES -->
+      <section class="view" data-view="computadores">
+        <div class="cards" id="compCards"></div>
+        <div class="panel"><div class="ph"><h3>Computadores no domínio</h3><input class="busca" placeholder="Buscar…" oninput="filtrar('listaComputadores',this.value)"><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirIngressar()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Ingressar computador</button></div>
+          <div id="listaComputadores"><div class="empty">carregando…</div></div></div>
+      </section>
+
+      <!-- SEGURANÇA -->
+      <section class="view" data-view="seguranca">
+        <div class="panel">
+          <div class="ph"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--jade)"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg><h3>Regras de senha e bloqueio</h3><span class="sp"></span><button class="btn sm" style="width:auto" onclick="gerarRelatorio()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h6"/></svg> Relatório</button><button class="btn sm pri" style="width:auto" id="btnSalvarPol">Salvar regras</button></div>
+          <div class="fgrid" id="polForm"><div class="muted">carregando…</div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--sol)"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><h3>Contas que pedem atenção</h3><span class="sp"></span><span class="muted small" id="insecResumo"></span></div>
+          <div id="listaInseguras"><div class="empty">carregando…</div></div>
+        </div>
+        <div class="cli"><div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Transparência técnica — o que roda por baixo<button class="btn sm" id="cliCopy" style="margin-left:auto" onclick="copiarCli()">Copiar</button></div>
+          <pre id="cliTxt"># Regras de senha e bloqueio
+samba-tool domain passwordsettings show
+# Contas com senha que nunca expira (flag UAC)
+samba-tool user list --filter="userAccountControl:1.2.840.113556.1.4.803:=65536"
+# Membros dos administradores do domínio
+samba-tool group listmembers "Domain Admins"
+# Verificação do banco do diretório
+samba-tool dbcheck</pre></div>
+      </section>
+
+      <!-- POLÍTICAS (GPO) -->
+      <section class="view" data-view="gpo">
+        <div style="display:flex;align-items:center;gap:8px;margin:2px 0 12px"><svg class="ic" viewBox="0 0 24 24" style="width:19px;height:19px;color:var(--accent)"><path d="M12 2l2 5 5 .4-3.8 3.3 1.2 5L12 18l-4.6 2.7 1.2-5L4.8 7.4 10 7z"/></svg><h3 style="font-size:16px">Biblioteca de modelos prontos</h3><span class="muted small">1 clique cria a política já configurada</span></div>
+        <div id="gpoBiblioteca" class="cards" style="margin-bottom:18px"><div class="muted">carregando…</div></div>
+        <div class="panel"><div class="ph"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent)"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg><h3>Políticas no domínio</h3><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirCriarGPO()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Nova política (vazia)</button></div>
+          <div class="muted small" style="padding:12px 18px 0">Depois de criar, <b>vincule a uma Unidade (OU)</b> para a política valer. Teste num Windows com <b>gpupdate /force</b>.</div>
+          <div id="listaGPOs"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <!-- UNIDADES (OU) -->
+      <section class="view" data-view="ous">
+        <div class="panel"><div class="ph"><h3>Unidades Organizacionais</h3><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirCriarOU()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Nova unidade</button></div>
+          <div id="listaOUs"><div class="empty">carregando…</div></div></div>
+      </section>
+
+      <!-- ORGANOGRAMA -->
+      <section class="view" data-view="organograma">
+        <div class="panel"><div class="ph"><h3>Organograma da empresa</h3><span class="sp"></span><span class="muted small">quem responde a quem</span></div>
+          <div id="orgArvore" style="padding:20px;overflow-x:auto"><div class="empty">carregando…</div></div></div>
+      </section>
+
+      <!-- SAÚDE -->
+      <section class="view" data-view="saude">
+        <div class="cards" id="saudeCards"><div class="muted">carregando…</div></div>
+        <div id="saudeBody"><div class="empty" style="margin-top:14px">carregando…</div></div>
+      </section>
+
+      <!-- REDE E DNS -->
+      <section class="view" data-view="dns">
+        <div id="dnsZonasWrap" style="margin-bottom:10px;display:none"><div class="gtabs" id="dnsZonas" style="flex-wrap:wrap"></div></div>
+        <div class="panel"><div class="ph"><h3>Registros da zona</h3><span class="muted small" id="dnsZona"></span><input class="busca" placeholder="Buscar registro…" oninput="filtrarDNSbusca(this.value)"><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirAddHost()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Novo host</button></div>
+          <div class="gtabs" id="dnsTipos" style="flex-wrap:wrap;margin-bottom:10px"></div>
+          <div id="listaDNS"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <!-- CONTROLADORES -->
+      <section class="view" data-view="controladores">
+        <div id="ctrlDCs"><div class="empty">carregando…</div></div>
+        <div class="panel"><div class="ph"><h3>Papéis-mestre (FSMO)</h3><span class="sp"></span><span class="muted small">quem é responsável por cada função</span></div>
+          <div id="ctrlFsmo"></div></div>
+      </section>
+
+      <!-- AUDITORIA -->
+      <section class="view" data-view="auditoria">
+        <div class="cards" id="audCards"></div>
+        <div class="panel"><div class="ph"><h3>Trilha de auditoria</h3>
+          <div class="gtabs" id="audTabs" style="display:flex;gap:6px">
+            <button class="gtab on" data-f="tudo" onclick="setFiltroAud('tudo',this)">Tudo</button>
+            <button class="gtab" data-f="sucesso" onclick="setFiltroAud('sucesso',this)">Sucessos</button>
+            <button class="gtab" data-f="falha" onclick="setFiltroAud('falha',this)">Falhas</button>
+          </div>
+          <input class="busca" placeholder="Buscar ação, objeto, usuário…" oninput="filtrarAud(this.value)"><span class="sp"></span><span class="muted small">quem fez o quê, quando</span></div>
+          <div id="listaAuditoria"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+      <!-- BACKUP -->
+      <section class="view" data-view="backup">
+        <div class="cards" id="backupCards"><div class="muted">carregando…</div></div>
+        <div class="panel"><div class="ph"><h3>Backup do domínio</h3><span class="sp"></span>
+          <button class="btn sm" id="btnBackupAgenda" onclick="backupAgenda()">Agendar diário</button>
+          <button class="btn sm pri" onclick="backupCriar()" id="btnBackupNow"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg> Fazer backup agora</button></div>
+          <div id="backupStatus"></div>
+          <div id="listaBackups"><div class="empty">carregando…</div></div>
+        </div>
+        <div class="cli"><div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Transparência técnica — comando real de backup</div>
+          <pre id="backupCliTxt">samba-tool domain backup offline --targetdir=/var/lib/guata-id/backups
+# restaurar (num servidor novo/limpo): samba-tool domain backup restore \
+#   --backup-file=&lt;arquivo&gt; --newservername=&lt;nome&gt; --targetdir=/var/lib/samba</pre>
+          <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm ghost" onclick="copiarBackupCli()">Copiar</button></div></div>
+      </section>
+
+    </div>
+  </main>
+ </div>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+async function api(path,method="GET",body){
+  const o={method,headers:{}};
+  if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
+  const r=await fetch(path,o); let j={}; try{j=await r.json();}catch(e){}
+  if(r.status===401 && path!=="/api/login"){mostrarLogin();throw new Error("sessao");}
+  return {ok:r.ok,status:r.status,data:j};
+}
+const sons={};["ad-acesso","sucesso","alerta","notificacao"].forEach(n=>{try{const a=new Audio("assets/sons/"+n+".ogg");a.volume=.45;sons[n]=a;}catch(e){}});
+function som(n){try{const a=sons[n];if(a){a.currentTime=0;a.play().catch(()=>{});}}catch(e){}}
+function toast(m,erro){const t=$("#toast");t.textContent=m;t.className=(erro?"erro ":"")+"show";som(erro?"alerta":"sucesso");setTimeout(()=>t.className=t.className.replace("show",""),3000);}
+function esc(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function inicial(s){return (s&&s.trim()?s.trim()[0]:'?').toUpperCase();}
+function vazio(masc,msg,extra){return `<div class="empty"><img src="assets/masc-${masc}.png" alt="" onerror="this.style.display='none'"><div>${msg}</div>${extra?`<div class="muted small" style="margin-top:4px">${extra}</div>`:''}</div>`;}
+function filtrar(id,termo){termo=(termo||"").toLowerCase().trim();document.querySelectorAll("#"+id+" .row").forEach(r=>{r.style.display=(!termo||r.textContent.toLowerCase().includes(termo))?"":"none";});}
+const SVG_GRUPO='<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 .01M23 21v-2a4 4 0 0 0-3-3.87"/></svg>';
+const visivel=g=>!["krbtgt"].includes((g||"").toLowerCase()) && !/^dns-|^DnsAdmins|^RAS and/i.test(g||"");
+
+/* sessão / navegação */
+function mostrarLogin(){$("#config").style.display="none";$("#app").style.display="none";$("#login").style.display="grid";$("#senha").value="";setTimeout(()=>$("#senha").focus(),50);}
+function mostrarApp(){$("#config").style.display="none";$("#login").style.display="none";$("#app").style.display="block";som("ad-acesso");carregarGruposCache();carregarUsuariosCache();carregarOUsCache();irPara("painel");}
+let usuariosCache=[];
+async function carregarUsuariosCache(){try{const {data}=await api("/api/usuarios");usuariosCache=(data.itens||[]).filter(u=>!["krbtgt","guest"].includes((u.login||"").toLowerCase()));}catch(e){}}
+function opcoesUsuario(sel,excluir){return '<option value="">— ninguém —</option>'+usuariosCache.filter(u=>u.login!==excluir).map(u=>`<option value="${esc(u.login)}" ${u.login===sel?'selected':''}>${esc(u.nome||u.login)}</option>`).join("");}
+const titulos={painel:"Painel",usuarios:"Pessoas",grupos:"Grupos",computadores:"Computadores",seguranca:"Segurança",saude:"Saúde do domínio",organograma:"Organograma",ous:"Unidades",gpo:"Políticas",dns:"Rede e DNS",controladores:"Controladores",auditoria:"Auditoria",backup:"Backup do domínio"};
+function irPara(v){
+  document.querySelectorAll(".mi").forEach(m=>m.classList.toggle("on",m.dataset.v===v));
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.dataset.view===v));
+  $("#tituloView").textContent=titulos[v]||"Painel";
+  fecharMenu();
+  if(v==="painel")carregarPainel();
+  if(v==="usuarios")carregarUsuarios();
+  if(v==="grupos")carregarGrupos();
+  if(v==="computadores")carregarComputadores();
+  if(v==="seguranca")carregarSeguranca();
+  if(v==="saude")carregarSaude();
+  if(v==="organograma")carregarOrganograma();
+  if(v==="ous")carregarOUs();
+  if(v==="gpo")carregarGPOs();
+  if(v==="auditoria")carregarAuditoria();
+  if(v==="controladores")carregarControladores();
+  if(v==="backup")carregarBackup();
+  if(v==="dns")carregarDNS();
+}
+document.querySelectorAll(".mi[data-v]").forEach(m=>m.addEventListener("click",()=>irPara(m.dataset.v)));
+function abrirMenu(){$("#aside").classList.add("open");$("#backdrop").classList.add("open");}
+function fecharMenu(){$("#aside").classList.remove("open");$("#backdrop").classList.remove("open");}
+
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();const b=$("#btnEntrar");b.disabled=true;b.innerHTML='<span class="spin"></span> Entrando…';
+  try{const r=await api("/api/login","POST",{usuario:($("#usuario")?$("#usuario").value.trim():"Administrator")||"Administrator",senha:$("#senha").value});if(r.ok)mostrarApp();else toast(r.data.erro||"Falha",true);}
+  catch(e){}finally{b.disabled=false;b.textContent="Entrar";}
+});
+$("#btnSair").addEventListener("click",async()=>{try{await api("/api/logout","POST",{});}catch(e){}mostrarLogin();});
+
+/* PAINEL */
+async function carregarPainel(){
+  try{const {data:e}=await api("/api/estado");
+    $("#domNome").textContent=e.dominio||"domínio";
+    const on=(e.servico==="active"||e.servico==="activating");
+    const pill=$("#domPill");pill.className="pill "+(on?"on":"off");
+    pill.innerHTML='<span class="dot"></span> '+(on?"Domínio saudável":"Serviço parado");
+    $("#sbSaude").textContent=(e.controladores||1)+" "+((e.controladores||1)===1?"controlador":"controladores")+" · "+(on?"no ar":"parado");
+    const card=(ic,l,v,s,target,cls,on2)=>`<div class="stat ${cls||''} ${on2===0?'zero':''}" style="cursor:pointer" onclick="irPara('${target}')"><div class="l">${ic} ${l}</div><div class="v">${v}</div><div class="s">${s} <span style="color:var(--accent);font-weight:700">›</span></div></div>`;
+    const U='<svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    const C='<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+    const G=SVG_GRUPO; const S='<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>';
+    const O='<svg class="ic" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+    const D='<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/></svg>';
+    $("#statCards").innerHTML=
+      card(U,"Pessoas",e.usuarios,`${e.usuarios_ativos} ativos · ${e.usuarios_inativos} inativos`,"usuarios")+
+      card(C,"Computadores",e.computadores,`${e.computadores_windows} Windows · ${e.computadores_outros} Linux/outros`,"computadores")+
+      card(G,"Grupos",e.grupos,"no domínio","grupos")+
+      card(D,"Controladores",e.controladores||1,"infraestrutura","controladores")+
+      card(S,"Segurança",e.inseguras,(e.inseguras===0?"tudo em ordem":"contas em atenção"),"seguranca","alerta",e.inseguras);
+    carregarAtencao();
+  }catch(e){}
+}
+async function carregarAtencao(){
+  try{const {data}=await api("/api/painel-atencao");const itens=data.itens||[];
+    const wrap=$("#atencaoWrap");if(!wrap)return;wrap.style.display='block';
+    const bi=$("#backupInfo");
+    if(bi){ if(data.ultimo_backup){bi.textContent="Último backup: "+_dataHora(data.ultimo_backup.ts)+(data.agenda_backup?" · diário ligado":"");}
+      else{bi.innerHTML='<span style="color:var(--vermelho);font-weight:700">Sem backup ainda</span>';} }
+    const n=$("#atencaoN");
+    const ICok='<svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M20 6 9 17l-5-5"/></svg>';
+    const IClock='<svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+    const ICpc='<svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+    const ICsh='<svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg>';
+    const ICbk='<svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/></svg>';
+    let html='';
+    if(!itens.length){
+      if(n)n.style.display='none';
+      html=`<div class="row"><div class="av" style="background:var(--jade-s);color:var(--jade2)">${ICok}</div><div style="min-width:0"><div class="nm">Tudo em ordem</div><div class="muted small">nenhuma pendência crítica no domínio agora</div></div></div>`;
+    }else{
+      if(n){n.style.display='';n.textContent=data.total+(data.total>1?' pendências':' pendência');}
+      html=itens.map(it=>{
+        const danger=it.sev==='alta';
+        const ic=it.tipo==='conta_bloqueada'?IClock:(it.tipo==='pc'?ICpc:ICsh);
+        let btn='';
+        if(it.acao==='desbloquear')btn=`<button class="btn sm pri" onclick="atencaoDesbloquear('${esc(it.login)}')">Desbloquear</button>`;
+        else if(it.acao==='resolver')btn=`<button class="btn sm" onclick="abrirEditar('${esc(it.login)}')">Resolver</button>`;
+        else btn=`<button class="btn sm ghost" onclick="irPara('computadores')">Ver</button>`;
+        return `<div class="row"><div class="av ${danger?'off':''}" style="flex:none">${ic}</div>
+          <div style="min-width:0"><div class="nm">${esc(it.titulo)}</div><div class="muted small">${esc(it.detalhe)}</div></div>
+          <span class="sp"></span><span class="badge ${danger?'alta':'media'}" style="margin-right:8px">${danger?'alta':'média'}</span>${btn}</div>`;
+      }).join("");
+    }
+    // card de backup (sempre)
+    const semBk=!data.ultimo_backup;
+    html+=`<div class="row"><div class="av ${semBk?'off':''}" style="flex:none;${semBk?'':'background:var(--jade-s);color:var(--jade2)'}">${ICbk}</div>
+      <div style="min-width:0"><div class="nm">Backup do domínio</div><div class="muted small">${semBk?'nunca foi feito — faça o primeiro ponto de recuperação':'último: '+_dataHora(data.ultimo_backup.ts)+(data.agenda_backup?' · agendado diário':' · sem agendamento')}</div></div>
+      <span class="sp"></span><button class="btn sm ${semBk?'pri':'ghost'}" onclick="irPara('backup')">${semBk?'Fazer backup':'Abrir'}</button></div>`;
+    $("#atencaoLista").innerHTML=html;
+  }catch(e){}
+}
+async function atencaoDesbloquear(login){
+  const r=await api("/api/usuario-desbloquear","POST",{login});
+  if(r.ok){toast("Conta desbloqueada!");carregarAtencao();}else toast(r.data.erro||"Erro",true);
+}
+
+/* USUÁRIOS */
+const usuariosSistema=["krbtgt","guest"];
+let pessoasLista=[],adminsSet=new Set(),filtroPessoa="todos",filtroPessoaTexto="";
+function setFiltroPessoa(f,el){filtroPessoa=f;document.querySelectorAll('[data-view="usuarios"] .gtab').forEach(t=>t.classList.toggle('on',t===el));renderPessoas();}
+async function carregarUsuarios(){
+  try{const {data}=await api("/api/usuarios");
+    pessoasLista=(data.itens||[]).filter(u=>!usuariosSistema.includes((u.login||"").toLowerCase()));
+    try{const {data:da}=await api("/api/grupo?nome="+encodeURIComponent("Domain Admins"));
+      adminsSet=new Set((da.membros||[]).map(m=>m.split("\\").pop().toLowerCase()));}catch(e){}
+    renderPessoas();
+  }catch(e){}
+}
+function parseCSVpessoas(txt){
+  const linhas=(txt||'').split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  if(!linhas.length)return [];
+  const sep=(linhas[0].includes(';')&&!linhas[0].includes(','))?';':',';
+  const alias={nome:'nome',name:'nome','e-mail':'email',email:'email',mail:'email',login:'login',usuario:'login','usuário':'login',cargo:'cargo',funcao:'cargo','função':'cargo',ou:'ou',unidade:'ou',setor:'ou',senha:'senha',password:'senha'};
+  let cols=['nome','login','email','cargo','ou','senha'],start=0;
+  const h=linhas[0].toLowerCase();
+  if(/(^|[,;])\s*(login|nome|usuario|usuário)\s*([,;]|$)/.test(h)){
+    cols=linhas[0].split(sep).map(c=>alias[c.trim().toLowerCase()]||c.trim().toLowerCase());start=1;
+  }
+  const rows=[];
+  for(let i=start;i<linhas.length;i++){const parts=linhas[i].split(sep).map(p=>p.trim());const row={};
+    cols.forEach((c,j)=>{row[c]=parts[j]||'';});
+    if(row.login||row.nome)rows.push(row);}
+  return rows;
+}
+function abrirImportarPessoas(){
+  abrir(`<h3>Importar pessoas (CSV)</h3><p class="sub">Colunas: <b>nome, login, email, cargo, ou, senha</b>. Senha em branco = o sistema gera uma forte. A OU precisa existir.</p>
+    <div class="field"><label>Arquivo CSV <span class="muted">(opcional)</span></label><input type="file" id="imp_file" accept=".csv,text/csv,text/plain" onchange="impArquivo(event)"></div>
+    <div class="field"><label>Ou cole as linhas aqui</label><textarea id="imp_txt" rows="6" oninput="impPreview()" placeholder="nome,login,email,cargo,ou,senha&#10;João Silva,joao.silva,joao@empresa.local,Analista,TI,&#10;Maria Souza,maria.souza,maria@empresa.local,Gerente,Financeiro," style="width:100%;font-family:ui-monospace;font-size:12.5px;padding:10px;border:1.5px solid var(--linha);border-radius:11px;background:var(--card2);color:var(--ink);resize:vertical"></textarea></div>
+    <div id="imp_prev" class="muted small" style="margin-bottom:8px"></div>
+    <div id="imp_result"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Fechar</button><button class="btn pri" id="imp_ok" onclick="importarPessoas()">Importar</button></div>`);
+  impPreview();
+}
+function impArquivo(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$("#imp_txt").value=r.result;impPreview();};r.readAsText(f);}
+function impPreview(){const n=parseCSVpessoas($("#imp_txt").value).length;$("#imp_prev").textContent=n?(n+" pessoa(s) detectada(s) — confira e clique em Importar."):"Cole o CSV ou escolha um arquivo.";}
+async function importarPessoas(){
+  const rows=parseCSVpessoas($("#imp_txt").value);
+  if(!rows.length)return toast("Nada para importar.",true);
+  const b=$("#imp_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  const r=await api("/api/pessoas-importar","POST",{linhas:rows});
+  b.disabled=false;b.textContent="Importar";
+  if(!r.ok)return toast(r.data.erro||"Erro",true);
+  const d=r.data,itens=d.itens||[];
+  $("#imp_result").innerHTML=`<div class="row" style="background:${d.falhas?'var(--sol-s)':'var(--jade-s)'};border-radius:12px;margin-bottom:8px"><div class="nm">${d.ok} criada(s)${d.falhas?' · <span style="color:var(--vermelho)">'+d.falhas+' falha(s)</span>':''}</div></div>
+    <div class="memlist" style="max-height:34vh;overflow:auto">${itens.map(it=>`<div class="memrow"><span style="min-width:0">${it.ok?'<span class="badge info">ok</span>':'<span class="badge off">erro</span>'} ${esc(it.nome||it.login)} <span class="muted">(${esc(it.login)})</span>${it.senha?' · senha <b style="font-family:ui-monospace">'+esc(it.senha)+'</b>':''}</span>${it.ok?'':'<span class="muted small" style="text-align:right">'+esc(it.erro||'')+'</span>'}</div>`).join("")}</div>
+    ${itens.some(it=>it.senha)?'<div class="muted small" style="margin-top:8px">Anote as senhas geradas — elas não reaparecem.</div>':''}`;
+  toast(d.ok+" pessoa(s) criada(s)!");
+  carregarUsuariosCache();carregarUsuarios();
+}
+function renderPessoas(){
+  const el=$("#listaUsuarios");if(!el)return;
+  let itens=pessoasLista.slice();
+  if(filtroPessoa==="ativos")itens=itens.filter(u=>u.ativo);
+  else if(filtroPessoa==="inativos")itens=itens.filter(u=>!u.ativo);
+  else if(filtroPessoa==="admin")itens=itens.filter(u=>adminsSet.has((u.login||"").toLowerCase()));
+  const t=filtroPessoaTexto.toLowerCase().trim();
+  if(t)itens=itens.filter(u=>((u.nome||'')+' '+(u.login||'')+' '+(u.email||'')+' '+(u.cargo||'')).toLowerCase().includes(t));
+  if(!itens.length){el.innerHTML=vazio('usuarios','Ninguém aqui.','Ajuste o filtro ou clique em “Nova pessoa”.');return;}
+  el.innerHTML=itens.map(u=>{const adm=adminsSet.has((u.login||'').toLowerCase());
+    return `<div class="row">
+      <div class="av ${u.ativo?'':'off'}">${u.foto?`<img class="avimg" src="${u.foto}">`:esc(inicial(u.nome||u.login))}</div>
+      <div style="min-width:0">
+        <div class="nm">${esc(u.nome||u.login)} ${u.ativo?'':'<span class="badge off">inativo</span>'}${adm?' <span class="badge alta">admin</span>':''}${u.trocar_logon?' <span class="badge baixa">trocar senha</span>':''}</div>
+        <div class="muted">${esc(u.login)}${u.cargo?' · '+esc(u.cargo):''}${u.ou?' · <span style="color:var(--accent);font-weight:600">'+esc(u.ou)+'</span>':''}</div>
+        <div class="muted small" style="margin-top:1px">${u.ultimo_logon?'último acesso: '+esc(u.ultimo_logon):'<span style="color:var(--suave)">nunca acessou</span>'}${u.email?' · '+esc(u.email):''}</div>
+      </div><span class="sp"></span>
+      <button class="btn sm ghost" onclick="abrirEditar('${esc(u.login)}')">Editar</button>
+      ${u.ativo?`<button class="btn sm danger" onclick="mudarEstado('${esc(u.login)}','desativar')">Desativar</button>`
+               :`<button class="btn sm ok" onclick="mudarEstado('${esc(u.login)}','ativar')">Ativar</button>`}
+    </div>`;}).join("");
+}
+let gruposCache=[];
+async function carregarGruposCache(){try{const {data}=await api("/api/grupos");gruposCache=(data.itens||[]).map(g=>g.nome);}catch(e){}}
+function opcoesGrupo(sel){return '<option value="">— nenhum —</option>'+gruposCache.map(g=>`<option ${g===sel?'selected':''}>${esc(g)}</option>`).join("");}
+function sugereLogin(n){return n.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,".").replace(/^\.|\.$/g,"").slice(0,40);}
+
+function abrirCriarUsuario(ouDn){
+  abrir(`<h3>Novo usuário</h3><p class="sub">Crie o acesso de uma pessoa ao domínio.</p>
+    <div class="field"><label>Nome completo</label><input id="m_nome" placeholder="Ex: João Silva"></div>
+    <div class="field"><label>Login</label><input id="m_login" placeholder="joao.silva"></div>
+    <div class="field"><label>E-mail <span class="muted">(opcional)</span></label><input id="m_email" type="email" placeholder="joao.silva@empresa.local"></div>
+    <div class="field"><label>Cargo <span class="muted">(opcional)</span></label><input id="m_cargo" placeholder="Ex: Analista"></div>
+    <div class="field"><label>Unidade (onde criar)</label><select id="m_ou">${opcoesOU(ouDn||"")}</select></div>
+    <div class="field"><label>Grupo <span class="muted">(opcional)</span></label><select id="m_grupo">${opcoesGrupo()}</select></div>
+    <div class="field"><label>Senha inicial</label><input id="m_senha" type="password" placeholder="mín. 8, com Maiúscula, minúscula e número"></div>
+    <div class="switch"><input type="checkbox" id="m_trocar" checked><label for="m_trocar" style="margin:0">Exigir troca de senha no 1º acesso</label></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Criar usuário</button></div>`);
+  const nm=$("#m_nome"),lg=$("#m_login");let ed=false;lg.addEventListener("input",()=>ed=true);
+  nm.addEventListener("input",()=>{if(!ed)lg.value=sugereLogin(nm.value);});
+  $("#m_ok").onclick=async()=>{
+    const login=lg.value.trim();
+    const body={nome:nm.value.trim(),login,email:$("#m_email").value.trim(),cargo:$("#m_cargo").value.trim(),grupo:$("#m_grupo").value,ou:$("#m_ou").value,senha:$("#m_senha").value};
+    const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/usuario-criar","POST",body);
+    if(r.ok && $("#m_trocar").checked){await api("/api/usuario-flag","POST",{login,flag:"trocar_logon",valor:true});}
+    b.disabled=false;b.textContent="Criar usuário";
+    if(r.ok){fechar();toast("Usuário '"+login+"' criado!");carregarUsuarios();carregarPainel();}
+    else toast(r.data.erro||"Não consegui criar",true);
+  };
+}
+function redimFoto(file,cb){
+  const img=new Image();const fr=new FileReader();
+  fr.onload=()=>{img.onload=()=>{
+    const s=128,c=document.createElement("canvas");c.width=s;c.height=s;const x=c.getContext("2d");
+    const m=Math.min(img.width,img.height),sx=(img.width-m)/2,sy=(img.height-m)/2;
+    x.drawImage(img,sx,sy,m,m,0,0,s,s);
+    cb(c.toDataURL("image/jpeg",0.82));
+  };img.src=fr.result;};
+  fr.readAsDataURL(file);
+}
+async function cancelarAgenda(login,quando){const r=await api("/api/agenda-cancelar","POST",{login,quando});if(r.ok){toast("Agendamento cancelado");abrirEditar(login);}else toast(r.data.erro||"Erro",true);}
+function gerarSenha(){const M="ABCDEFGHJKLMNPQRSTUVWXYZ",m="abcdefghijkmnpqrstuvwxyz",n="23456789",s="@#!$%";const r=new Uint32Array(1);const pick=a=>{crypto.getRandomValues(r);return a[r[0]%a.length]};let arr=[pick(M),pick(m),pick(n),pick(s)];for(let i=0;i<10;i++)arr.push(pick(M+m+n));for(let i=arr.length-1;i>0;i--){crypto.getRandomValues(r);const j=r[0]%(i+1);const x=arr[i];arr[i]=arr[j];arr[j]=x;}return arr.join("");}
+function abrirNovaPessoa(){
+  const np={nome:"",sobrenome:"",login:"",email:"",ou:"",grupos:[],senha:"",trocar:true,loginEdit:false};
+  const m=$("#modal");
+  const dots=s=>`<div class="dots">${[1,2,3,4].map(i=>`<i class="${s>=i?'on':''}"></i>`).join("")}</div>`;
+  function salvarStep(s){
+    if(s===1){np.nome=$("#np_nome").value.trim();np.sobrenome=$("#np_sob").value.trim();np.login=$("#np_login").value.trim();np.email=$("#np_email").value.trim();}
+    if(s===2){np.ou=$("#np_ou").value;}
+    if(s===3){np.grupos=[...m.querySelectorAll(".np_g:checked")].map(c=>c.value);}
+    if(s===4){np.senha=$("#np_senha").value;np.trocar=$("#np_trocar").checked;}
+  }
+  function render(s){
+    m.className="modal wide";let b="";
+    if(s===1){b=`<h3>Quem é a pessoa?</h3><p class="sub">Os dados básicos.</p>
+      <div class="field"><label>Nome</label><input id="np_nome" value="${esc(np.nome)}" placeholder="João"></div>
+      <div class="field"><label>Sobrenome</label><input id="np_sob" value="${esc(np.sobrenome)}" placeholder="Silva"></div>
+      <div class="field"><label>Login (nome de acesso)</label><input id="np_login" value="${esc(np.login)}" placeholder="joao.silva"></div>
+      <div class="field"><label>E-mail <span class="muted">(opcional)</span></label><input id="np_email" type="email" value="${esc(np.email)}" placeholder="joao.silva@empresa.local"></div>
+      <div class="cfgnav"><button class="btn ghost" id="np_cancel">Cancelar</button><button class="btn pri" id="np_next">Continuar</button></div>`;
+    }else if(s===2){b=`<h3>Onde trabalha?</h3><p class="sub">A unidade define onde a pessoa fica e as políticas que ela recebe.</p>
+      <div class="field"><label>Unidade</label><select id="np_ou">${opcoesOU(np.ou)}</select></div>
+      <div class="cfgnav"><button class="btn ghost" id="np_back">Voltar</button><button class="btn pri" id="np_next">Continuar</button></div>`;
+    }else if(s===3){const gs=gruposCache.filter(visivel);
+      b=`<h3>De que precisa?</h3><p class="sub">Marque os acessos. Cada um é um grupo do domínio.</p>
+      <div style="max-height:42vh;overflow:auto;margin:0 -2px">${gs.length?gs.map(g=>`<label style="display:flex;gap:11px;align-items:center;border-bottom:1px solid var(--linha);padding:11px 2px;cursor:pointer"><input type="checkbox" class="np_g" value="${esc(g)}" ${np.grupos.includes(g)?'checked':''} style="width:auto"><span style="font-weight:600;color:var(--ink)">${esc(g)}</span></label>`).join(""):'<div class="muted small" style="padding:8px 0">Nenhum grupo criado ainda — você pode dar acessos depois.</div>'}</div>
+      <div class="cfgnav"><button class="btn ghost" id="np_back">Voltar</button><button class="btn pri" id="np_next">Continuar</button></div>`;
+    }else if(s===4){if(!np.senha)np.senha=gerarSenha();
+      b=`<h3>Segurança</h3><p class="sub">Senha inicial da pessoa.</p>
+      <div class="field"><label>Senha temporária</label><div style="display:flex;gap:8px"><input id="np_senha" value="${esc(np.senha)}" style="flex:1"><button class="btn sm" id="np_gerar">Gerar</button></div></div>
+      <div class="toggle-row"><span>Exigir troca de senha no 1º acesso</span><label class="sw"><input type="checkbox" id="np_trocar" ${np.trocar?'checked':''}><span class="sl"></span></label></div>
+      <div class="cfgnav"><button class="btn ghost" id="np_back">Voltar</button><button class="btn pri" id="np_criar">Criar pessoa</button></div>`;
+    }
+    m.innerHTML=dots(s)+b;$("#mask").classList.add("open");
+    const inp=m.querySelector("input");if(inp)setTimeout(()=>inp.focus(),50);
+    if($("#np_cancel"))$("#np_cancel").onclick=()=>{fechar();m.className="modal";};
+    if($("#np_back"))$("#np_back").onclick=()=>{salvarStep(s);render(s-1);};
+    if($("#np_next"))$("#np_next").onclick=()=>{
+      if(s===1){const nm=$("#np_nome").value.trim();if(!nm){toast("Informe o nome.",true);return;}
+        if(!$("#np_login").value.trim())$("#np_login").value=sugereLogin(nm+" "+$("#np_sob").value);}
+      salvarStep(s);render(s+1);};
+    if($("#np_gerar"))$("#np_gerar").onclick=()=>{$("#np_senha").value=gerarSenha();};
+    const lg=$("#np_login"),nm2=$("#np_nome"),sb=$("#np_sob");
+    if(lg&&nm2){lg.addEventListener("input",()=>np.loginEdit=true);
+      const upd=()=>{if(!np.loginEdit)lg.value=sugereLogin(nm2.value+" "+(sb.value||""));};
+      nm2.addEventListener("input",upd);sb.addEventListener("input",upd);}
+    if($("#np_criar"))$("#np_criar").onclick=async()=>{salvarStep(4);
+      const b2=$("#np_criar");b2.disabled=true;b2.innerHTML='<span class="spin"></span> Criando…';
+      const r=await api("/api/pessoa-criar","POST",np);
+      if(!r.ok){b2.disabled=false;b2.textContent="Criar pessoa";toast(r.data.erro||"Erro",true);return;}
+      som("sucesso");const dt=r.data.detalhes||{};
+      m.innerHTML=`<div style="text-align:center"><div class="done-ic"><svg class="ic" viewBox="0 0 24 24" style="width:34px;height:34px"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h3>Pessoa criada!</h3><p class="sub">${esc((np.nome+' '+np.sobrenome).trim())} já pode usar o domínio.</p></div>
+        <div class="evbox"><details><summary>Ver detalhes técnicos</summary><div>
+          <div class="memrow"><span class="muted">Conta</span><b>${esc(dt.login||np.login)}</b></div>
+          <div class="memrow"><span class="muted">Unidade (OU)</span><b style="font-family:ui-monospace;font-size:12px">${esc(dt.ou||'')}</b></div>
+          <div class="memrow"><span class="muted">Grupos</span><b>${(dt.grupos||[]).length?esc((dt.grupos||[]).join(', ')):'—'}</b></div>
+          <div class="memrow"><span class="muted">Controlador</span><b>${esc(dt.dc||'')}</b></div>
+          <div class="memrow"><span class="muted">Resultado</span><b style="color:var(--jade2)">${esc(dt.resultado||'sucesso')}</b></div>
+          <div class="memrow"><span class="muted">Auditoria</span><b style="font-family:ui-monospace;font-size:12px">${esc(dt.audit||'')}</b></div>
+        </div></details></div>
+        <div class="acts"><button class="btn ghost" id="np_outra">Criar outra</button><button class="btn pri" id="np_fim">Concluir</button></div>`;
+      $("#np_fim").onclick=()=>{fechar();m.className="modal";carregarUsuarios();carregarUsuariosCache();carregarPainel();};
+      $("#np_outra").onclick=()=>abrirNovaPessoa();
+    };
+  }
+  render(1);
+}
+function evidBox(dt,linhas){return `<div class="evbox"><details><summary>Ver detalhes técnicos</summary><div>
+  ${linhas.map(([l,v])=>`<div class="memrow"><span class="muted">${l}</span><b style="text-align:right;max-width:60%">${esc(v||'—')}</b></div>`).join("")}
+  <div class="memrow"><span class="muted">Controlador</span><b>${esc(dt.dc||'')}</b></div>
+  <div class="memrow"><span class="muted">Auditoria</span><b style="font-family:ui-monospace;font-size:12px">${esc(dt.audit||'')}</b></div>
+  </div></details></div>`;}
+function telaResultado(titulo,sub,corpo){const m=$("#modal");m.className="modal wide";
+  m.innerHTML=`<div style="text-align:center"><div class="done-ic"><svg class="ic" viewBox="0 0 24 24" style="width:34px;height:34px"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <h3>${titulo}</h3><p class="sub">${sub}</p></div>${corpo}
+    <div class="acts"><button class="btn pri" onclick="fechar();$('#modal').className='modal'">Concluir</button></div>`;}
+function opcoesPessoa(){return usuariosCache.map(u=>`<option value="${esc(u.login)}">${esc(u.nome||u.login)} (${esc(u.login)})</option>`).join("");}
+function jornadaDepartamento(){
+  abrir(`<div style="text-align:center"><div style="margin-bottom:6px"><svg class="ic" viewBox="0 0 24 24" style="width:32px;height:32px;color:var(--accent)"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01"/></svg></div><h3>Novo departamento</h3><p class="sub">Cria a unidade e o grupo da equipe de uma vez só.</p></div>
+    <div class="field"><label>Nome do departamento</label><input id="jd_nome" placeholder="Ex: Marketing"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="jd_ok">Criar departamento</button></div>`);
+  $("#jd_ok").onclick=async()=>{const nome=$("#jd_nome").value.trim();if(!nome){toast("Informe o nome",true);return;}
+    const b=$("#jd_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/jornada-departamento","POST",{nome});b.disabled=false;b.textContent="Criar departamento";
+    if(!r.ok){toast(r.data.erro||"Erro",true);return;}som("sucesso");const dt=r.data.detalhes||{};
+    carregarOUsCache();carregarGruposCache();carregarPainel();
+    telaResultado("Departamento criado!",esc(nome)+" já tem unidade e grupo.",evidBox(dt,[["Departamento",dt.departamento],["Unidade (OU)",dt.unidade],["Grupo criado",dt.grupo],["Resultado",dt.resultado]]));};
+}
+function jornadaSaida(){
+  if(!usuariosCache.length){toast("Nenhuma pessoa no domínio.",true);return;}
+  abrir(`<div style="text-align:center"><div style="margin-bottom:6px"><svg class="ic" viewBox="0 0 24 24" style="width:32px;height:32px;color:var(--accent)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></div><h3>Pessoa saiu da empresa</h3><p class="sub">Vou desativar a conta e remover todos os acessos (grupos). A pessoa continua existindo, só sem acesso.</p></div>
+    <div class="field"><label>Quem saiu?</label><select id="js_login">${opcoesPessoa()}</select></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn danger" id="js_ok">Encerrar acessos</button></div>`);
+  $("#js_ok").onclick=async()=>{const login=$("#js_login").value;if(!confirm("Encerrar todos os acessos de '"+login+"'?"))return;
+    const b=$("#js_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/jornada-saida","POST",{login});b.disabled=false;b.textContent="Encerrar acessos";
+    if(!r.ok){toast(r.data.erro||"Erro",true);return;}som("sucesso");const dt=r.data.detalhes||{};
+    carregarUsuarios();carregarPainel();
+    telaResultado("Acessos encerrados",esc(login)+" está sem acesso ao domínio.",evidBox(dt,[["Conta",dt.login],["Grupos removidos",(dt.grupos_removidos||[]).join(', ')||'nenhum'],["Resultado",dt.resultado]]));};
+}
+function jornadaComprometida(){
+  if(!usuariosCache.length){toast("Nenhuma pessoa no domínio.",true);return;}
+  abrir(`<div style="text-align:center"><div style="margin-bottom:6px"><svg class="ic" viewBox="0 0 24 24" style="width:32px;height:32px;color:var(--vermelho)"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><rect x="9.3" y="11" width="5.4" height="4.5" rx="1"/><path d="M10.3 11V9.5a1.7 1.7 0 0 1 3.4 0V11"/></svg></div><h3>Conta comprometida</h3><p class="sub">Ação de emergência: bloqueio a conta e troco a senha na hora. Depois você revisa a atividade.</p></div>
+    <div class="field"><label>Qual conta?</label><select id="jc_login">${opcoesPessoa()}</select></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn danger" id="jc_ok">Bloquear agora</button></div>`);
+  $("#jc_ok").onclick=async()=>{const login=$("#jc_login").value;
+    const b=$("#jc_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/jornada-comprometida","POST",{login});b.disabled=false;b.textContent="Bloquear agora";
+    if(!r.ok){toast(r.data.erro||"Erro",true);return;}som("alerta");const dt=r.data.detalhes||{};const at=r.data.atividade||[];
+    carregarUsuarios();carregarPainel();
+    const atHtml=at.length?`<div class="field"><label>Atividade recente desta conta</label><div class="memlist">${at.map(a=>{let q='';try{q=new Date((a.ts||0)*1000).toLocaleString('pt-BR');}catch(e){}return `<div class="memrow"><span>${esc(a.acao||'')}</span><b class="muted small">${esc(q)}</b></div>`;}).join("")}</div></div>`:'';
+    telaResultado("Conta contida",esc(login)+" foi bloqueada e a senha trocada.",
+      `<div class="field"><label>Nova senha temporária</label><input readonly value="${esc(dt.nova_senha||'')}" onclick="this.select()"></div>`+atHtml+evidBox(dt,[["Conta",dt.login],["Resultado",dt.resultado]]));};
+}
+async function abrirEditar(login){
+  abrir(`<h3>Carregando…</h3>`);
+  const {data:u}=await api("/api/usuario?login="+encodeURIComponent(login));
+  if(!u||u.erro){toast("Usuário não encontrado",true);fechar();return;}
+  const grps=(u.grupos||[]).filter(visivel);
+  let agItens=[];try{const ag=await api("/api/agenda?login="+encodeURIComponent(login));agItens=(ag.data&&ag.data.itens)||[];}catch(e){}
+  const m=$("#modal");m.className="modal wide";
+  m.innerHTML=`
+    <div class="profhead">
+      <div class="profphoto" id="pf_photo" title="Trocar foto">${u.foto?`<img src="${u.foto}">`:esc(inicial(u.nome||login))}<span class="cam">trocar</span></div>
+      <div style="min-width:0"><h3>${esc(u.nome||login)} ${u.ativo?'':'<span class="badge off">inativo</span>'}</h3><div class="lg">${esc(login)}</div><div id="pf_maquinas" class="muted small" style="margin-top:2px"></div></div>
+      <span style="flex:1"></span>
+      <button class="btn sm ghost" id="pf_close">Fechar</button>
+    </div>
+    <input type="file" id="pf_file" accept="image/*" style="display:none">
+    <div class="ptabs">
+      <button class="ptab on" data-pt="geral">Geral</button>
+      <button class="ptab" data-pt="conta">Conta</button>
+      <button class="ptab" data-pt="grupos">Grupos</button>
+      <button class="ptab" data-pt="org">Organização</button>
+    </div>
+    <div class="ptabview on" data-pt="geral">
+      <div class="field"><label>Nome completo</label><input id="pf_nome" value="${esc(u.nome||'')}"></div>
+      <div class="field"><label>E-mail</label><input id="pf_email" type="email" value="${esc(u.email||'')}"></div>
+      <div class="field"><label>Cargo</label><input id="pf_cargo" value="${esc(u.cargo||'')}"></div>
+      <div class="field"><label>Departamento</label><input id="pf_dep" value="${esc(u.departamento||'')}"></div>
+      <div class="field"><label>Telefone</label><input id="pf_tel" value="${esc(u.telefone||'')}"></div>
+      <div class="field"><label>Empresa</label><input id="pf_emp" value="${esc(u.empresa||'')}"></div>
+      <div class="field"><label>Escritório</label><input id="pf_esc" value="${esc(u.escritorio||'')}" placeholder="Ex: Matriz - 2º andar"></div>
+      <div class="field"><label>Descrição</label><input id="pf_desc" value="${esc(u.descricao||'')}" placeholder="Ex: Estagiário de verão"></div>
+      <button class="btn pri block" id="pf_save">Salvar dados</button>
+    </div>
+    <div class="ptabview" data-pt="conta">
+      <div class="toggle-row"><span>Conta ativa</span><label class="sw"><input type="checkbox" id="pf_ativo" ${u.ativo?'checked':''}><span class="sl"></span></label></div>
+      <div class="toggle-row"><span>Senha nunca expira</span><label class="sw"><input type="checkbox" id="pf_ne" ${u.nunca_expira?'checked':''}><span class="sl"></span></label></div>
+      <div class="toggle-row"><span>Exigir troca no próximo acesso</span><label class="sw"><input type="checkbox" id="pf_tl" ${u.trocar_logon?'checked':''}><span class="sl"></span></label></div>
+      ${u.bloqueada?`<div class="toggle-row" style="color:var(--vermelho)"><span><b>Conta bloqueada</b> (senhas erradas demais)</span><button class="btn sm ok" id="pf_unlock">Desbloquear</button></div>`:''}
+      <div class="field" style="margin-top:12px"><label>Validade da conta ${u.expira?('— expira em '+esc(u.expira)):'— não expira'}</label>
+        <div style="display:flex;gap:8px"><input id="pf_exp_dias" type="number" min="1" placeholder="expira em X dias (vazio = nunca)" style="flex:1"><button class="btn sm" id="pf_exp">Aplicar</button></div></div>
+      <div class="field"><label>Agendar admissão / desligamento</label>
+        ${agItens.length?`<div class="chips" style="margin-bottom:8px">${agItens.map(a=>{let q='';try{q=new Date((a.quando||0)*1000).toLocaleString('pt-BR');}catch(e){}return `<span class="chip">${a.acao==='ativar'?'Ligar':'Desligar'} em ${esc(q)} <span onclick="cancelarAgenda('${esc(login)}',${a.quando})" style="cursor:pointer;color:var(--vermelho);font-weight:800">×</span></span>`;}).join("")}</div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="pf_ag_acao" style="flex:1;min-width:120px"><option value="ativar">Ligar a conta</option><option value="desativar">Desligar a conta</option></select>
+          <input id="pf_ag_quando" type="datetime-local" style="flex:1;min-width:160px">
+          <button class="btn sm" id="pf_ag_btn">Agendar</button></div></div>
+      <button class="btn block" style="margin-top:14px" id="pf_senha">Resetar senha</button>
+      <button class="btn pri block" style="margin-top:10px" id="pf_saveconta">Salvar conta</button>
+    </div>
+    <div class="ptabview" data-pt="grupos">
+      <div class="field"><label>Faz parte de</label><div class="chips">${grps.length?grps.map(g=>`<span class="chip">${esc(g)}</span>`).join(""):'<span class="muted small">nenhum grupo ainda</span>'}</div></div>
+      <div class="field"><label>Adicionar a um grupo</label><div style="display:flex;gap:8px"><select id="pf_addg" style="flex:1">${opcoesGrupo()}</select><button class="btn sm" id="pf_add">Adicionar</button></div></div>
+    </div>
+    <div class="ptabview" data-pt="org">
+      <div class="field"><label>Superior (a quem responde)</label><select id="pf_sup">${opcoesUsuario(u.superior,login)}</select></div>
+      <button class="btn pri block" id="pf_savesup">Salvar superior</button>
+      <div class="field" style="margin-top:16px"><label>Unidade (onde fica)</label><div style="display:flex;gap:8px"><select id="pf_ou" style="flex:1">${opcoesOU(u.local)}</select><button class="btn sm" id="pf_mover">Mover</button></div></div>
+      <div class="field"><label>Lidera (reportam a ${esc(u.nome||login)})</label><div class="chips">${(u.lidera||[]).length?u.lidera.map(l=>`<span class="chip">${esc(l)}</span>`).join(""):'<span class="muted small">ninguém ainda</span>'}</div></div>
+      <button class="btn block" style="margin-top:8px" id="pf_verorg">Ver organograma</button>
+    </div>`;
+  $("#mask").classList.add("open");
+  const fecharFicha=()=>{fechar();m.className="modal";};
+  $("#pf_close").onclick=fecharFicha;
+  api("/api/usuario-maquinas?login="+encodeURIComponent(login)+"&nome="+encodeURIComponent(u.nome||"")).then(r=>{const mq=(r.data&&r.data.maquinas)||[];const el=$("#pf_maquinas");if(el&&mq.length)el.innerHTML='<svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;vertical-align:-1px"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg> '+mq.map(esc).join(", ");});
+  m.querySelectorAll(".ptab").forEach(t=>t.onclick=()=>{
+    m.querySelectorAll(".ptab").forEach(x=>x.classList.toggle("on",x===t));
+    m.querySelectorAll(".ptabview").forEach(v=>v.classList.toggle("on",v.dataset.pt===t.dataset.pt));
+  });
+  $("#pf_photo").onclick=()=>$("#pf_file").click();
+  $("#pf_file").onchange=e=>{const f=e.target.files[0];if(!f)return;redimFoto(f,async b64=>{
+    const r=await api("/api/usuario-foto","POST",{login,foto:b64});
+    if(r.ok){som("sucesso");toast("Foto atualizada!");abrirEditar(login);carregarUsuarios();}else toast(r.data.erro||"Erro",true);});};
+  $("#pf_save").onclick=async()=>{const b=$("#pf_save");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/usuario-editar","POST",{login,nome:$("#pf_nome").value.trim(),email:$("#pf_email").value.trim(),cargo:$("#pf_cargo").value.trim(),departamento:$("#pf_dep").value.trim(),telefone:$("#pf_tel").value.trim(),empresa:$("#pf_emp").value.trim(),descricao:$("#pf_desc").value.trim(),escritorio:$("#pf_esc").value.trim()});
+    b.disabled=false;b.textContent="Salvar dados";
+    if(r.ok){toast("Dados salvos!");carregarUsuarios();}else toast(r.data.erro||"Erro",true);};
+  if($("#pf_unlock"))$("#pf_unlock").onclick=async()=>{const r=await api("/api/usuario-desbloquear","POST",{login});
+    if(r.ok){toast("Conta desbloqueada!");abrirEditar(login);}else toast(r.data.erro||"Erro",true);};
+  $("#pf_exp").onclick=async()=>{const r=await api("/api/usuario-expira","POST",{login,dias:$("#pf_exp_dias").value.trim()||"nunca"});
+    if(r.ok){toast("Validade atualizada!");abrirEditar(login);}else toast(r.data.erro||"Erro",true);};
+  $("#pf_ag_btn").onclick=async()=>{const v=$("#pf_ag_quando").value;if(!v){toast("Escolha data e hora",true);return;}
+    const ts=Math.floor(new Date(v).getTime()/1000);
+    if(ts<=Math.floor(Date.now()/1000)){toast("Escolha uma data futura",true);return;}
+    const r=await api("/api/agendar","POST",{login,acao:$("#pf_ag_acao").value,quando:ts});
+    if(r.ok){toast("Agendado!");abrirEditar(login);}else toast(r.data.erro||"Erro",true);};
+  $("#pf_senha").onclick=()=>abrirSenha(login);
+  $("#pf_saveconta").onclick=async()=>{const b=$("#pf_saveconta");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    if($("#pf_ativo").checked!==u.ativo)await api("/api/usuario-estado","POST",{login,acao:$("#pf_ativo").checked?"ativar":"desativar"});
+    if($("#pf_ne").checked!==u.nunca_expira)await api("/api/usuario-flag","POST",{login,flag:"nunca_expira",valor:$("#pf_ne").checked});
+    if($("#pf_tl").checked!==u.trocar_logon)await api("/api/usuario-flag","POST",{login,flag:"trocar_logon",valor:$("#pf_tl").checked});
+    b.disabled=false;b.textContent="Salvar conta";toast("Conta atualizada!");carregarUsuarios();carregarPainel();};
+  $("#pf_add").onclick=async()=>{const g=$("#pf_addg").value;if(!g)return;const r=await api("/api/grupo-membro","POST",{grupo:g,login});if(r.ok){toast("Adicionado!");abrirEditar(login);}else toast(r.data.erro||"Erro",true);};
+  $("#pf_savesup").onclick=async()=>{const b=$("#pf_savesup");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/usuario-superior","POST",{login,superior:$("#pf_sup").value});b.disabled=false;b.textContent="Salvar superior";
+    if(r.ok){toast("Hierarquia salva!");}else toast(r.data.erro||"Erro",true);};
+  $("#pf_mover").onclick=async()=>{const dn=$("#pf_ou").value;const r=await api("/api/usuario-mover","POST",{login,dn});
+    if(r.ok){toast("Usuário movido!");abrirEditar(login);}else toast(r.data.erro||"Erro",true);};
+  $("#pf_verorg").onclick=()=>{fechar();m.className="modal";irPara("organograma");};
+}
+function abrirSenha(login){
+  abrir(`<h3>Resetar senha</h3><p class="sub">Nova senha para <b>${esc(login)}</b>.</p>
+    <div class="field"><label>Nova senha</label><input id="m_senha" type="password" placeholder="mín. 8, com Maiúscula, minúscula e número"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Salvar</button></div>`);
+  $("#m_ok").onclick=async()=>{const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/usuario-senha","POST",{login,senha:$("#m_senha").value});b.disabled=false;b.textContent="Salvar";
+    if(r.ok){fechar();toast("Senha de '"+login+"' alterada!");}else toast(r.data.erro||"Erro",true);};
+}
+async function mudarEstado(login,acao){
+  if(acao==="desativar"&&!confirm("Desativar o acesso de '"+login+"'?"))return;
+  const r=await api("/api/usuario-estado","POST",{login,acao});
+  if(r.ok){toast(acao==="desativar"?"'"+login+"' desativado.":"'"+login+"' ativado.");carregarUsuarios();carregarPainel();}else toast(r.data.erro||"Erro",true);
+}
+
+/* GRUPOS */
+let gruposRicos=[],filtroGrupo="todos",filtroGrupoTexto="";
+const ADMIN_G=["domain admins","enterprise admins","schema admins","administrators","account operators","backup operators","server operators","print operators","group policy creator owners","dnsadmins","key admins","enterprise key admins"];
+function categoriaGrupo(n){n=(n||"").toLowerCase();
+  if(ADMIN_G.includes(n))return "admin";
+  if(/^(domain |ras |cert |denied |allowed |read-only|enterprise read|cloneable|protected users|dnsupdateproxy|distributed com|cryptographic|event log|certificate service|windows authorization|pre-windows|incoming forest|performance|network configuration|remote desktop|replicator|guests$|users$|iis_|storage replica|access control|remote management|system managed|device owners|hyper-v|rds )/i.test(n)||n==="krbtgt")return "sistema";
+  return "dept";}
+function setFiltroGrupo(f,el){filtroGrupo=f;document.querySelectorAll('.gtab').forEach(t=>t.classList.toggle('on',t===el));renderGrupos();}
+async function carregarGrupos(){try{const {data}=await api("/api/grupos");gruposRicos=data.itens||[];renderGrupos();}catch(e){}}
+function renderGrupos(){
+  const el=$("#listaGrupos");if(!el)return;
+  let itens=gruposRicos.map(g=>({...g,cat:categoriaGrupo(g.nome)}));
+  if(filtroGrupo!=="todos")itens=itens.filter(g=>g.cat===filtroGrupo);
+  const t=filtroGrupoTexto.toLowerCase().trim();if(t)itens=itens.filter(g=>(g.nome+' '+(g.descricao||'')).toLowerCase().includes(t));
+  if(!itens.length){el.innerHTML=vazio('grupos','Nenhum grupo aqui.','Ajuste o filtro ou crie um novo grupo.');return;}
+  const lbl={admin:"Administração",sistema:"Sistema",dept:"Grupo"};
+  const SH='<svg class="ic" viewBox="0 0 24 24" style="width:22px;height:22px"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+  const CG='<svg class="ic" viewBox="0 0 24 24" style="width:22px;height:22px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.7 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9.4a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9.4a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>';
+  const DG='<svg class="ic" viewBox="0 0 24 24" style="width:22px;height:22px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 .01M23 21v-2a4 4 0 0 0-3-3.87"/></svg>';
+  const ico={admin:SH,sistema:CG,dept:DG};
+  el.innerHTML=itens.map(g=>`<div class="gcard">
+    <div class="gchead"><div class="gcicon ${g.cat}">${ico[g.cat]}</div>
+      <div style="min-width:0;flex:1"><div class="gcname">${esc(g.nome)}</div><div class="gcdesc"${g.descricao?'':' style="opacity:.6"'}>${esc(g.descricao||'sem descrição')}</div></div>
+      <span class="gcbadge ${g.cat}">${lbl[g.cat]}</span></div>
+    <div class="gcmembers"><div><b>${g.membros}</b> ${g.membros===1?'pessoa':'pessoas'}</div><button class="btn sm pri" style="width:auto" onclick="abrirGrupo('${esc(g.nome)}')">Gerenciar</button></div>
+    <div class="gctech"><span class="mono">CN=${esc(g.nome)}</span>${g.gid?`<span class="mono">GID ${esc(g.gid)}</span>`:''}</div>
+  </div>`).join("");
+}
+function abrirCriarGrupo(ouDn){
+  abrir(`<h3>Novo grupo</h3><p class="sub">Grupos organizam permissões (ex: Financeiro).</p>
+    <div class="field"><label>Nome do grupo</label><input id="m_nome" placeholder="Ex: Financeiro"></div>
+    <div class="field"><label>Abrangência</label><select id="m_escopo">
+      <option value="Global">Global (padrão — pessoas da empresa)</option>
+      <option value="Domain">Local do domínio (permissões em recursos)</option>
+      <option value="Universal">Universal (várias unidades/filiais)</option></select></div>
+    <div class="field"><label>Tipo</label><select id="m_tipo">
+      <option value="Security">Segurança (dá permissões)</option>
+      <option value="Distribution">Distribuição (só listas/e-mail)</option></select></div>
+    <div class="field"><label>Unidade (onde criar)</label><select id="m_ou">${opcoesOU(ouDn||"")}</select></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Criar grupo</button></div>`);
+  $("#m_ok").onclick=async()=>{const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/grupo-criar","POST",{nome:$("#m_nome").value.trim(),escopo:$("#m_escopo").value,tipo:$("#m_tipo").value,ou:$("#m_ou").value});b.disabled=false;b.textContent="Criar grupo";
+    if(r.ok){fechar();toast("Grupo criado!");carregarGruposCache();carregarGrupos();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function abrirGrupo(nome){
+  abrir(`<h3>${esc(nome)}</h3><p class="sub">Carregando…</p>`);
+  const {data:g}=await api("/api/grupo?nome="+encodeURIComponent(nome));
+  const membros=g.membros||[],mof=(g.memberof||[]).filter(visivel);
+  const m=$("#modal");m.className="modal wide";
+  m.innerHTML=`<div class="profhead"><div class="profphoto" style="cursor:default">${SVG_GRUPO}</div>
+      <div style="min-width:0"><h3>${esc(nome)}</h3><div class="lg">${esc(g.escopo||'')} · ${esc(g.tipo||'')} · ${membros.length} ${membros.length===1?'membro':'membros'}</div></div>
+      <span style="flex:1"></span><button class="btn sm ghost" id="g_close">Fechar</button></div>
+    <div class="field"><label>Membros</label><div class="memlist" style="max-height:26vh;overflow:auto">${membros.length?membros.map(x=>`<div class="memrow"><span>${esc(x)}</span><button class="btn sm danger" onclick="removerMembro('${esc(nome)}','${esc(x)}')">Remover</button></div>`).join(""):'<div class="muted small" style="padding:6px 0">Nenhum membro ainda.</div>'}</div></div>
+    <div class="field"><label>Adicionar membro (usuário ou grupo)</label><div style="display:flex;gap:8px"><input id="g_add" placeholder="login ou nome do grupo" style="flex:1"><button class="btn sm" id="g_addb">Adicionar</button></div></div>
+    <div class="field"><label>Faz parte de (grupos-pai)</label><div class="chips">${mof.length?mof.map(x=>`<span class="chip">${esc(x)}</span>`).join(""):'<span class="muted small">nenhum</span>'}</div></div>
+    <div class="field"><label>Descrição</label><input id="g_desc" value="${esc(g.descricao||'')}"></div>
+    <div class="field"><label>E-mail do grupo</label><input id="g_email" type="email" value="${esc(g.email||'')}"></div>
+    <div class="acts"><button class="btn danger" id="g_del">Apagar grupo</button><button class="btn pri" id="g_save">Salvar</button></div>`;
+  $("#mask").classList.add("open");
+  $("#g_close").onclick=()=>{fechar();m.className="modal";};
+  $("#g_addb").onclick=async()=>{const u=$("#g_add").value.trim();if(!u)return;const r=await api("/api/grupo-membro","POST",{grupo:nome,login:u});if(r.ok){toast("Adicionado!");abrirGrupo(nome);carregarGrupos();}else toast(r.data.erro||"Erro",true);};
+  $("#g_save").onclick=async()=>{const b=$("#g_save");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/grupo-editar","POST",{nome,descricao:$("#g_desc").value.trim(),email:$("#g_email").value.trim()});b.disabled=false;b.textContent="Salvar";
+    if(r.ok){toast("Dados do grupo salvos!");carregarGrupos();}else toast(r.data.erro||"Erro",true);};
+  $("#g_del").onclick=async()=>{if(!confirm("Apagar o grupo '"+nome+"'?"))return;const r=await api("/api/grupo-apagar","POST",{nome});if(r.ok){fechar();m.className="modal";toast("Grupo apagado.");carregarGruposCache();carregarGrupos();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function removerMembro(g,u){const r=await api("/api/grupo-remover-membro","POST",{grupo:g,login:u});if(r.ok){toast("Removido");abrirGrupo(g);carregarGrupos();}else toast(r.data.erro||"Erro",true);}
+
+/* COMPUTADORES */
+let compCache=[];
+async function carregarComputadores(){
+  try{const {data}=await api("/api/computadores");const itens=(data.itens||[]);compCache=itens;const el=$("#listaComputadores");
+    const R=data.resumo||{};
+    const IT='<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+    const IW='<svg class="ic" viewBox="0 0 24 24"><path d="M3 5.5 10 4.5v7H3zM10 4.3 21 3v8.5H10zM3 12.5h7v7l-7-1zM10 12.5h11V21l-11-1.5z"/></svg>';
+    const IC='<svg class="ic" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V5z"/><path d="M9 12l2 2 4-4"/></svg>';
+    const IX='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    const stat=(ic,l,v,s,cor)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v"${cor?` style="color:${cor}"`:''}>${v}</div><div class="s">${esc(s)}</div></div>`;
+    $("#compCards").innerHTML=
+      stat(IT,"No domínio",R.total||0,(R.windows||0)+" Windows · "+(R.linux||0)+" Linux")+
+      stat(IC,"Ativas (logon ≤15d)",R.recentes_15||0,"vistas recentemente",(R.recentes_15?'var(--jade2)':''))+
+      stat(IX,"Inativas (+30 dias)",R.inativas_30||0,R.inativas_30?"revise estas máquinas":"nenhuma parada",(R.inativas_30?'var(--vermelho)':'var(--jade2)'))+
+      stat(IW,"Políticas (GPO)","—","veja em Políticas");
+    if(!itens.length){el.innerHTML=vazio('computadores','Nenhum computador no domínio ainda.','Clique em “Ingressar computador” para ver como adicionar uma estação.');return;}
+    el.innerHTML=itens.map((c,i)=>{const inat=(c.dias!=null&&c.dias>30);
+      return `<div class="row">
+      <div class="av">${c.windows?IW:IT}</div>
+      <div style="min-width:0"><div class="nm">${esc(c.nome)}${c.setor?' <span class="badge" style="background:var(--accent-s);color:var(--accent)">'+esc(c.setor)+'</span>':''}${inat?' <span class="badge off">inativo '+c.dias+'d</span>':''}</div><div class="muted">${c.patrimonio?'<b>'+esc(c.patrimonio)+'</b> · ':''}${c.ip?'<b style="font-family:ui-monospace;color:var(--ink)">'+esc(c.ip)+'</b> · ':'<span style="color:var(--sol)">sem IP no DNS</span> · '}${esc(c.os)}${c.ultimo?' · visto em '+esc(c.ultimo):''}</div></div>
+      <span class="sp"></span><button class="btn sm ghost" onclick="abrirComputador(${i})">Detalhes</button></div>`;}).join("");
+  }catch(e){}
+}
+function abrirComputador(i){
+  const c=compCache[i];if(!c)return;
+  const lin=(l,v)=>v?`<div class="memrow"><span class="muted">${l}</span><b>${esc(v)}</b></div>`:'';
+  const icoBig=c.windows
+    ?'<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:var(--accent)"><path d="M3 5.5 10 4.5v7H3zM10 4.3 21 3v8.5H10zM3 12.5h7v7l-7-1zM10 12.5h11V21l-11-1.5z"/></svg>'
+    :'<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:none;stroke:var(--accent);stroke-width:2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+  const m=$("#modal");m.className="modal wide";
+  m.innerHTML=`
+    <div class="profhead">
+      <div class="profphoto" style="cursor:default">${icoBig}</div>
+      <div style="min-width:0"><h3>${esc(c.nome)}</h3><div class="lg">${esc(c.os)}${c.windows?'':' · Linux/guataOS'}</div></div>
+      <span style="flex:1"></span><button class="btn sm ghost" id="pf_close">Fechar</button>
+    </div>
+    <div class="ptabs">
+      <button class="ptab on" data-pt="geral">Geral</button>
+      <button class="ptab" data-pt="inv">Inventário</button>
+      <button class="ptab" data-pt="acoes">Ações</button>
+    </div>
+    <div class="ptabview on" data-pt="geral">
+      ${lin("Sistema",c.os)}${lin("Versão",c.versao)}${lin("Endereço IP",c.ip)}${lin("Nome de rede (DNS)",c.dns)}${lin("Último acesso",c.ultimo)}${lin("Entrou no domínio",c.criado)}
+    </div>
+    <div class="ptabview" data-pt="inv">
+      <p class="muted small" style="margin-bottom:10px">Inventário do Guatá — guardado no próprio servidor, amarrado a <b>${esc(c.nome)}</b>. Patrimônio, setor, valor e garantia desta máquina.</p>
+      <div style="display:flex;gap:14px;align-items:center;background:var(--card2);border:1px solid var(--linha);border-radius:14px;padding:12px;margin-bottom:12px">
+        <img id="iv_qr" src="/api/inventario-qr?maquina=${encodeURIComponent(c.nome)}" style="width:88px;height:88px;background:#fff;border-radius:8px;padding:5px;flex:none" onerror="this.style.display='none'">
+        <div style="min-width:0"><div class="nm">Etiqueta QR</div><div class="muted small">Cole na máquina. Ao escanear, mostra patrimônio, setor e responsável.</div>
+          <button class="btn sm" style="margin-top:8px" onclick="imprimirEtiqueta('${esc(c.nome)}')"><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg> Imprimir etiqueta</button></div>
+      </div>
+      <div class="invh">Identificação</div>
+      <div class="field"><label>Tipo</label><input id="iv_tipo" placeholder="Ex: Notebook, Desktop, Impressora"></div>
+      <div class="field"><label>Marca</label><input id="iv_marca" placeholder="Ex: Dell"></div>
+      <div class="field"><label>Modelo</label><input id="iv_modelo" placeholder="Ex: Latitude 3420"></div>
+      <div class="field"><label>Nº de série</label><input id="iv_serie" placeholder="Ex: 5CD1234XYZ"></div>
+      <div class="field"><label>Patrimônio / etiqueta</label><input id="iv_patrimonio" placeholder="Ex: PAT-00123"></div>
+      <div class="invh">Organização</div>
+      <div class="field"><label>Setor</label><input id="iv_setor" placeholder="Ex: Financeiro"></div>
+      <div class="field"><label>Localização</label><input id="iv_localizacao" placeholder="Ex: Matriz - 2º andar"></div>
+      <div class="field"><label>Responsável / usuário</label><input id="iv_responsavel" list="dl_usuarios" placeholder="Digite e escolha uma pessoa do domínio"><datalist id="dl_usuarios">${(usuariosCache||[]).map(u=>`<option value="${esc(u.nome||u.login)}">${esc(u.login)}</option>`).join("")}</datalist></div>
+      <div class="field"><label>Estado</label><select id="iv_status"><option value="">—</option><option>Ativo</option><option>Em manutenção</option><option>Em RMA</option><option>Reserva</option><option>Baixado</option></select></div>
+      <div class="invh">Financeiro</div>
+      <div class="field"><label>Valor (R$)</label><input id="iv_valor" placeholder="Ex: 3200,00"></div>
+      <div class="field"><label>Fornecedor</label><input id="iv_fornecedor" placeholder="Ex: Dell"></div>
+      <div class="field"><label>Nota fiscal</label><input id="iv_nota_fiscal" placeholder="Ex: NF 45678"></div>
+      <div class="field"><label>Data da compra</label><input id="iv_data_compra" placeholder="Ex: 03/2025"></div>
+      <div class="field"><label>Garantia até</label><input id="iv_garantia_ate" placeholder="Ex: 12/2027"></div>
+      <div class="invh">Hardware</div>
+      <div class="field"><label>Processador</label><input id="iv_processador" placeholder="Ex: Intel i5-1135G7"></div>
+      <div class="field"><label>Memória (RAM)</label><input id="iv_memoria" placeholder="Ex: 16 GB"></div>
+      <div class="field"><label>Disco</label><input id="iv_disco" placeholder="Ex: SSD 512 GB"></div>
+      <div class="field"><label>Observação</label><input id="iv_observacao" placeholder="Ex: trocar SSD em 2026"></div>
+      <button class="btn pri block" id="iv_save">Salvar inventário</button>
+    </div>
+    <div class="ptabview" data-pt="acoes">
+      <p class="muted small" style="margin-bottom:12px">Ao remover, o computador sai do domínio (precisará entrar de novo para voltar).</p>
+      <button class="btn danger block" id="c_del">Remover do domínio</button>
+    </div>`;
+  $("#mask").classList.add("open");
+  $("#pf_close").onclick=()=>{fechar();m.className="modal";};
+  const IVK=["tipo","marca","modelo","serie","patrimonio","setor","localizacao","responsavel","status","valor","fornecedor","nota_fiscal","data_compra","garantia_ate","processador","memoria","disco","observacao"];
+  api("/api/inventario?maquina="+encodeURIComponent(c.nome)).then(r=>{const cp=(r.data&&r.data.campos)||{};IVK.forEach(k=>{const el=$("#iv_"+k);if(el&&cp[k])el.value=cp[k];});});
+  const ivbtn=$("#iv_save");if(ivbtn)ivbtn.onclick=async()=>{ivbtn.disabled=true;ivbtn.innerHTML='<span class="spin"></span>';
+    const campos={};IVK.forEach(k=>{campos[k]=($("#iv_"+k)||{}).value||"";});
+    const r=await api("/api/inventario-salvar","POST",{maquina:c.nome,campos});ivbtn.disabled=false;ivbtn.textContent="Salvar inventário";
+    if(r.ok){toast("Inventário salvo!");const q=$("#iv_qr");if(q){q.style.display='';q.src='/api/inventario-qr?maquina='+encodeURIComponent(c.nome)+'&t='+Date.now();}carregarComputadores();}else toast(r.data.erro||"Erro",true);};
+  m.querySelectorAll(".ptab").forEach(t=>t.onclick=()=>{
+    m.querySelectorAll(".ptab").forEach(x=>x.classList.toggle("on",x===t));
+    m.querySelectorAll(".ptabview").forEach(v=>v.classList.toggle("on",v.dataset.pt===t.dataset.pt));});
+  $("#c_del").onclick=async()=>{if(!confirm("Remover '"+c.nome+"' do domínio?"))return;
+    const r=await api("/api/computador-remover","POST",{nome:c.nome});
+    if(r.ok){fechar();m.className="modal";toast("Removido do domínio.");carregarComputadores();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function carregarSaude(){
+  try{const {data:s}=await api("/api/saude");
+    const on=(s.servico==="active");
+    const IChub='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M10 13l-4 4M14 13l4 4"/></svg>';
+    const ICtree='<svg class="ic" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="5" rx="1"/><rect x="3" y="17" width="7" height="5" rx="1"/><rect x="14" y="17" width="7" height="5" rx="1"/><path d="M12 7v5M6.5 17v-3h11v3"/></svg>';
+    const ICdb='<svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg>';
+    const ICpol='<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+    const ICdns='<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>';
+    const kpi=(ic,l,val,sub,ok)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:17px${ok===false?';color:var(--vermelho)':(ok===true?';color:var(--jade2)':'')}">${val}</div><div class="s">${esc(sub)}</div></div>`;
+    const nDC=s.controladores||1, fsmoAt=(s.fsmo||[]).filter(p=>p.dc).length, fsmoTot=s.fsmo_total||5;
+    $("#saudeCards").innerHTML=
+      kpi(IChub,"Controladores",nDC+(nDC>1?" DCs":" DC"),nDC>1?"alta disponibilidade":"domínio soberano",on)+
+      kpi(ICtree,"Mestres FSMO",fsmoAt+" / "+fsmoTot,"papéis atribuídos",fsmoAt===fsmoTot)+
+      kpi(ICdb,"Banco (dbcheck)",s.banco_ok==null?"Verificar":(s.banco_ok?"0 erros":"Atenção"),s.banco_ok==null?"toque em Rodar dbcheck":(s.banco_ok?"sam.ldb íntegro":(s.banco_msg||'verifique')),s.banco_ok==null?null:s.banco_ok)+
+      kpi(ICpol,"SYSVOL & GPOs",(s.gpos||0)+" GPOs",s.sysvol_ok?"políticas presentes":"SYSVOL ausente",s.sysvol_ok);
+    const bar=(l,pct,val,cor)=>`<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span class="muted">${l}</span><b>${esc(val)}</b></div><div style="height:7px;border-radius:99px;background:var(--linha);overflow:hidden"><div style="height:100%;width:${Math.max(2,Math.min(100,pct))}%;background:${cor};border-radius:99px"></div></div></div>`;
+    const chip=t=>`<span class="badge" style="background:var(--accent-s);color:var(--accent)">${esc(t)}</span>`;
+    const d=s.dc_local||{}, mem=d.mem||{};
+    let dcHtml=`<div class="panel"><div class="ph"><h3>Controladores de domínio</h3><span class="sp"></span><span class="muted small">${(s.outros_dcs&&s.outros_dcs.length)?nDC+" nós":"sincronização local"}</span></div><div style="padding:6px 2px 2px">`;
+    dcHtml+=`<div style="border:1px solid var(--linha);border-radius:16px;padding:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="av" style="width:46px;height:46px;flex:none">${ICdns}</div>
+        <div style="min-width:0"><div class="nm" style="font-size:16px">${esc(d.nome||'DC')} <span class="badge" style="background:var(--accent-s);color:var(--accent)">este servidor</span></div><div class="muted" style="font-size:12.5px">${esc(d.os||'')} · ${esc(d.samba||'')}</div></div>
+        <span class="sp"></span><span class="badge ${on?'info':'off'}">${on?'no ar':'parado'}</span>
+      </div>
+      <div class="memrow"><span class="muted">Endereço IP</span><b style="font-family:ui-monospace">${esc(d.ip||'—')}</b></div>
+      <div class="memrow"><span class="muted">Tempo ligado</span><b>${esc(d.uptime||'—')}</b></div>
+      <div class="memrow"><span class="muted">Kernel</span><b style="font-family:ui-monospace;font-size:12px">${esc(d.kernel||'—')}</b></div>
+      <div style="display:flex;gap:16px;margin:14px 0 4px">${bar('CPU',d.cpu||0,(d.cpu||0)+'%','var(--accent)')}${bar('Memória',mem.pct||0,(mem.total_gb?(mem.usado_gb+' / '+mem.total_gb+' GB'):'—'),'#7c9cff')}</div>
+      ${(d.papeis&&d.papeis.length)?`<div style="margin-top:14px"><div class="muted small" style="margin-bottom:6px;letter-spacing:.04em">PAPÉIS FSMO NESTE NÓ (${d.papeis.length})</div><div class="chips">${d.papeis.map(chip).join('')}</div></div>`:''}
+      ${d.invocation?`<div class="memrow" style="margin-top:12px"><span class="muted">DSA invocationId</span><b style="font-family:ui-monospace;font-size:11px;max-width:60%;text-align:right;word-break:break-all">${esc(d.invocation)}</b></div>`:''}
+    </div>`;
+    (s.outros_dcs||[]).forEach(o=>{dcHtml+=`<div style="border:1px solid var(--linha);border-radius:16px;padding:14px 16px;margin-top:10px;display:flex;align-items:center;gap:12px"><div class="av" style="width:40px;height:40px;flex:none">${ICdns}</div><div style="min-width:0"><div class="nm">${esc(o.nome)}</div><div class="chips" style="margin-top:5px">${(o.papeis||[]).map(chip).join('')||'<span class="muted small">réplica</span>'}</div></div><span class="sp"></span><span class="badge info">réplica</span></div>`;});
+    dcHtml+=`</div></div>`;
+    const viz=(s.drs&&s.drs.vizinhos)||[];
+    let drsHtml=`<div class="panel"><div class="ph"><h3>Replicação do diretório (DRS)</h3></div><div style="padding:6px 2px 2px">`;
+    if(!viz.length){
+      drsHtml+=`<div class="empty" style="padding:22px">Nenhum parceiro de replicação — <b>normal para 1 controlador</b>.<div class="muted small" style="margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto">Ao promover um 2º DC, a matriz de partições (Domínio, Configuração, Esquema, DNS) aparece aqui com o status real de cada vetor — sem invenção.</div></div>`;
+    }else{
+      drsHtml+=viz.map(v=>`<div class="row"><div class="av" style="flex:none"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M4 12h16M4 12l4-4M4 12l4 4M20 12l-4-4M20 12l-4 4"/></svg></div><div style="min-width:0"><div class="nm" style="font-family:ui-monospace;font-size:12.5px">${esc(v.nc||'')}</div><div class="muted">${esc(v.parceiro||'')} · via ${esc(v.transporte||'')}${v.ultimo?' · '+esc(v.ultimo):''}</div></div><span class="sp"></span><span class="badge ${v.ok?'info':'off'}">${v.ok?'em dia':(v.falhas+' falha'+(v.falhas>1?'s':''))}</span></div>`).join('');
+    }
+    drsHtml+=`</div></div>`;
+    const cli=`<div class="cli"><div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Transparência técnica — diagnósticos reais</div>
+      <pre id="saudeCliTxt">samba-tool drs showrepl        # vetores de replicação
+samba-tool fsmo show           # detentores dos papéis FSMO
+samba-tool dbcheck             # integridade do sam.ldb
+samba-tool ntacl sysvolcheck   # permissões do SYSVOL</pre>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn sm" onclick="saudeCmd('showrepl')">Rodar showrepl</button>
+        <button class="btn sm" onclick="saudeCmd('fsmo')">Ver FSMO</button>
+        <button class="btn sm" onclick="saudeCmd('dbcheck')">Rodar dbcheck</button>
+        <button class="btn sm" onclick="saudeCmd('sysvolcheck')">Checar SYSVOL</button>
+        <button class="btn sm ghost" onclick="copiarSaudeCli()">Copiar</button>
+      </div>
+      <pre id="saudeCmdOut" style="display:none;margin-top:12px;border-top:1px solid var(--sb-linha);padding-top:12px"></pre></div>`;
+    $("#saudeBody").innerHTML=dcHtml+drsHtml+cli;
+  }catch(e){}
+}
+function saudeCmd(o){const out=$("#saudeCmdOut");out.style.display='block';out.textContent='$ rodando samba-tool '+o+' …';
+  api("/api/saude-cmd?o="+o).then(r=>{const d=r.data||{};out.textContent='$ '+(d.cmd||'')+'\n\n'+(d.saida||d.erro||'(sem saída)');}).catch(()=>{out.textContent='Falha ao executar.';});}
+function copiarSaudeCli(){try{navigator.clipboard.writeText($("#saudeCliTxt").textContent).then(()=>toast("Comandos copiados!"));}catch(e){}}
+function relChk(ok){return ok?'<span class="badge info">ok</span>':'<span class="badge media">rever</span>';}
+function imprimirEtiqueta(nome){
+  abrir(`<div class="printavel" style="text-align:center;padding:18px 10px">
+      <img src="/api/inventario-qr?maquina=${encodeURIComponent(nome)}" style="width:210px;height:210px" onerror="this.style.display='none'">
+      <div style="font-weight:800;font-size:20px;margin-top:8px">${esc(nome)}</div>
+      <div class="muted" id="et_sub">etiqueta de patrimônio</div>
+    </div>
+    <div class="acts"><button class="btn ghost" onclick="fechar();$('#modal').className='modal'">Fechar</button><button class="btn pri" onclick="window.print()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg> Imprimir</button></div>`);
+  api("/api/inventario?maquina="+encodeURIComponent(nome)).then(r=>{const cp=(r.data&&r.data.campos)||{};const s=[cp.patrimonio,cp.setor,cp.responsavel].filter(Boolean).join(' · ');if(s&&$("#et_sub"))$("#et_sub").textContent=s;});
+}
+async function gerarRelatorio(){
+  abrir(`<h3>Relatório de conformidade</h3><p class="sub">Montando o retrato do domínio…</p>`);
+  const m=$("#modal");m.className="modal wide";
+  try{
+    const [est,pol,ins,gp,bk]=await Promise.all([api("/api/estado"),api("/api/politica-senha"),api("/api/contas-inseguras"),api("/api/gpos"),api("/api/backups")]);
+    const e=est.data||{},p=pol.data||{},inseg=(ins.data.itens||[]),gpos=(gp.data.itens||[]),bks=(bk.data.itens||[]);
+    const agora=new Date().toLocaleString('pt-BR');const ub=bks[0];
+    const diasBackup=ub?Math.floor((Date.now()/1000-ub.ts)/86400):null;
+    const linha=(l,v,ok)=>`<div class="memrow"><span class="muted">${l}</span><span style="display:flex;gap:8px;align-items:center;text-align:right"><b>${esc(v)}</b> ${relChk(ok)}</span></div>`;
+    const sec=t=>`<h3 style="font-size:15px;margin:18px 0 8px">${t}</h3>`;
+    m.innerHTML=`<div class="printavel">
+      <div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid var(--linha);padding-bottom:12px;margin-bottom:6px">
+        <div class="av" style="width:42px;height:42px;flex:none;background:var(--accent-s);color:var(--accent)"><svg class="ic" viewBox="0 0 24 24" style="width:22px;height:22px"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <div style="min-width:0"><h2 style="margin:0">Relatório de conformidade</h2><div class="muted">${esc(e.dominio||'')} · gerado em ${agora}</div></div>
+      </div>
+      <p class="muted small">Retrato do que está <b>realmente configurado</b> no domínio (Samba AD DC). Evidência real, sem selo externo — não substitui auditoria formal.</p>
+      ${sec('1. Política de senha')}
+      ${linha('Tamanho mínimo',(p.min_tamanho||0)+' caracteres',(p.min_tamanho||0)>=8)}
+      ${linha('Complexidade exigida',p.complexidade?'sim':'não',!!p.complexidade)}
+      ${linha('Histórico (não repetir)',(p.historico||0)+' senhas',(p.historico||0)>=5)}
+      ${linha('Expiração',(p.max_idade?p.max_idade+' dias':'nunca'),(p.max_idade||0)>0)}
+      ${linha('Bloqueio por tentativas',(p.bloqueio_tentativas?p.bloqueio_tentativas+' tentativas':'desligado'),(p.bloqueio_tentativas||0)>0)}
+      ${sec('2. Contas que pedem atenção')}
+      ${linha('Contas sinalizadas',inseg.length+'',inseg.length===0)}
+      ${inseg.length?`<div class="memlist" style="margin-top:4px">${inseg.slice(0,20).map(c=>`<div class="memrow"><span>${esc(c.nome||c.login)}</span><span class="muted small" style="text-align:right">${(c.flags||[]).map(f=>esc(f.txt)).join(', ')}</span></div>`).join('')}</div>`:''}
+      ${sec('3. Políticas de grupo (GPO)')}
+      ${linha('Políticas no domínio',gpos.length+'',gpos.length>0)}
+      ${gpos.length?`<div class="muted small">${gpos.map(g=>esc(g.nome)).join(' · ')}</div>`:''}
+      ${sec('4. Backup do domínio')}
+      ${linha('Último backup',ub?(new Date(ub.ts*1000).toLocaleString('pt-BR')):'nunca',!!ub&&diasBackup!=null&&diasBackup<=7)}
+      ${linha('Agendamento',bk.data.agenda?'diário ativo':'manual',!!bk.data.agenda)}
+      ${sec('5. Inventário')}
+      ${linha('Pessoas',(e.usuarios||0)+' ('+(e.usuarios_ativos||0)+' ativas)',true)}
+      ${linha('Computadores',(e.computadores||0)+'',true)}
+      ${linha('Grupos',(e.grupos||0)+'',true)}
+      ${linha('Controladores',(e.controladores||1)+'',true)}
+      <div class="muted small" style="margin-top:16px;border-top:1px solid var(--linha);padding-top:8px">Gerado pelo Guatá ID · evidência real do Samba AD DC · ${esc(e.dominio||'')}</div>
+    </div>
+    <div class="acts"><button class="btn ghost" onclick="fechar();$('#modal').className='modal'">Fechar</button><button class="btn pri" onclick="window.print()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg> Imprimir / PDF</button></div>`;
+    $("#mask").classList.add("open");
+  }catch(err){toast("Erro ao gerar relatório",true);}
+}
+async function carregarControladores(){
+  try{const {data:s}=await api("/api/saude");const on=(s.servico==="active");
+    const ICdns='<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>';
+    const chip=t=>`<span class="badge" style="background:var(--accent-s);color:var(--accent)">${esc(t)}</span>`;
+    const d=s.dc_local||{};
+    let h=`<div class="panel"><div class="ph"><h3>Controladores de domínio</h3><span class="sp"></span><span class="muted small">${s.controladores||1} nó(s)</span></div><div style="padding:6px 2px 2px">`;
+    h+=`<div style="border:1px solid var(--linha);border-radius:16px;padding:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div class="av" style="width:46px;height:46px;flex:none">${ICdns}</div>
+      <div style="min-width:0"><div class="nm" style="font-size:16px">${esc(d.nome||'DC')} <span class="badge" style="background:var(--accent-s);color:var(--accent)">este servidor</span></div><div class="muted" style="font-size:12.5px">${esc(d.os||'')} · ${esc(d.samba||'')}</div></div>
+      <span class="sp"></span><span class="badge ${on?'info':'off'}">${on?'no ar':'parado'}</span></div>
+      <div class="memrow"><span class="muted">Endereço IP</span><b style="font-family:ui-monospace">${esc(d.ip||'—')}</b></div>
+      <div class="memrow"><span class="muted">Tempo ligado</span><b>${esc(d.uptime||'—')}</b></div>
+      <div class="memrow"><span class="muted">Kernel</span><b style="font-family:ui-monospace;font-size:12px">${esc(d.kernel||'—')}</b></div>
+      ${(d.papeis&&d.papeis.length)?`<div style="margin-top:12px"><div class="muted small" style="margin-bottom:6px;letter-spacing:.04em">PAPÉIS-MESTRE NESTE NÓ (${d.papeis.length})</div><div class="chips">${d.papeis.map(chip).join('')}</div></div>`:''}
+    </div>`;
+    (s.outros_dcs||[]).forEach(o=>{h+=`<div style="border:1px solid var(--linha);border-radius:16px;padding:14px 16px;margin-top:10px;display:flex;align-items:center;gap:12px"><div class="av" style="width:40px;height:40px;flex:none">${ICdns}</div><div style="min-width:0"><div class="nm">${esc(o.nome)}</div><div class="chips" style="margin-top:5px">${(o.papeis||[]).map(chip).join('')||'<span class="muted small">réplica</span>'}</div></div><span class="sp"></span><span class="badge info">réplica</span></div>`;});
+    h+=`</div></div>`;
+    $("#ctrlDCs").innerHTML=h;
+    const fsmo=s.fsmo||[];
+    const expl={"Schema Master":"define a estrutura de todos os objetos","Domain Naming Master":"controla criar/remover domínios na floresta","PDC Emulator":"hora oficial, senhas e bloqueios","RID Master":"distribui os identificadores de novas contas","Infrastructure Master":"mantém as referências entre domínios"};
+    $("#ctrlFsmo").innerHTML=fsmo.length?fsmo.map(p=>`<div class="row"><div class="av" style="flex:none;background:var(--accent-s);color:var(--accent)"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17.3 5.7 21.4 8 14 2 9.4h7.6z"/></svg></div><div style="min-width:0"><div class="nm">${esc(p.papel)}</div><div class="muted small">${esc(expl[p.papel]||'função-mestre do domínio')}</div></div><span class="sp"></span><span class="badge ${p.dc?'info':'alta'}">${esc(p.dc||'sem dono')}</span></div>`).join(""):'<div class="empty" style="padding:18px">Sem dados de FSMO (verifique o serviço do domínio).</div>';
+  }catch(e){}
+}
+function copiarBackupCli(){try{navigator.clipboard.writeText($("#backupCliTxt").textContent).then(()=>toast("Comando copiado!"));}catch(e){}}
+
+/* BACKUP */
+let backupPoll=null;
+function _dataHora(ts){if(!ts)return'—';const d=new Date(ts*1000);return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+async function carregarBackup(){
+  try{const {data}=await api("/api/backups");const itens=data.itens||[];
+    const ab=$("#btnBackupAgenda");if(ab){const on=data.agenda;ab.textContent=on?"Agendado: diário 02h":"Agendar diário";ab.classList.toggle("ok",!!on);}
+    const ultimo=itens[0];
+    const ICb='<svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/></svg>';
+    const ICc='<svg class="ic" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V5z"/><path d="M9 12l2 2 4-4"/></svg>';
+    const ICk='<svg class="ic" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+    const ICa='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    const total=itens.reduce((s,x)=>s+(x.bytes||0),0);
+    const tam=(n=>{for(const u of['B','KB','MB','GB','TB']){if(n<1024)return (u=='B'?n.toFixed(0):n.toFixed(1))+' '+u;n/=1024;}return n.toFixed(1)+' PB';})(total);
+    const kpi=(ic,l,v,s,ok)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v" style="font-size:17px${ok===true?';color:var(--jade2)':''}">${v}</div><div class="s">${esc(s)}</div></div>`;
+    $("#backupCards").innerHTML=
+      kpi(ICb,"Último backup",ultimo?_dataHora(ultimo.ts):"nenhum",ultimo?(ultimo.tamanho+" · LDB+SYSVOL"):"faça o primeiro",!!ultimo)+
+      kpi(ICc,"Integridade",ultimo&&ultimo.sha?"SHA-256 OK":"—",ultimo&&ultimo.sha?ultimo.sha+"…":"assinado na criação",!!(ultimo&&ultimo.sha))+
+      kpi(ICk,"Pontos salvos",String(itens.length),"mantém os 5 mais novos",itens.length>0)+
+      kpi(ICa,"Agendamento",data.agenda?"Diário 02h":"Manual",data.agenda?"timer systemd ativo":"ligue em Agendar diário",data.agenda);
+    renderBackupStatus(null);
+    if(!itens.length){$("#listaBackups").innerHTML=vazio('backup','Nenhum backup ainda.','Clique em “Fazer backup agora” para gerar o primeiro ponto de recuperação (LDB + SYSVOL).');return;}
+    const GLB='<svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><ellipse cx="12" cy="5" rx="8" ry="3"/></svg>';
+    $("#listaBackups").innerHTML=itens.map(b=>`<div class="row"><div class="av">${GLB}</div>
+      <div style="min-width:0"><div class="nm" style="font-family:ui-monospace;font-size:13px;word-break:break-all">${esc(b.arquivo)}</div>
+        <div class="muted">${_dataHora(b.ts)} · ${esc(b.tamanho)}${b.sha?' · SHA-256 '+esc(b.sha)+'…':''}</div></div>
+      <span class="sp"></span>
+      <a class="btn sm" href="/api/backup-baixar?f=${encodeURIComponent(b.arquivo)}">Baixar</a>
+      <button class="btn sm danger" onclick="backupApagar('${esc(b.arquivo)}')">Apagar</button></div>`).join("");
+  }catch(e){}
+}
+function renderBackupStatus(st){
+  const el=$("#backupStatus");if(!el)return;
+  if(!st){el.innerHTML="";return;}
+  if(st.rodando){el.innerHTML=`<div class="row" style="background:var(--accent-s);border-radius:12px"><span class="spin"></span><div style="margin-left:10px"><div class="nm">Gerando backup…</div><div class="muted">${esc(st.msg||'')} — pode levar alguns minutos (não feche)</div></div></div>`;return;}
+  if(st.ok===true){el.innerHTML=`<div class="row" style="background:var(--jade-s);border-radius:12px"><div class="nm" style="color:var(--jade2)">${esc(st.msg||"Backup concluído")}</div>${st.arquivo?`<span class="sp"></span><span class="muted small" style="font-family:ui-monospace">${esc(st.arquivo)}</span>`:''}</div>`;return;}
+  if(st.ok===false){el.innerHTML=`<div class="row" style="background:var(--verm-s);border-radius:12px"><div style="min-width:0"><div class="nm" style="color:var(--vermelho)">Falha no backup</div><div class="muted" style="word-break:break-word">${esc(st.msg||'')}</div></div></div>`;return;}
+  el.innerHTML="";
+}
+async function backupCriar(){
+  const b=$("#btnBackupNow");b.disabled=true;
+  const r=await api("/api/backup-criar","POST",{});
+  if(!r.ok){b.disabled=false;return toast(r.data.erro||"Erro",true);}
+  toast("Backup iniciado…");
+  if(backupPoll)clearInterval(backupPoll);
+  backupPoll=setInterval(async()=>{
+    const s=await api("/api/backup-status");renderBackupStatus(s.data);
+    if(s.data && !s.data.rodando){clearInterval(backupPoll);backupPoll=null;b.disabled=false;
+      if(s.data.ok)toast("Backup concluído!");else if(s.data.ok===false)toast("Backup falhou",true);
+      carregarBackup();}
+  },3000);
+}
+async function backupApagar(arq){if(!confirm("Apagar o backup '"+arq+"'?"))return;
+  const r=await api("/api/backup-apagar","POST",{arquivo:arq});
+  if(r.ok){toast("Backup apagado.");carregarBackup();}else toast(r.data.erro||"Erro",true);}
+async function backupAgenda(){
+  const {data}=await api("/api/backups");const ligar=!data.agenda;
+  const r=await api("/api/backup-agenda","POST",{ligar});
+  if(r.ok){toast(ligar?"Backup diário agendado (02h).":"Agendamento desligado.");carregarBackup();}
+  else toast(r.data.erro||"Erro ao agendar",true);}
+
+/* SEGURANÇA */
+async function carregarSeguranca(){
+  try{const {data:p}=await api("/api/politica-senha");
+    const campo=(id,l,v,suf)=>`<div class="field"><label>${l}</label><input id="${id}" type="number" min="0" value="${v!=null?v:''}"> ${suf?`<span class="muted small">${suf}</span>`:''}</div>`;
+    $("#polForm").innerHTML=
+      campo("p_min","Tamanho mínimo da senha",p.min_tamanho,"caracteres")+
+      campo("p_hist","Não repetir as últimas",p.historico,"senhas")+
+      campo("p_max","Senha expira em",p.max_idade,"dias (0 = nunca)")+
+      campo("p_bloq","Bloquear após",p.bloqueio_tentativas,"tentativas erradas (0 = não bloqueia)")+
+      campo("p_dur","Ficar bloqueada por",p.bloqueio_duracao,"minutos")+
+      `<div class="field"><label>Exigir complexidade</label><div class="switch"><label class="sw"><input type="checkbox" id="p_cx" ${p.complexidade?'checked':''}><span class="sl"></span></label><span class="muted small">maiúscula, minúscula e número</span></div></div>`;
+  }catch(e){}
+  carregarInseguras();
+}
+$("#btnSalvarPol").onclick=async()=>{
+  const b=$("#btnSalvarPol");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  const body={min_tamanho:$("#p_min").value,historico:$("#p_hist").value,max_idade:$("#p_max").value,
+    bloqueio_tentativas:$("#p_bloq").value,bloqueio_duracao:$("#p_dur").value,complexidade:$("#p_cx").checked};
+  const r=await api("/api/politica-senha","POST",body);b.disabled=false;b.textContent="Salvar regras";
+  if(r.ok)toast("Regras de senha salvas!");else toast(r.data.erro||"Erro",true);
+};
+async function carregarInseguras(){
+  try{const {data}=await api("/api/contas-inseguras");const itens=(data.itens||[]);const el=$("#listaInseguras");
+    $("#insecResumo").textContent=itens.length?itens.length+" conta(s)":"tudo em ordem";
+    if(!itens.length){el.innerHTML=vazio('usuarios','Nenhuma conta insegura. ','O domínio está saudável.');return;}
+    el.innerHTML=itens.map(c=>`<div class="row">
+      <div class="av ${c.sev==='alta'?'off':''}">${esc(inicial(c.nome||c.login))}</div>
+      <div style="min-width:0"><div class="nm">${esc(c.nome||c.login)}</div>
+        <div class="chips" style="margin-top:3px">${c.flags.map(f=>`<span class="badge ${f.sev}">${esc(f.txt)}</span>`).join("")}</div></div>
+      <span class="sp"></span><button class="btn sm ghost" onclick="abrirEditar('${esc(c.login)}')">Resolver</button></div>`).join("");
+  }catch(e){}
+}
+
+/* INGRESSAR MÁQUINA */
+function copiarTxt(t){try{navigator.clipboard.writeText(t).then(()=>toast("Copiado!"));}catch(e){}}
+async function abrirIngressar(){
+  const {data:e}=await api("/api/estado");
+  const dom=esc(e.dominio||'seu.dominio'); const ip=esc(e.ip||'este servidor');
+  const cmdLin=`sudo realm join -U Administrator ${e.dominio||'seu.dominio'}`;
+  const metodo=(ic,tit,tag,corpo)=>`<div style="border:1px solid var(--linha);border-radius:14px;padding:14px 16px;margin-top:10px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div class="av" style="width:34px;height:34px;flex:none">${ic}</div>
+      <b style="font-size:14px">${tit}</b><span class="sp"></span><span class="badge info">${tag}</span></div>${corpo}</div>`;
+  const passo=(n,t)=>`<div class="memrow" style="align-items:flex-start"><span class="muted" style="min-width:18px">${n}</span><span style="text-align:left;flex:1">${t}</span></div>`;
+  const win='<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M3 5.5 10 4.5v7H3zM10 4.3 21 3v8.5H10zM3 12.5h7v7l-7-1zM10 12.5h11V21l-11-1.5z"/></svg>';
+  const tux='<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 2l8 3v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V5z"/><path d="M9 12l2 2 4-4"/></svg>';
+  const term='<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M4 17l6-6-6-6M12 19h8"/></svg>';
+  abrir(`<h3>Ingressar um computador</h3><p class="sub">No domínio <b>${dom}</b>. Primeiro o essencial, depois escolha o sistema.</p>
+    <div class="row" style="background:var(--accent-s);border-radius:12px"><div class="av" style="flex:none"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18A15 15 0 0 1 12 3"/></svg></div>
+      <div style="min-width:0"><div class="nm">Passo 0 — aponte o DNS para o servidor</div><div class="muted">No PC, defina o DNS primário como <b>${ip}</b>. Sem isso o domínio não é encontrado.</div></div></div>
+    ${metodo(tux,"No guataOS / Linux","realmd + SSSD",
+      passo(1,"Mochila → <b>Configurações</b> → <b>Identidade & Domínio</b> (o domínio é descoberto via DNS).")+
+      passo(2,'Clique em <b>Entrar no Domínio</b> e autentique com <b>Administrator</b>.')+
+      `<div class="cli" style="margin-top:8px"><div class="clihead">${term} ou pela linha de comando</div><pre id="ing_lin">${esc(cmdLin)}</pre><div style="margin-top:8px"><button class="btn sm ghost" onclick="copiarTxt(document.getElementById('ing_lin').textContent)">Copiar comando</button></div></div>`)}
+    ${metodo(win,"No Windows 10/11 Pro","Acesso corporativo",
+      passo(1,"<b>Configurações</b> → <b>Contas</b> → <b>Acessar conta corporativa ou de estudante</b>.")+
+      passo(2,`Conectar → <b>Ingressar neste dispositivo em um domínio local</b> → digite <b>${dom}</b>.`)+
+      passo(3,"Use <b>Administrator</b> + senha do domínio e <b>reinicie</b>."))}
+    <div class="acts"><button class="btn pri" onclick="fechar()">Entendi</button></div>`);
+}
+
+/* ORGANOGRAMA */
+async function carregarOrganograma(){
+  try{const {data}=await api("/api/organograma");const itens=(data.itens||[]).filter(u=>!usuariosSistema.includes((u.login||"").toLowerCase()));
+    const el=$("#orgArvore");
+    if(!itens.length){el.innerHTML=vazio('usuarios','Nenhum usuário ainda.','Defina quem responde a quem na ficha de cada pessoa.');return;}
+    const byLogin={};itens.forEach(u=>byLogin[u.login]=u);
+    const filhos={};itens.forEach(u=>{const c=(u.chefe&&byLogin[u.chefe])?u.chefe:"__raiz__";(filhos[c]=filhos[c]||[]).push(u);});
+    const seen=new Set();
+    function no(u){
+      if(seen.has(u.login))return "";seen.add(u.login);
+      const kids=(filhos[u.login]||[]);
+      return `<li><div class="orgnode" onclick="abrirEditar('${esc(u.login)}')">
+        <div class="orgav">${u.foto?`<img src="${u.foto}">`:esc(inicial(u.nome||u.login))}</div>
+        <div style="min-width:0;text-align:left"><div class="orgnm">${esc(u.nome||u.login)}</div>${u.cargo?`<div class="orgcg">${esc(u.cargo)}</div>`:''}</div>
+      </div>${kids.length?`<ul>${kids.map(no).join("")}</ul>`:''}</li>`;
+    }
+    const raizes=(filhos["__raiz__"]||[]);
+    el.innerHTML=`<div class="org"><ul>${raizes.map(no).join("")}</ul></div>`;
+  }catch(e){}
+}
+
+/* UNIDADES (OU) */
+let ousCache=[],ousBase="";
+async function carregarOUsCache(){try{const {data}=await api("/api/ous");ousCache=data.itens||[];ousBase=data.base||"";}catch(e){}}
+function opcoesOU(selDn){
+  let o=`<option value="${esc(ousBase)}">Padrão (Usuários)</option>`;
+  o+=ousCache.map(u=>`<option value="${esc(u.dn)}" ${u.dn===selDn?'selected':''}>${esc(u.nome)}</option>`).join("");
+  return o;
+}
+async function carregarOUs(){
+  await carregarOUsCache();const el=$("#listaOUs");const itens=ousCache;
+  if(!itens.length){el.innerHTML=vazio('grupos','Nenhuma unidade ainda.','Crie unidades (ex: Financeiro, Filial SP) para organizar e aplicar políticas.');return;}
+  el.innerHTML=itens.map((u,i)=>`<div class="row">
+    <div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+    <div style="min-width:0"><div class="nm">${esc(u.nome)}</div><div class="muted">${u.itens} ${u.itens===1?'item':'itens'}${u.descricao?' · '+esc(u.descricao):''}</div></div>
+    <span class="sp"></span>
+    <button class="btn sm pri" style="width:auto" onclick="abrirOU(${i})">Abrir</button>
+    <button class="btn sm danger" onclick="apagarOU(${i})">Apagar</button></div>`).join("");
+}
+async function abrirOU(i){const u=ousCache[i];if(!u)return;
+  const m=$("#modal");m.className="modal wide";
+  abrir(`<h3>${esc(u.nome)}</h3><p class="sub">Carregando conteúdo…</p>`);m.className="modal wide";
+  const {data}=await api("/api/ou-conteudo?dn="+encodeURIComponent(u.dn));
+  const itens=data.itens||[];const gpos=data.gpos||[];
+  m.innerHTML=`<h3>${esc(u.nome)}</h3><p class="sub">Unidade organizacional</p>
+    <div class="acts" style="margin:0 0 14px"><button class="btn pri" id="o_user">Criar usuário aqui</button><button class="btn" id="o_grupo">Criar grupo aqui</button><button class="btn" id="o_deleg">Delegar controle</button></div>
+    <div class="field"><label>Conteúdo (${itens.length})</label><div class="memlist" style="max-height:30vh;overflow:auto">${itens.length?itens.map(x=>`<div class="memrow"><span>${esc(x)}</span></div>`).join(""):'<div class="muted small" style="padding:6px 0">Vazia. Crie usuários/grupos aqui.</div>'}</div></div>
+    <div class="field"><label>Políticas (GPO) vinculadas</label><div class="chips">${gpos.length?gpos.map(g=>`<span class="chip">${esc(g)}</span>`).join(""):'<span class="muted small">nenhuma — vincule na aba Políticas (GPO)</span>'}</div></div>
+    <div class="acts"><button class="btn ghost" id="o_ren">Renomear</button><button class="btn pri" id="o_close">Fechar</button></div>`;
+  $("#mask").classList.add("open");
+  $("#o_close").onclick=()=>{fechar();m.className="modal";};
+  $("#o_deleg").onclick=()=>{fechar();m.className="modal";abrirDelegacao(u.dn,u.nome);};
+  $("#o_user").onclick=()=>{fechar();m.className="modal";abrirCriarUsuario(u.dn);};
+  $("#o_grupo").onclick=()=>{fechar();m.className="modal";abrirCriarGrupo(u.dn);};
+  $("#o_ren").onclick=()=>{const novo=prompt("Novo nome da unidade:",u.nome);if(!novo)return;
+    api("/api/ou-renomear","POST",{dn:u.dn,nome:novo}).then(r=>{if(r.ok){fechar();m.className="modal";toast("Unidade renomeada!");carregarOUs();carregarOUsCache();}else toast(r.data.erro||"Erro",true);});};
+}
+function delegPreview(){
+  const dn=window._delegDn,grupo=$("#dg_grupo")?$("#dg_grupo").value:'',nivel=$("#dg_nivel")?$("#dg_nivel").value:'total';
+  if(!grupo){$("#dg_cmd").textContent='Escolha um grupo.';if($("#dg_sid"))$("#dg_sid").innerHTML='';return;}
+  api("/api/delegacao-comando?ou="+encodeURIComponent(dn)+"&grupo="+encodeURIComponent(grupo)+"&nivel="+encodeURIComponent(nivel)).then(r=>{
+    const d=r.data||{};const pre=$("#dg_cmd");if(pre)pre.textContent=d.cmd||'—';
+    const w=$("#dg_sid");if(w)w.innerHTML=d.ok_sid?('SID do grupo: <b style="font-family:ui-monospace">'+esc(d.sid)+'</b>'):('<span style="color:var(--sol)">Não achei o SID automático — troque <b>SID-DO-GRUPO</b> pelo resultado de <code>wbinfo -n "'+esc(grupo)+'"</code>.</span>');
+  });
+}
+function abrirDelegacao(dn,nome){
+  window._delegDn=dn;const grupos=(gruposCache||[]);
+  abrir(`<h3>Delegar controle da unidade</h3><p class="sub">Deixa um grupo administrar a unidade <b>${esc(nome)}</b> (ex: o RH gerencia só o RH). Gera o comando oficial do Samba pra você rodar.</p>
+    <div class="field"><label>Grupo que vai administrar</label><select id="dg_grupo" onchange="delegPreview()"><option value="">— escolha —</option>${grupos.map(g=>`<option>${esc(g)}</option>`).join("")}</select></div>
+    <div class="field"><label>Nível</label><select id="dg_nivel" onchange="delegPreview()"><option value="total">Controle total da unidade</option><option value="gerencia">Gerenciar objetos (criar/editar/apagar)</option></select></div>
+    <div class="cli"><div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Comando para rodar no servidor</div><pre id="dg_cmd">Escolha um grupo.</pre></div>
+    <div class="muted small" id="dg_sid" style="margin-top:8px"></div>
+    <div class="muted small" style="margin-top:8px;background:var(--sol-s);color:var(--sol);padding:8px 10px;border-radius:10px">Isto escreve ACL de segurança no AD. Rode com calma e teste o acesso depois — por isso o Guatá não aplica sozinho: evidência real, você no comando.</div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Fechar</button><button class="btn pri" onclick="copiarTxt(document.getElementById('dg_cmd').textContent)">Copiar comando</button></div>`);
+}
+function abrirCriarOU(){
+  const opts=['<option value="">Raiz do domínio</option>'].concat((ousCache||[]).map(u=>`<option value="${esc(u.dn)}">${esc(u.nome)}</option>`)).join('');
+  abrir(`<h3>Nova unidade</h3><p class="sub">Unidades organizam pessoas e PCs (ex: Financeiro, Filial SP), recebem políticas e podem ficar dentro de outra.</p>
+    <div class="field"><label>Nome da unidade</label><input id="m_nome" placeholder="Ex: Financeiro" oninput="ouPreview()"></div>
+    <div class="field"><label>Dentro de (unidade pai)</label><select id="m_pai" onchange="ouPreview()">${opts}</select></div>
+    <div class="field"><label>Descrição <span class="muted">(opcional)</span></label><input id="m_desc" placeholder="Ex: Setor financeiro" oninput="ouPreview()"></div>
+    <div class="field"><div class="switch"><label class="sw"><input type="checkbox" id="m_block" onchange="ouPreview()"><span class="sl"></span></label><span class="muted small">Bloquear herança de políticas (GPO) vindas de cima</span></div></div>
+    <div class="cli" style="margin-top:2px"><div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> O que vai rodar no servidor</div><pre id="m_cli"></pre></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Criar unidade</button></div>`);
+  ouPreview();
+  $("#m_ok").onclick=async()=>{const nome=$("#m_nome").value.trim();if(!nome)return toast("Dê um nome à unidade",true);
+    const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/ou-criar","POST",{nome,descricao:$("#m_desc").value.trim(),pai:$("#m_pai").value,bloquear_heranca:$("#m_block").checked});
+    b.disabled=false;b.textContent="Criar unidade";
+    if(r.ok){fechar();toast("Unidade criada!"+(r.data.aviso||""));carregarOUsCache();carregarOUs();}else toast(r.data.erro||"Erro",true);};
+}
+function ouPreview(){
+  const nomeEl=$("#m_nome");if(!nomeEl)return;
+  const nome=(nomeEl.value.trim()||'NOME').replace(/[^A-Za-z0-9 _-]/g,'');
+  const destino=($("#m_pai")?$("#m_pai").value:'')||ousBase||'DC=dominio';
+  const dn='OU='+nome+','+destino;
+  const desc=$("#m_desc")?$("#m_desc").value.trim():'';
+  let t='samba-tool ou create "'+dn+'"'+(desc?' \\\n  --description="'+desc+'"':'');
+  if($("#m_block")&&$("#m_block").checked) t+='\nsamba-tool gpo setinheritance "'+dn+'" block';
+  const cli=$("#m_cli");if(cli)cli.textContent=t;
+}
+async function apagarOU(i){const u=ousCache[i];if(!u)return;
+  if(!confirm("Apagar a unidade '"+u.nome+"'? (precisa estar vazia)"))return;
+  const r=await api("/api/ou-apagar","POST",{dn:u.dn});
+  if(r.ok){toast("Unidade apagada.");carregarOUs();}else toast(r.data.erro||"Erro (a unidade pode ter itens dentro)",true);
+}
+
+/* POLÍTICAS (GPO) */
+let gposCache=[];
+async function carregarBibliotecaGPO(){
+  try{const {data}=await api("/api/gpo-modelos");const mods=data.itens||[];const el=$("#gpoBiblioteca");if(!el)return;
+    const IC='<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+    el.innerHTML=mods.map(md=>`<div class="stat" style="cursor:default">
+      <div class="l">${IC} ${esc(md.nome)}</div>
+      <div class="s" style="margin-top:6px;min-height:34px">${esc(md.desc)}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="badge info">${md.scope==='machine'?'computador':'usuário'}</span><span class="sp"></span><button class="btn sm pri" onclick="instanciarModelo('${md.id}','${esc(md.nome)}')">Usar modelo</button></div>
+    </div>`).join("");
+  }catch(e){}
+}
+async function instanciarModelo(id,nome){
+  const r=await api("/api/gpo-criar","POST",{nome:"Guatá - "+nome});
+  if(!r.ok)return toast(r.data.erro||"Erro ao criar a política",true);
+  await carregarGPOs();
+  const i=gposCache.findIndex(g=>g.guid===(r.data.guid||''));
+  toast("Política criada! Ajuste e salve as regras.");
+  if(i>=0)abrirConstruirGPO(i,id);
+}
+async function carregarGPOs(){
+  carregarBibliotecaGPO();
+  try{const {data}=await api("/api/gpos");gposCache=data.itens||[];const el=$("#listaGPOs");
+    if(data.erro && !gposCache.length){el.innerHTML=`<div class="empty">Não consegui listar as políticas.<div class="muted small" style="margin-top:4px">${esc(data.erro)}</div></div>`;return;}
+    if(!gposCache.length){el.innerHTML=vazio('grupos','Nenhuma política criada ainda.','Clique em “Nova política”.');return;}
+    el.innerHTML=gposCache.map((g,i)=>`<div class="row">
+      <div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg></div>
+      <div style="min-width:0"><div class="nm">${esc(g.nome)}</div><div class="muted">${esc(g.guid)}</div></div>
+      <span class="sp"></span>
+      <button class="btn sm pri" style="width:auto" onclick="abrirConstruirGPO(${i})">Configurar regras</button>
+      <button class="btn sm ghost" onclick="abrirVincularGPO(${i})">Vincular</button>
+      <button class="btn sm danger" onclick="apagarGPO(${i})">Apagar</button></div>`).join("");
+  }catch(e){}
+}
+function abrirCriarGPO(){
+  abrir(`<h3>Nova política (GPO)</h3><p class="sub">Dê um nome claro. Depois você vincula a uma unidade para ela valer.</p>
+    <div class="field"><label>Nome da política</label><input id="m_nome" placeholder="Ex: Bloquear USB - Financeiro"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Criar</button></div>`);
+  $("#m_ok").onclick=async()=>{const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/gpo-criar","POST",{nome:$("#m_nome").value.trim()});b.disabled=false;b.textContent="Criar";
+    if(r.ok){fechar();toast("Política criada!");carregarGPOs();}else toast(r.data.erro||"Erro",true);};
+}
+async function apagarGPO(i){const g=gposCache[i];if(!g)return;if(!confirm("Apagar a política '"+g.nome+"'?"))return;
+  const r=await api("/api/gpo-apagar","POST",{guid:g.guid});
+  if(r.ok){toast("Política apagada.");carregarGPOs();}else toast(r.data.erro||"Erro",true);
+}
+async function abrirVincularGPO(i){const g=gposCache[i];if(!g)return;await carregarOUsCache();
+  const ops=ousCache.length?ousCache.map(u=>`<option value="${esc(u.dn)}">${esc(u.nome)}</option>`).join(""):`<option value="${esc(ousBase)}">Domínio inteiro</option>`;
+  abrir(`<h3>Vincular política</h3><p class="sub">Aplicar <b>${esc(g.nome)}</b> a uma unidade (OU).</p>
+    <div class="field"><label>Unidade</label><select id="m_ou">${ops}</select></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Vincular</button></div>`);
+  $("#m_ok").onclick=async()=>{const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/gpo-vincular","POST",{ou:$("#m_ou").value,guid:g.guid});b.disabled=false;b.textContent="Vincular";
+    if(r.ok){fechar();toast("Política vinculada à unidade!");}else toast(r.data.erro||"Erro",true);};
+}
+async function abrirConstruirGPO(i,preId){const g=gposCache[i];if(!g)return;
+  abrir(`<h3>Configurar regras</h3><p class="sub">Carregando modelos…</p>`);
+  const {data}=await api("/api/gpo-modelos");const mods=data.itens||[];
+  const m=$("#modal");m.className="modal wide";
+  m.innerHTML=`<h3>Configurar regras</h3><p class="sub">Marque o que <b>${esc(g.nome)}</b> deve aplicar.</p>
+    <div style="max-height:52vh;overflow:auto;margin:0 -2px">${mods.map(md=>`
+      <div style="display:flex;gap:11px;align-items:flex-start;border-bottom:1px solid var(--linha);padding:12px 2px">
+        <input type="checkbox" class="gmod" data-id="${md.id}" id="gm_${md.id}" style="width:auto;margin-top:3px">
+        <div style="flex:1;min-width:0">
+          <label for="gm_${md.id}" style="margin:0;font-weight:700;color:var(--ink)">${esc(md.nome)} <span class="muted small">(${md.scope==='machine'?'computador':'usuário'})</span></label>
+          <div class="muted small">${esc(md.desc)}</div>
+          ${(md.params||[]).length?`<div class="gparams" hidden style="margin-top:8px;display:grid;gap:8px">${md.params.map(p=>`<input class="gp" data-mod="${md.id}" data-p="${p.id}" placeholder="${esc(p.label)}${p.ph?' — ex: '+esc(p.ph):''}">`).join("")}</div>`:''}
+        </div>
+      </div>`).join("")}</div>
+    <div class="muted small" style="margin:10px 0">Grava as regras na política (substitui as anteriores). Teste num Windows do domínio com <b>gpupdate /force</b>.</div>
+    <div class="acts"><button class="btn ghost" id="g_cancel">Cancelar</button><button class="btn pri" id="g_save">Salvar regras</button></div>`;
+  $("#mask").classList.add("open");
+  $("#g_cancel").onclick=()=>{fechar();m.className="modal";};
+  m.querySelectorAll(".gmod").forEach(c=>c.onchange=()=>{const pr=c.parentElement.querySelector(".gparams");if(pr)pr.hidden=!c.checked;});
+  if(preId){const cb=m.querySelector('.gmod[data-id="'+preId+'"]');if(cb){cb.checked=true;const pr=cb.parentElement.querySelector(".gparams");if(pr)pr.hidden=false;}}
+  $("#g_save").onclick=async()=>{
+    const selec=[];m.querySelectorAll(".gmod:checked").forEach(c=>{const id=c.dataset.id;const params={};
+      m.querySelectorAll('.gp[data-mod="'+id+'"]').forEach(inp=>params[inp.dataset.p]=inp.value.trim());selec.push({id,params});});
+    if(!selec.length){toast("Marque ao menos uma regra.",true);return;}
+    const b=$("#g_save");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/gpo-construir","POST",{guid:g.guid,selec});
+    b.disabled=false;b.textContent="Salvar regras";
+    if(r.ok){fechar();m.className="modal";toast("Regras gravadas na política!");}else toast(r.data.erro||"Erro",true);
+  };
+}
+
+/* AUDITORIA */
+let audCache=[],audFiltro='tudo',audBusca='';
+function audCat(acao){acao=(acao||'').toLowerCase();
+  if(/apag|remov|desativ|desvincul|exclu|bloque|comprometid|sa[ií]|delet/.test(acao))return 'danger';
+  if(/criar|ativ|adicion|login|backup|vincul|ingress|desbloque/.test(acao))return 'create';
+  if(/edit|mover|renome|agend|senha|foto|pol[ií]tic|flag|exp|heran/.test(acao))return 'modify';
+  return 'neutral';}
+function audDia(ts){const d=new Date((ts||0)*1000);const h=new Date();const o=new Date(h.getTime()-86400000);
+  const f=x=>x.toLocaleDateString('pt-BR');
+  if(f(d)===f(h))return 'Hoje';if(f(d)===f(o))return 'Ontem';return f(d);}
+async function carregarAuditoria(){
+  try{const {data}=await api("/api/auditoria");audCache=data.itens||[];renderAud();}catch(e){}
+}
+function setFiltroAud(f,el){audFiltro=f;document.querySelectorAll('#audTabs .gtab').forEach(t=>t.classList.toggle('on',t===el));renderAud();}
+function filtrarAud(v){audBusca=(v||'').toLowerCase();renderAud();}
+function renderAud(){
+  const el=$("#listaAuditoria");if(!el)return;
+  const total=audCache.length, ok=audCache.filter(a=>a.resultado==='sucesso').length, fail=total-ok;
+  const hoje=audCache.filter(a=>audDia(a.ts)==='Hoje').length;
+  const ICt='<svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
+  const ICok='<svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+  const ICf='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>';
+  const ICd='<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  const kpi=(ic,l,v,s,cor)=>`<div class="stat"><div class="l">${ic} ${l}</div><div class="v"${cor?` style="color:${cor}"`:''}>${v}</div><div class="s">${esc(s)}</div></div>`;
+  const ac=$("#audCards");if(ac)ac.innerHTML=
+    kpi(ICt,"Eventos",total,"registrados")+
+    kpi(ICok,"Sucessos",ok,"ações concluídas","var(--jade2)")+
+    kpi(ICf,"Falhas",fail,fail?"revise estas":"nenhuma",(fail?'var(--vermelho)':'var(--jade2)'))+
+    kpi(ICd,"Hoje",hoje,"nas últimas 24h");
+  let lista=audCache;
+  if(audFiltro==='sucesso')lista=lista.filter(a=>a.resultado==='sucesso');
+  else if(audFiltro==='falha')lista=lista.filter(a=>a.resultado!=='sucesso');
+  if(audBusca)lista=lista.filter(a=>((a.acao||'')+' '+(a.objeto||'')+' '+(a.usuario||'')).toLowerCase().includes(audBusca));
+  if(!lista.length){el.innerHTML=vazio('usuarios','Nada por aqui.','As ações aparecem aqui com quem fez, quando, de onde e o resultado.');return;}
+  const corCat={create:'var(--jade)',danger:'var(--vermelho)',modify:'var(--sol)',neutral:'var(--accent)'};
+  const bgCat={create:'var(--jade-s)',danger:'var(--verm-s)',modify:'var(--sol-s)',neutral:'var(--accent-s)'};
+  let html='',diaAtual='';
+  lista.forEach(a=>{
+    const dia=audDia(a.ts);
+    if(dia!==diaAtual){diaAtual=dia;html+=`<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--suave);margin:16px 0 6px;padding-left:4px">${esc(dia)}</div>`;}
+    const cat=audCat(a.acao);const okk=a.resultado==='sucesso';
+    let hora='';try{hora=new Date((a.ts||0)*1000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}catch(e){}
+    html+=`<div class="row">
+      <span style="font-family:ui-monospace;font-size:12px;color:var(--suave);min-width:42px">${esc(hora)}</span>
+      <div class="av" style="background:${bgCat[cat]};color:${corCat[cat]};flex:none"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></div>
+      <div style="min-width:0"><div class="nm">${esc(a.acao||'')} <span class="muted" style="font-weight:500">· ${esc(a.objeto||'')}</span></div>
+        <div class="muted small">${esc(a.usuario||'Administrator')}${a.ip?' · '+esc(a.ip):''}</div></div>
+      <span class="sp"></span><span class="badge ${okk?'info':'alta'}">${okk?'ok':'falha'}</span></div>`;
+  });
+  el.innerHTML=html;
+}
+
+/* REDE E DNS */
+let dnsCache=[],dnsZonaAtual='',dnsZonasLista=[],dnsTipo='TODOS',dnsBusca='';
+async function carregarDNS(zona){
+  try{const q=zona?('?zona='+encodeURIComponent(zona)):'';
+    const {data}=await api("/api/dns"+q);
+    dnsCache=data.itens||[];dnsZonaAtual=data.zona||'';dnsZonasLista=data.zonas||[];
+    $("#dnsZona").textContent=dnsZonaAtual?("zona "+dnsZonaAtual):"";
+    if(data.erro && !dnsCache.length){$("#listaDNS").innerHTML=`<div class="empty">Não consegui ler o DNS.<div class="muted small" style="margin-top:4px">${esc(data.erro)}</div></div>`;$("#dnsTipos").innerHTML='';return;}
+    // chips de zona
+    const zw=$("#dnsZonasWrap");
+    if(dnsZonasLista.length>1){zw.style.display='';$("#dnsZonas").innerHTML=dnsZonasLista.map(z=>`<button class="gtab ${z===dnsZonaAtual?'on':''}" onclick="setDnsZona('${esc(z)}')">${esc(z)}</button>`).join("");}
+    else zw.style.display='none';
+    renderDNS();
+  }catch(e){}
+}
+function setDnsZona(z){dnsTipo='TODOS';dnsBusca='';carregarDNS(z);}
+function setDnsTipo(t){dnsTipo=t;renderDNS();}
+function filtrarDNSbusca(v){dnsBusca=(v||'').toLowerCase();renderDNS();}
+function renderDNS(){
+  const el=$("#listaDNS");if(!el)return;
+  if(!dnsCache.length){el.innerHTML=vazio('computadores','Nenhum registro ainda.','Adicione um host (nome → IP) com “Novo host”.');$("#dnsTipos").innerHTML='';return;}
+  // chips de tipo com contagem
+  const cont={};dnsCache.forEach(r=>{cont[r.tipo]=(cont[r.tipo]||0)+1;});
+  const ordem=['A','AAAA','CNAME','SRV','PTR','MX','TXT','NS','SOA'];
+  const tipos=ordem.filter(t=>cont[t]);
+  let chips=`<button class="gtab ${dnsTipo==='TODOS'?'on':''}" onclick="setDnsTipo('TODOS')">Todos (${dnsCache.length})</button>`;
+  chips+=tipos.map(t=>`<button class="gtab ${dnsTipo===t?'on':''}" onclick="setDnsTipo('${t}')">${t} (${cont[t]})</button>`).join("");
+  $("#dnsTipos").innerHTML=chips;
+  let lista=dnsCache;
+  if(dnsTipo!=='TODOS')lista=lista.filter(r=>r.tipo===dnsTipo);
+  if(dnsBusca)lista=lista.filter(r=>((r.nome||'')+' '+(r.tipo||'')+' '+(r.dado||'')).toLowerCase().includes(dnsBusca));
+  const GLB='<svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18A15 15 0 0 1 12 3"/></svg>';
+  const CHV='<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--suave)"><path d="M9 6l6 6-6 6"/></svg>';
+  const corTipo={A:'info',AAAA:'info',CNAME:'media',SRV:'alta',PTR:'info',MX:'media',TXT:'media',NS:'media',SOA:'alta'};
+  if(!lista.length){el.innerHTML='<div class="empty" style="padding:22px">Nenhum registro deste tipo.</div>';return;}
+  el.innerHTML=lista.map(r=>{const sis=(r.nome==='@');const edit=(!sis && (r.tipo==='A'||r.tipo==='CNAME'));
+    const fqdn=sis?(dnsZonaAtual||''):r.nome+'.'+(dnsZonaAtual||'');
+    return `<div class="row"${edit?` onclick="abrirRegistroDNS('${esc(r.nome)}','${esc(r.tipo)}','${esc(r.dado)}')" style="cursor:pointer"`:''}><div class="av">${GLB}</div>
+      <div style="min-width:0"><div class="nm">${esc(fqdn)} <span class="badge ${corTipo[r.tipo]||'info'}" style="margin-left:4px">${esc(r.tipo)}</span></div><div class="muted" style="font-family:ui-monospace;font-size:12.5px;word-break:break-all">${esc(r.dado)}</div></div>
+      <span class="sp"></span>${edit?CHV:'<span class="badge info">sistema</span>'}</div>`;}).join("");
+}
+const DNS_DICAS={A:['Endereço IPv4','ex: 192.168.1.50'],AAAA:['Endereço IPv6','ex: 2001:db8::1'],
+  CNAME:['Aponta para (host)','ex: srvws001'],MX:['Servidor de e-mail + prioridade','ex: mail.dominio 10'],
+  TXT:['Texto','ex: v=spf1 mx -all'],SRV:['host porta prioridade peso','ex: srv.dominio 88 0 100'],
+  PTR:['Host de destino','ex: srvws001.dominio'],NS:['Servidor de nomes','ex: ns1.dominio']};
+function abrirAddHost(){
+  const zona=dnsZonaAtual||'';
+  const tipos=['A','AAAA','CNAME','MX','TXT','SRV','PTR','NS'];
+  abrir(`<h3>Novo registro DNS</h3><p class="sub">Na zona <b>${esc(zona||'—')}</b>. Escolha o tipo e preencha o valor.</p>
+    <div class="field"><label>Tipo de registro</label><select id="r_tipo" onchange="dnsRegPreview()">${tipos.map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>
+    <div class="field"><label>Nome / prefixo</label><input id="r_nome" placeholder="ex: impressora (ou @ para a raiz da zona)" oninput="dnsRegPreview()"></div>
+    <div class="field"><label id="r_dadoLbl">Endereço IP</label><input id="r_dado" placeholder="ex: 192.168.1.50" oninput="dnsRegPreview()"></div>
+    <div class="cli" style="margin-top:2px"><div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> O que vai rodar no servidor</div><pre id="r_cli"></pre></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="r_ok">Criar registro</button></div>`);
+  dnsRegPreview();
+  $("#r_ok").onclick=async()=>{const nome=$("#r_nome").value.trim(),tipo=$("#r_tipo").value,dado=$("#r_dado").value.trim();
+    if(!nome||!dado)return toast("Preencha o nome e o valor",true);
+    const b=$("#r_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/dns-registro-add","POST",{nome,tipo,dado,zona:dnsZonaAtual});
+    b.disabled=false;b.textContent="Criar registro";
+    if(r.ok){fechar();toast("Registro criado!");carregarDNS(dnsZonaAtual);}else toast(r.data.erro||"Erro",true);};
+}
+function dnsRegPreview(){
+  const tipo=$("#r_tipo")?$("#r_tipo").value:'A';const dd=DNS_DICAS[tipo]||DNS_DICAS.A;
+  if($("#r_dadoLbl"))$("#r_dadoLbl").textContent=dd[0];
+  if($("#r_dado"))$("#r_dado").placeholder=dd[1].replace('dominio',dnsZonaAtual||'dominio');
+  const nome=($("#r_nome")?$("#r_nome").value.trim():'')||'nome';
+  const dado=($("#r_dado")?$("#r_dado").value.trim():'')||'<valor>';
+  const cli=$("#r_cli");if(cli)cli.textContent='samba-tool dns add 127.0.0.1 '+(dnsZonaAtual||'<zona>')+' '+nome+' '+tipo+' "'+dado+'"';
+}
+async function removerHost(nome,tipo,dado){if(!confirm("Remover o host '"+nome+"'?"))return;
+  const r=await api("/api/dns-remover","POST",{nome,tipo,dado});
+  if(r.ok){fechar();toast("Host removido.");carregarDNS();}else toast(r.data.erro||"Erro",true);}
+function _zonaDNS(){return ($("#dnsZona").textContent||"").replace("zona","").trim();}
+function abrirRegistroDNS(nome,tipo,dado){
+  const zona=_zonaDNS();const fqdn=nome+'.'+zona;
+  abrir(`<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+      <div class="av" style="width:44px;height:44px;flex:none"><svg class="ic" viewBox="0 0 24 24" style="width:22px;height:22px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18A15 15 0 0 1 12 3"/></svg></div>
+      <div style="min-width:0"><h3 style="margin:0">${esc(fqdn)}</h3><p class="sub" style="margin:2px 0 0">Registro ${esc(tipo)} · zona ${esc(zona)}</p></div></div>
+    <div class="memrow"><span class="muted">Tipo</span><b>${esc(tipo)}</b></div>
+    <div class="memrow"><span class="muted">Aponta para</span><b style="font-family:ui-monospace;font-size:13px">${esc(dado)}</b></div>
+    <div class="memrow"><span class="muted">Nome curto</span><b style="font-family:ui-monospace;font-size:13px">${esc(nome)}</b></div>
+    <div class="memrow"><span class="muted">FQDN</span><b style="font-family:ui-monospace;font-size:13px;max-width:62%;text-align:right;word-break:break-all">${esc(fqdn)}</b></div>
+    <div class="cli"><div class="clihead"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 17l6-6-6-6M12 19h8"/></svg> Consultar este registro no servidor</div>
+      <pre>samba-tool dns query localhost ${esc(zona)} ${esc(nome)} ${esc(tipo)} -U Administrator</pre></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="fechar()">Fechar</button>
+      ${tipo==='A'?`<button class="btn" onclick="editarHost('${esc(nome)}','${esc(dado)}')">Editar IP</button>`:''}
+      <button class="btn danger" onclick="removerHost('${esc(nome)}','${esc(tipo)}','${esc(dado)}')">Remover</button>
+    </div>`);
+}
+function editarHost(nome,ipAtual){
+  abrir(`<h3>Editar host</h3><p class="sub">Troca o IP de <b>${esc(nome)}.${esc(_zonaDNS())}</b> (registro A).</p>
+    <div class="field"><label>Novo endereço IP</label><input id="e_ip" value="${esc(ipAtual)}" placeholder="ex: 192.168.1.50"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="e_ok">Salvar</button></div>`);
+  $("#e_ip").focus();
+  $("#e_ok").onclick=async()=>{const novo=$("#e_ip").value.trim();if(!novo)return toast("Informe o IP",true);
+    if(novo===ipAtual)return fechar();
+    const b=$("#e_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const rm=await api("/api/dns-remover","POST",{nome,tipo:"A",dado:ipAtual});
+    if(!rm.ok){b.disabled=false;b.textContent="Salvar";return toast(rm.data.erro||"Erro ao trocar",true);}
+    const ad=await api("/api/dns-add","POST",{nome,ip:novo});
+    b.disabled=false;b.textContent="Salvar";
+    if(ad.ok){fechar();toast("IP atualizado!");carregarDNS();}else toast(ad.data.erro||"Erro ao gravar novo IP",true);};
+}
+
+function copiarCli(){try{navigator.clipboard.writeText($("#cliTxt").textContent).then(()=>toast("Comandos copiados!"));}catch(e){}}
+
+/* MODAL base */
+function fechar(){$("#mask").classList.remove("open");$("#modal").className="modal";}
+function abrir(html){$("#modal").className="modal";$("#modal").innerHTML=html;$("#mask").classList.add("open");const i=$("#modal input");if(i)setTimeout(()=>i.focus(),50);}
+$("#mask").addEventListener("click",e=>{if(e.target.id==="mask")fechar();});
+
+/* CONFIGURADOR */
+let cfgStep=0;
+function cfgDotsRender(){const d=$("#cfgDots");d.innerHTML="";for(let i=1;i<=4;i++){const el=document.createElement("i");if(cfgStep>=i)el.className="on";d.appendChild(el);}}
+function cfgIr(n){cfgStep=n;document.querySelectorAll(".cfgstep").forEach(s=>s.classList.toggle("on",+s.dataset.step===n));cfgDotsRender();const inp=document.querySelector('.cfgstep[data-step="'+n+'"] input');if(inp)setTimeout(()=>inp.focus(),60);}
+function cfgValida(step){
+  if(step===1){
+    let dom=$("#c_dom").value.trim().toLowerCase().replace(/\s/g,"");
+    if(!/^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/.test(dom)){toast("Nome inválido (ex: empresa.local)",true);return;}
+    $("#c_dom").value=dom;
+    if(!$("#c_nb").value.trim())$("#c_nb").value=dom.split(".")[0].toUpperCase().slice(0,15);
+    cfgIr(2);
+  } else if(step===2){
+    const p=$("#c_senha").value,p2=$("#c_senha2").value;
+    if(p.length<8||!/[A-Z]/.test(p)||!/[a-z]/.test(p)||!/[0-9]/.test(p)){toast("Senha fraca (mín. 8, com Maiúscula, minúscula e número)",true);return;}
+    if(p!==p2){toast("As senhas não conferem",true);return;}
+    cfgIr(3);
+  }
+}
+function cfgRevisar(){
+  if(!$("#c_ip").value.trim()){toast("Informe o IP fixo",true);return;}
+  const g=(l,v)=>`<div><span class="muted">${l}</span><b>${esc(v||'—')}</b></div>`;
+  $("#c_resumo").innerHTML=g("Domínio",$("#c_dom").value)+g("Nome curto",$("#c_nb").value)+g("Servidor",$("#c_host").value||'dc01')+g("IP fixo",$("#c_ip").value)+g("Gateway",$("#c_gw").value)+g("DNS internet",$("#c_dns").value||'1.1.1.1');
+  cfgIr(4);
+}
+async function cfgCriar(){
+  const body={dominio:$("#c_dom").value.trim(),netbios:$("#c_nb").value.trim(),senha:$("#c_senha").value,
+    ip:$("#c_ip").value.trim(),gateway:$("#c_gw").value.trim(),dns:$("#c_dns").value.trim()||"1.1.1.1",hostname:$("#c_host").value.trim()||"dc01"};
+  const b=$("#c_criar");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  const r=await api("/api/provisionar","POST",body);
+  if(!r.ok){b.disabled=false;b.textContent="Criar domínio";toast(r.data.erro||"Erro",true);return;}
+  cfgIr(5);cfgPoll((body.ip.split("/")[0]));
+}
+function cfgPoll(ip){
+  const t=setInterval(async()=>{
+    let s;try{const r=await api("/api/provisionar-status");s=r.data;}catch(e){return;}
+    $("#c_prog").style.width=(s.pct||0)+"%";$("#c_etapa").textContent=s.etapa||"";
+    if(s.erro){clearInterval(t);cfgIr(4);$("#c_criar").disabled=false;$("#c_criar").textContent="Criar domínio";toast(s.erro,true);}
+    else if(s.pronto){clearInterval(t);som("ad-acesso");$("#c_url").textContent="http://"+(s.ip||ip);$("#c_done_sub").textContent="Domínio "+(s.dominio||"")+" no ar. Entre com o Administrator.";cfgIr(6);}
+  },1500);
+}
+async function mostrarConfig(){
+  $("#login").style.display="none";$("#app").style.display="none";$("#config").style.display="grid";
+  try{const {data}=await api("/api/estado-inicial");
+    if(data.ip_sugerido)$("#c_ip").value=data.ip_sugerido;
+    if(data.gw_sugerido)$("#c_gw").value=data.gw_sugerido;
+    if(data.host_sugerido&&!["guata-id","localhost","guata"].includes(data.host_sugerido))$("#c_host").value=data.host_sugerido;
+  }catch(e){}
+  cfgIr(0);
+}
+
+/* início */
+(async()=>{try{const r=await api("/api/sessao");
+  if(!r.data.provisionado)mostrarConfig();
+  else if(r.data.logado)mostrarApp();
+  else mostrarLogin();
+}catch(e){mostrarLogin();}})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+[Sound Theme]
+Name=Guatá
+Comment=Sons do Guatá OS — calmos, brasileiros, naturais
+Inherits=freedesktop
+Directories=stereo
+
+[stereo]
+OutputProfile=stereo

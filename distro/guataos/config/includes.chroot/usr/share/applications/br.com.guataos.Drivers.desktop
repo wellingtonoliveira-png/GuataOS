@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Guatá Drivers
+Name[pt_BR]=Guatá Drivers
+Comment=Driver da placa de vídeo (NVIDIA proprietário sob demanda)
+Comment[pt_BR]=Driver da placa de vídeo (NVIDIA proprietário sob demanda)
+Exec=guata-drivers
+Icon=/usr/share/icons/guata/app-ferramentas.png
+Terminal=false
+Categories=System;Settings;GTK;
+Keywords=driver;video;nvidia;placa;gpu;
+StartupNotify=true

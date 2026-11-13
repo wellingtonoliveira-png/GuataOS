@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+# Sobre o Guatá OS — tela de versão/sistema (estilo "winver", com a cara do Guatá)
+import gi, subprocess, socket, platform, os
+gi.require_version("Gtk", "4.0"); gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+
+ICON = "/usr/share/icons/guata"
+
+def sh(cmd, default="—"):
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=6)
+        s = (out.stdout or "").strip()
+        return s if s else default
+    except Exception:
+        return default
+
+def versao_guata():
+    v = sh(["dpkg-query", "-W", "-f=${Version}", "guata-desktop"], "")
+    if v: return v
+    try:
+        for ln in open("/etc/os-release"):
+            if ln.startswith("VERSION_ID="):
+                return ln.split("=",1)[1].strip().strip('"') or "—"
+    except Exception: pass
+    return "—"
+
+def base_debian():
+    try:
+        v = open("/etc/debian_version").read().strip()
+        return f"Debian {v}"
+    except Exception:
+        return "Debian 13"
+
+def gnome_ver():
+    v = sh(["gnome-shell", "--version"], "")
+    return v.replace("GNOME Shell ", "GNOME ") if v else "GNOME"
+
+CSS = """
+.janela { background: linear-gradient(160deg,#0f3d28,#0a2a1c); }
+.card { background:#ffffff; border-radius:22px; padding:26px 30px; }
+.ver { font-size:30px; font-weight:800; color:#1f8f57; }
+.sub { color:#5b6b62; }
+.row-l { color:#6b7a71; }
+.row-v { font-weight:600; color:#223; }
+.hdrt { font-weight:800; font-size:16px; color:#15321f; }
+button.cta { background:#2f8f66; color:#fff; font-weight:700; border-radius:12px; padding:8px 14px; }
+button.cta:hover { background:#277a56; }
+.footer { color:rgba(255,255,255,.82); font-size:12px; }
+"""
+
+class Sobre(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="br.com.guataos.Sobre")
+
+    def do_activate(self):
+        prov = Gtk.CssProvider(); prov.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, 1000)
+
+        win = Adw.ApplicationWindow(application=self)
+        win.set_title("Sobre o Guatá OS"); win.set_default_size(460, 600)
+        win.add_css_class("janela")
+
+        tv = Adw.ToolbarView(); hb = Adw.HeaderBar()
+        tl = Gtk.Label(label="Sobre o Guatá OS"); tl.add_css_class("title"); hb.set_title_widget(tl)
+        tv.add_top_bar(hb)
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16,
+                       margin_top=20, margin_bottom=20, margin_start=22, margin_end=22)
+
+        # logo
+        lf = os.path.join(ICON, "logo-guata-transp.png")
+        if os.path.exists(lf):
+            img = Gtk.Image.new_from_file(lf); img.set_pixel_size(150); root.append(img)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); card.add_css_class("card")
+        v = Gtk.Label(label="Versão " + versao_guata(), xalign=0); v.add_css_class("ver")
+        sub = Gtk.Label(label="Tecnologia que nasce da natureza.", xalign=0); sub.add_css_class("sub")
+        card.append(v); card.append(sub)
+
+        sep = Gtk.Separator(); sep.set_margin_top(10); sep.set_margin_bottom(10); card.append(sep)
+
+        # mascote + info
+        info = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+        mp = os.path.join(ICON, "mascote-acenando.png")
+        if os.path.exists(mp):
+            m = Gtk.Image.new_from_file(mp); m.set_pixel_size(84); info.append(m)
+        grid = Gtk.Grid(); grid.set_row_spacing(7); grid.set_column_spacing(16); grid.set_hexpand(True)
+        linhas = [
+            ("Sistema", "Guatá OS"),
+            ("Base", base_debian()),
+            ("Ambiente", gnome_ver()),
+            ("Kernel", platform.release()),
+            ("Máquina", socket.gethostname()),
+        ]
+        for i, (l, val) in enumerate(linhas):
+            ll = Gtk.Label(label=l, xalign=0); ll.add_css_class("row-l")
+            vv = Gtk.Label(label=val, xalign=1); vv.add_css_class("row-v"); vv.set_hexpand(True)
+            grid.attach(ll, 0, i, 1, 1); grid.attach(vv, 1, i, 1, 1)
+        info.append(grid); card.append(info)
+        root.append(card)
+
+        # ações
+        btns = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, halign=Gtk.Align.CENTER)
+        b1 = Gtk.Button(label="Procurar atualizações"); b1.add_css_class("cta")
+        b1.connect("clicked", lambda *_: self._run("guata-atualizacoes"))
+        b2 = Gtk.Button(label="Site do Guatá")
+        b2.connect("clicked", lambda *_: self._run2("xdg-open", "https://guataos.com.br"))
+        btns.append(b1); btns.append(b2); root.append(btns)
+
+        foot = Gtk.Label(label="guataos.com.br  ·  feito no Brasil 🌱"); foot.add_css_class("footer")
+        root.append(foot)
+
+        tv.set_content(root); win.set_content(tv); win.present()
+
+    def _run(self, cmd):
+        try: subprocess.Popen([cmd])
+        except Exception: pass
+
+    def _run2(self, *cmd):
+        try: subprocess.Popen(list(cmd))
+        except Exception: pass
+
+Sobre().run()

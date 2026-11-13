@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ocara
+Comment=A loja do guataOS — apps curados, 1 clique
+Exec=ocara
+Icon=/usr/share/icons/guata/ocara.png
+Terminal=false
+Categories=System;PackageManager;GTK;
+Keywords=loja;store;apps;instalar;ocara;
+StartupNotify=true
+StartupWMClass=br.com.guataos.Ocara

@@ -1,0 +1,436 @@
+#!/usr/bin/env python3
+# ─────────────────────────────────────────────────────────────────────────────
+# Assistente Guatá — copiloto do Guatá OS com a cara da capivara.
+# Multi-provedor: Claude (nativo) + QUALQUER IA no padrão OpenAI-compatível
+# (OpenAI, Gemini, OpenRouter, Groq, Ollama/LM Studio local…).
+# Sem dependências extras: Python3 + GI + urllib. Chaves por usuário (chmod 600).
+# ─────────────────────────────────────────────────────────────────────────────
+import gi, json, os, threading, urllib.request, urllib.error, subprocess
+gi.require_version("Gtk", "4.0"); gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, GLib, Pango
+
+ICON = "/usr/share/icons/guata"
+CFG_DIR = os.path.expanduser("~/.config/guata")
+CFG = os.path.join(CFG_DIR, "ia.json")
+
+# Provedores pré-configurados. tipo: "claude" (API nativa) | "openai" (compatível).
+PRESETS = {
+    "claude":     {"nome": "Claude (Anthropic)",        "tipo": "claude", "base": "https://api.anthropic.com/v1",                      "modelo": "claude-sonnet-5"},
+    "openai":     {"nome": "OpenAI (GPT)",               "tipo": "openai", "base": "https://api.openai.com/v1",                        "modelo": "gpt-4o-mini"},
+    "gemini":     {"nome": "Gemini (Google)",            "tipo": "openai", "base": "https://generativelanguage.googleapis.com/v1beta/openai", "modelo": "gemini-2.0-flash"},
+    "openrouter": {"nome": "OpenRouter",                 "tipo": "openai", "base": "https://openrouter.ai/api/v1",                     "modelo": "openai/gpt-4o-mini"},
+    "groq":       {"nome": "Groq",                       "tipo": "openai", "base": "https://api.groq.com/openai/v1",                   "modelo": "llama-3.3-70b-versatile"},
+    "local":      {"nome": "Local (Ollama/LM Studio)",   "tipo": "openai", "base": "http://localhost:11434/v1",                        "modelo": "llama3.1"},
+    "outro":      {"nome": "Outro (OpenAI-compatível / Azure)", "tipo": "openai", "base": "",                                          "modelo": ""},
+}
+ORDEM = ["claude", "openai", "gemini", "openrouter", "groq", "local", "outro"]
+
+SISTEMA = (
+    "Você é o Guatá, o assistente do Guatá OS — uma distribuição Linux brasileira "
+    "baseada em Debian 13 com GNOME, feita para técnicos e para quem está começando. "
+    "Fale sempre em português do Brasil, com tom acolhedor, direto e sem jargão "
+    "desnecessário. A mascote é uma capivara. Os apps têm nomes próprios: Ocara (loja "
+    "de programas), Pajé (caixa de ferramentas de diagnóstico/resgate), Nheengatu "
+    "(terminal), Jacá (arquivos), Oca (configurações), Mochila (central de apps), "
+    "Kurumim (finanças). Ajude com Linux, rede, disco, instalação de programas e uso "
+    "do sistema. Quando sugerir comandos de terminal, explique o que fazem e avise "
+    "sobre riscos. Seja conciso: respostas curtas e úteis, listas quando ajudar. "
+    "Se não souber, diga com honestidade."
+)
+
+DIAG_REDE = [
+    ["sh", "-c", "ip -brief addr 2>/dev/null"],
+    ["sh", "-c", "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status 2>/dev/null"],
+    ["sh", "-c", "ping -c 2 -W 2 1.1.1.1 2>&1"],
+    ["sh", "-c", "ping -c 2 -W 2 deb.debian.org 2>&1 | tail -3"],
+    ["sh", "-c", "cat /etc/resolv.conf 2>/dev/null | grep -v '^#'"],
+]
+
+
+def carregar_cfg():
+    try:
+        with open(CFG) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def salvar_cfg(d):
+    os.makedirs(CFG_DIR, exist_ok=True)
+    tmp = CFG + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(d, f, indent=2)
+    os.replace(tmp, CFG)
+    try:
+        os.chmod(CFG, 0o600)
+    except Exception:
+        pass
+
+
+def perfil_atual(cfg):
+    """Retorna (provedor, {base, modelo, api_key, tipo}) com defaults do preset."""
+    prov = cfg.get("provedor", "claude")
+    if prov not in PRESETS:
+        prov = "claude"
+    preset = PRESETS[prov]
+    perfis = cfg.get("perfis", {})
+    p = perfis.get(prov, {})
+    return prov, {
+        "tipo": preset["tipo"],
+        "base": (p.get("base") or preset["base"]).rstrip("/"),
+        "modelo": p.get("modelo") or preset["modelo"],
+        "api_key": p.get("api_key", ""),
+    }
+
+
+def _req_json(url, corpo, headers, timeout=60):
+    req = urllib.request.Request(url, data=corpo, method="POST")
+    for k, v in headers.items():
+        req.add_header(k, v)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def _gemini_modelos(api_key):
+    """Lista os modelos do Gemini que suportam chat (pra auto-escolher um válido)."""
+    try:
+        url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + api_key
+        with urllib.request.urlopen(url, timeout=15) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        nomes = []
+        for mm in d.get("models", []):
+            if "generateContent" in mm.get("supportedGenerationMethods", []):
+                nomes.append(mm.get("name", "").replace("models/", ""))
+        return [n for n in nomes if n]
+    except Exception:
+        return []
+
+
+def chamar_ia(perfil, mensagens):
+    """Chama o provedor conforme o tipo. Retorna (texto, erro)."""
+    try:
+        if perfil["tipo"] == "claude":
+            corpo = json.dumps({
+                "model": perfil["modelo"], "max_tokens": 1024,
+                "system": SISTEMA, "messages": mensagens,
+            }).encode("utf-8")
+            dados = _req_json(perfil["base"] + "/messages", corpo, {
+                "x-api-key": perfil["api_key"],
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            })
+            partes = [b.get("text", "") for b in dados.get("content", []) if b.get("type") == "text"]
+            return ("".join(partes).strip() or "(sem resposta)", None)
+        else:
+            # OpenAI-compatível: system vira a 1ª mensagem
+            msgs = [{"role": "system", "content": SISTEMA}] + mensagens
+            base = perfil["base"].rstrip("/")
+            eh_gemini = "generativelanguage.googleapis.com" in base
+            # Gemini: garante o endpoint OpenAI-compat mesmo se o endereço vier sem /openai
+            if eh_gemini and not base.endswith("/openai"):
+                base = "https://generativelanguage.googleapis.com/v1beta/openai"
+            modelo = perfil["modelo"]
+            if eh_gemini and modelo.startswith("gemini-1.5"):
+                modelo = "gemini-2.0-flash"  # 1.5 foi descontinuado
+            headers = {"content-type": "application/json"}
+            if perfil["api_key"]:
+                headers["Authorization"] = "Bearer " + perfil["api_key"]
+
+            def _chat(mod):
+                corpo = json.dumps({"model": mod, "max_tokens": 1024, "messages": msgs}).encode("utf-8")
+                return _req_json(base + "/chat/completions", corpo, headers)
+
+            try:
+                dados = _chat(modelo)
+            except urllib.error.HTTPError as e:
+                # Modelo não existe pra essa chave? Descobre um válido e tenta de novo.
+                if e.code == 404 and eh_gemini:
+                    mods = _gemini_modelos(perfil["api_key"])
+                    alvo = next((x for x in mods if "flash" in x and "1.5" not in x), None) \
+                        or next((x for x in mods if "flash" in x), None) \
+                        or (mods[0] if mods else None)
+                    if not alvo:
+                        raise
+                    dados = _chat(alvo)
+                else:
+                    raise
+            try:
+                return (dados["choices"][0]["message"]["content"].strip(), None)
+            except Exception:
+                return (None, "Resposta em formato inesperado do provedor.")
+    except urllib.error.HTTPError as e:
+        try:
+            body = json.loads(e.read().decode("utf-8"))
+            if isinstance(body, list) and body:   # Gemini devolve [{"error":{...}}]
+                body = body[0]
+            det = body.get("error", {}) if isinstance(body, dict) else {}
+            det = det.get("message", "") if isinstance(det, dict) else str(det)
+        except Exception:
+            det = ""
+        if e.code in (401, 403):
+            return (None, "Chave de API inválida ou sem permissão. Confira em Configurações.")
+        if e.code == 404:
+            return (None, f"Modelo/endereço não encontrado (404). {det or 'Confira o modelo nas Configurações.'}")
+        if e.code == 429:
+            return (None, "Limite de uso atingido. Tente de novo em instantes.")
+        return (None, f"Erro da API ({e.code}). {det}")
+    except urllib.error.URLError as e:
+        return (None, f"Sem conexão com o provedor. {getattr(e, 'reason', '')}")
+    except Exception as e:
+        return (None, f"Falha inesperada: {e}")
+
+
+CSS = """
+.janela { background: linear-gradient(160deg,#0f3d28,#0a2a1c); }
+.hero { color:#fff; }
+.hero-t { font-size:20px; font-weight:800; color:#fff; }
+.hero-s { color:rgba(255,255,255,.8); }
+.prov { color:rgba(255,255,255,.7); font-size:12px; }
+.bolha-user { background:#2f8f66; color:#fff; border-radius:16px 16px 4px 16px; padding:10px 14px; }
+.bolha-ia { background:#ffffff; color:#13261d; border-radius:16px 16px 16px 4px; padding:10px 14px; }
+.bolha-erro { background:#ffe3e0; color:#7a1c13; border-radius:14px; padding:10px 14px; }
+.chip { background:rgba(255,255,255,.14); color:#fff; border-radius:999px; padding:6px 12px; }
+.chip:hover { background:rgba(255,255,255,.26); }
+.barra { background:rgba(255,255,255,.06); border-radius:16px; padding:6px; }
+entry.campo { border-radius:12px; min-height:40px; }
+button.enviar { background:#2f8f66; color:#fff; font-weight:700; border-radius:12px; min-width:48px; }
+button.enviar:hover { background:#277a56; }
+"""
+
+
+class Assistente(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="br.com.guataos.Assistente")
+        self.historico = []
+        self.pensando = False
+
+    def do_activate(self):
+        prov = Gtk.CssProvider(); prov.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, 1000)
+
+        self.win = Adw.ApplicationWindow(application=self)
+        self.win.set_title("Assistente Guatá"); self.win.set_default_size(560, 740)
+        self.win.add_css_class("janela")
+
+        tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar(); hb.add_css_class("flat")
+        tl = Gtk.Label(label="Assistente Guatá"); tl.add_css_class("title")
+        hb.set_title_widget(tl)
+        bcfg = Gtk.Button(icon_name="emblem-system-symbolic")
+        bcfg.set_tooltip_text("Configurações (provedor de IA)")
+        bcfg.connect("clicked", lambda *_: self.abrir_config())
+        hb.pack_end(bcfg)
+        tv.add_top_bar(hb)
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                       margin_top=10, margin_bottom=14, margin_start=14, margin_end=14)
+
+        hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12); hero.add_css_class("hero")
+        mp = os.path.join(ICON, "capivara-mascote.png")
+        if os.path.exists(mp):
+            img = Gtk.Image.new_from_file(mp); img.set_pixel_size(64); hero.append(img)
+        cx = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, valign=Gtk.Align.CENTER)
+        t = Gtk.Label(label="Oi! Eu sou o Guatá 🌱", xalign=0); t.add_css_class("hero-t")
+        s = Gtk.Label(label="Pergunte sobre Linux, rede, programas ou o sistema.", xalign=0)
+        s.add_css_class("hero-s"); s.set_wrap(True)
+        self.lbl_prov = Gtk.Label(label="", xalign=0); self.lbl_prov.add_css_class("prov")
+        cx.append(t); cx.append(s); cx.append(self.lbl_prov); hero.append(cx)
+        root.append(hero)
+
+        self.lista = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); self.lista.set_margin_top(4)
+        sw = Gtk.ScrolledWindow(); sw.set_vexpand(True)
+        sw.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sw.set_child(self.lista); self.scroller = sw
+        root.append(sw)
+
+        chips = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        for txt, acao in [
+            ("🩺 Diagnóstico de rede", self.diag_rede),
+            ("📦 Indicar um programa", lambda: self.preencher("Preciso de um programa para ")),
+            ("❓ Como uso o Guatá?", lambda: self.enviar_texto("Me explique rapidinho o que é o Guatá OS e os principais apps.")),
+        ]:
+            c = Gtk.Button(label=txt); c.add_css_class("chip")
+            c.connect("clicked", lambda _b, a=acao: a()); chips.append(c)
+        root.append(chips)
+
+        barra = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8); barra.add_css_class("barra")
+        self.campo = Gtk.Entry(); self.campo.add_css_class("campo"); self.campo.set_hexpand(True)
+        self.campo.set_placeholder_text("Escreva sua pergunta…")
+        self.campo.connect("activate", lambda *_: self.on_enviar())
+        env = Gtk.Button(icon_name="go-up-symbolic"); env.add_css_class("enviar")
+        env.connect("clicked", lambda *_: self.on_enviar())
+        barra.append(self.campo); barra.append(env)
+        root.append(barra)
+
+        tv.set_content(root); self.win.set_content(tv); self.win.present()
+
+        self._atualizar_rodape()
+        cfg = carregar_cfg(); _, perfil = perfil_atual(cfg)
+        if not perfil["api_key"] and perfil["base"].startswith("http") and "localhost" not in perfil["base"]:
+            self.bolha("Antes de começar, abra as Configurações (engrenagem), escolha o "
+                       "provedor (Claude, OpenAI, Gemini, local…) e cole a chave. 🔑", "ia")
+        else:
+            self.bolha("Tô pronto! Como posso ajudar hoje?", "ia")
+        self.campo.grab_focus()
+
+    def _atualizar_rodape(self):
+        prov, perfil = perfil_atual(carregar_cfg())
+        self.lbl_prov.set_text(f"⚙ {PRESETS[prov]['nome']} · {perfil['modelo']}")
+
+    # ---------- UI ----------
+    def bolha(self, texto, tipo):
+        linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        lbl = Gtk.Label(label=texto, xalign=0, wrap=True)
+        lbl.set_wrap_mode(Pango.WrapMode.WORD_CHAR); lbl.set_selectable(True); lbl.set_max_width_chars(48)
+        if tipo == "user":
+            lbl.add_css_class("bolha-user"); linha.set_halign(Gtk.Align.END)
+        elif tipo == "erro":
+            lbl.add_css_class("bolha-erro"); linha.set_halign(Gtk.Align.START)
+        else:
+            lbl.add_css_class("bolha-ia"); linha.set_halign(Gtk.Align.START)
+        linha.append(lbl); self.lista.append(linha); GLib.idle_add(self._rolar)
+        return lbl
+
+    def _rolar(self):
+        adj = self.scroller.get_vadjustment(); adj.set_value(adj.get_upper()); return False
+
+    def preencher(self, prefixo):
+        self.campo.set_text(prefixo); self.campo.set_position(-1); self.campo.grab_focus()
+
+    # ---------- envio ----------
+    def on_enviar(self):
+        txt = self.campo.get_text().strip()
+        if txt:
+            self.campo.set_text(""); self.enviar_texto(txt)
+
+    def enviar_texto(self, texto):
+        if self.pensando:
+            return
+        prov, perfil = perfil_atual(carregar_cfg())
+        if not perfil["api_key"] and "localhost" not in perfil["base"]:
+            self.bolha("Escolha o provedor e cole a chave nas Configurações (engrenagem). 🔑", "erro")
+            return
+        if not perfil["base"].startswith("http"):
+            self.bolha("Falta o endereço do provedor nas Configurações.", "erro")
+            return
+        self.bolha(texto, "user")
+        self.historico.append({"role": "user", "content": texto})
+        self.pensando = True
+        pensando = self.bolha("…", "ia")
+        threading.Thread(target=self._trabalho, args=(perfil, pensando), daemon=True).start()
+
+    def _trabalho(self, perfil, pensando):
+        texto, erro = chamar_ia(perfil, self.historico)
+        def atualizar():
+            if erro:
+                pensando.get_parent().set_halign(Gtk.Align.START)
+                pensando.set_css_classes(["bolha-erro"]); pensando.set_text(erro)
+                if self.historico and self.historico[-1]["role"] == "user":
+                    self.historico.pop()
+            else:
+                pensando.set_text(texto)
+                self.historico.append({"role": "assistant", "content": texto})
+            self.pensando = False; self._rolar(); return False
+        GLib.idle_add(atualizar)
+
+    # ---------- diagnóstico ----------
+    def diag_rede(self):
+        if self.pensando:
+            return
+        self.bolha("🩺 Rodando diagnóstico de rede…", "user")
+        threading.Thread(target=self._diag_trabalho, daemon=True).start()
+
+    def _diag_trabalho(self):
+        saidas = []
+        for cmd in DIAG_REDE:
+            try:
+                out = subprocess.run(cmd, capture_output=True, text=True, timeout=12).stdout.strip()
+            except Exception as e:
+                out = f"(falhou: {e})"
+            saidas.append(f"$ {cmd[-1]}\n{out}")
+        relatorio = "\n\n".join(saidas)
+        pergunta = ("Fiz um diagnóstico de rede nesta máquina com Guatá OS. Abaixo a saída "
+                    "dos comandos. Diga em pt-BR, de forma simples, se a rede está OK; se não, "
+                    "aponte o problema provável e os passos pra resolver.\n\n" + relatorio)
+        prov, perfil = perfil_atual(carregar_cfg())
+        def preparar():
+            if not perfil["api_key"] and "localhost" not in perfil["base"]:
+                self.bolha("Configure o provedor pra eu interpretar o diagnóstico. 🔑", "erro")
+                return False
+            self.historico.append({"role": "user", "content": pergunta})
+            self.pensando = True
+            p = self.bolha("…", "ia")
+            threading.Thread(target=self._trabalho, args=(perfil, p), daemon=True).start()
+            return False
+        GLib.idle_add(preparar)
+
+    # ---------- configurações (multi-provedor) ----------
+    def abrir_config(self):
+        cfg = carregar_cfg()
+        prov_atual = cfg.get("provedor", "claude")
+        if prov_atual not in PRESETS:
+            prov_atual = "claude"
+        perfis = cfg.get("perfis", {})
+
+        dlg = Adw.MessageDialog(transient_for=self.win, heading="Provedor de IA",
+                                body="Escolha a IA. As chaves ficam só nesta máquina (~/.config/guata/ia.json).")
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=6)
+
+        # dropdown de provedor
+        nomes = [PRESETS[k]["nome"] for k in ORDEM]
+        dd = Gtk.DropDown.new_from_strings(nomes)
+        dd.set_selected(ORDEM.index(prov_atual))
+        box.append(Gtk.Label(label="Provedor", xalign=0)); box.append(dd)
+
+        ebase = Gtk.Entry(); ebase.set_placeholder_text("Endereço (base URL)")
+        emod = Gtk.Entry(); emod.set_placeholder_text("Modelo")
+        ekey = Gtk.Entry(); ekey.set_placeholder_text("Chave de API"); ekey.set_visibility(False)
+        box.append(Gtk.Label(label="Endereço (base URL)", xalign=0)); box.append(ebase)
+        box.append(Gtk.Label(label="Modelo", xalign=0)); box.append(emod)
+        box.append(Gtk.Label(label="Chave de API", xalign=0)); box.append(ekey)
+        dica = Gtk.Label(xalign=0); dica.add_css_class("dim-label"); dica.set_wrap(True)
+        box.append(dica)
+
+        def preencher_campos(prov):
+            preset = PRESETS[prov]; p = perfis.get(prov, {})
+            ebase.set_text(p.get("base") or preset["base"])
+            emod.set_text(p.get("modelo") or preset["modelo"])
+            ekey.set_text(p.get("api_key", ""))
+            if prov == "local":
+                dica.set_text("Local: sem chave. Rode o Ollama (ollama serve) ou LM Studio. Ex. modelo: llama3.1")
+            elif prov == "gemini":
+                dica.set_text("Gemini: chave em aistudio.google.com/apikey. Modelo sugerido: gemini-2.0-flash")
+            elif prov == "outro":
+                dica.set_text("Qualquer endpoint OpenAI-compatível (inclui Azure OpenAI). Preencha endereço + modelo + chave.")
+            else:
+                dica.set_text("")
+        preencher_campos(prov_atual)
+
+        def on_change(d, _):
+            preencher_campos(ORDEM[d.get_selected()])
+        dd.connect("notify::selected", on_change)
+
+        dlg.set_extra_child(box)
+        dlg.add_response("cancel", "Cancelar"); dlg.add_response("save", "Salvar")
+        dlg.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
+        dlg.set_default_response("save")
+
+        def resp(d, r):
+            if r == "save":
+                prov = ORDEM[dd.get_selected()]
+                perfis[prov] = {
+                    "base": ebase.get_text().strip(),
+                    "modelo": emod.get_text().strip() or PRESETS[prov]["modelo"],
+                    "api_key": ekey.get_text().strip(),
+                }
+                cfg["provedor"] = prov; cfg["perfis"] = perfis
+                salvar_cfg(cfg)
+                self._atualizar_rodape()
+                self.bolha(f"Pronto! Agora falo via {PRESETS[prov]['nome']}. 🌱", "ia")
+            d.destroy()
+        dlg.connect("response", resp)
+        dlg.present()
+
+
+if __name__ == "__main__":
+    Assistente().run()

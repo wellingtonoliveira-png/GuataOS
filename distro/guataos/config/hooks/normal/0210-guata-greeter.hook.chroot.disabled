@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+# Guatá Greeter (LightDM) como login padrão; GDM fica de reserva
+systemctl disable gdm3 2>/dev/null || true
+systemctl disable gdm 2>/dev/null || true
+systemctl enable lightdm 2>/dev/null || true
+echo "/usr/sbin/lightdm" > /etc/X11/default-display-manager
+echo "set shared/default-x-display-manager lightdm" | debconf-communicate 2>/dev/null || true

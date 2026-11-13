@@ -1,0 +1,20 @@
+#!/bin/bash
+# Guatá Files — varredura antivírus (ClamAV). Infectados vão para quarentena.
+# Uso: guata-files-scan scan   |   guata-files-scan status
+set -uo pipefail
+BASE=/srv/guata-files; QUAR="$BASE/.quarentena"; RES=/run/guata-files-scan.txt; LOG=/var/log/guata-files-scan.log
+mkdir -p "$QUAR"
+case "${1:-scan}" in
+  scan)
+    if ! command -v clamscan >/dev/null 2>&1; then echo "TS=$(date +%s)">"$RES"; echo "ERRO=clamav não instalado">>"$RES"; exit 1; fi
+    echo "===== $(date) =====" >> "$LOG"
+    out=$(clamscan -ri --exclude-dir='/\.snapshots' --exclude-dir='/\.quarentena' --move="$QUAR" "$BASE" 2>>"$LOG")
+    echo "$out" >> "$LOG"
+    inf=$(printf '%s\n' "$out" | grep -c ' FOUND$' || true)
+    { echo "TS=$(date +%s)"; echo "INF=$inf"
+      printf '%s\n' "$out" | grep ' FOUND$' | sed 's/: .* FOUND$//'
+    } > "$RES"
+    ;;
+  status) cat "$RES" 2>/dev/null || true ;;
+  *) echo "uso: guata-files-scan scan|status"; exit 1;;
+esac

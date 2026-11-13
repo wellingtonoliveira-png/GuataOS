@@ -1,0 +1,15 @@
+Package: guata-print
+Version: 1.0.0
+Section: net
+Priority: optional
+Architecture: all
+Depends: cups, cups-client, python3, openssl
+Recommends: samba, printer-driver-all, cups-pdf, avahi-daemon
+Maintainer: Wellsystem / Guatá <wellington@sopremabrasil.com.br>
+Homepage: https://guataos.com.br
+Description: Guatá Print — servidor de impressão soberano, fácil como um app
+ Transforma o guataOS em servidor de impressão: adiciona impressoras,
+ compartilha para a rede e para o domínio (Windows), faz bilhetagem
+ (quem imprimiu quanto), cotas por usuário/grupo e relatórios de custo.
+ Motor CUPS + Samba por baixo, traduzido em telas simples. BETA.
+ Um produto Wellsystem.

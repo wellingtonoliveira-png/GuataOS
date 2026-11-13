@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Energia
+Comment=⚡ perfis de energia
+Exec=guata-energia
+Icon=/usr/share/icons/guata/app-energia.png
+Terminal=false
+Categories=System;
+StartupWMClass=br.com.guataos.Energia

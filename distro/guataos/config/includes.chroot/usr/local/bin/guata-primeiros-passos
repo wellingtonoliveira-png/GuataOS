@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""guataOS — Primeiros Passos (boas-vindas). Zero comando, tudo clique."""
+import gi, os, sys, subprocess, shutil
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk
+
+HOME = os.path.expanduser("~")
+FLAG = os.path.join(HOME, ".config/guata/primeiros-passos-ok")
+ICON = "/usr/share/icons/guata/mascote-acenando.png"
+SOM  = "/usr/share/sounds/guata/abertura.oga"
+
+CSS = """
+window,.fundo{background:#f5f7f3}
+.titulo{font-size:30px;font-weight:850;color:#13231c}
+.lead{font-size:17px;color:#55665d}
+.lead b{color:#2f8f66}
+.b{font-size:15px;font-weight:800;border-radius:13px;padding:13px 18px;background:#fff;border:2px solid #e2e9e2;color:#20302a}
+.b:hover{background:#f3f9f5;border-color:#bfe0cd}
+.b.pri{background:#2f8f66;color:#fff;border-color:transparent}
+.b.pri:hover{background:#1f7a55}
+"""
+
+def _run(*cmds):
+    for c in cmds:
+        try: subprocess.Popen(c); return
+        except Exception: continue
+
+class Welcome(Adw.Application):
+    def __init__(self): super().__init__(application_id="br.com.guataos.PrimeirosPassos")
+    def do_activate(self):
+        css=Gtk.CssProvider(); css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, 1000)
+        win=Adw.ApplicationWindow(application=self); win.set_title("Bem-vindo ao guataOS")
+        win.set_default_size(720, 460); win.add_css_class("fundo")
+        tv=Adw.ToolbarView(); hb=Adw.HeaderBar(); hb.set_title_widget(Gtk.Label(label="Bem-vindo ao guataOS"))
+        tv.add_top_bar(hb); win.set_content(tv)
+
+        body=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=22,
+                     margin_top=20, margin_start=28, margin_end=28, margin_bottom=10)
+        tv.set_content(Gtk.Box(orientation=Gtk.Orientation.VERTICAL))
+        tv.get_child().append(body)
+
+        if os.path.exists(ICON):
+            img=Gtk.Image.new_from_file(ICON); img.set_pixel_size(200); img.set_valign(Gtk.Align.CENTER); body.append(img)
+        col=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, hexpand=True, valign=Gtk.Align.CENTER)
+        t=Gtk.Label(label="Opa, seja bem-vindo! 🥾", xalign=0); t.add_css_class("titulo"); col.append(t)
+        lead=Gtk.Label(xalign=0); lead.set_wrap(True); lead.add_css_class("lead")
+        lead.set_markup("O <b>guataOS</b> é feito pra ser <b>fácil e bonito</b> — tudo no clique, sem comando.\nPor onde quer começar?")
+        col.append(lead)
+        body.append(col)
+
+        btns=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, halign=Gtk.Align.CENTER,
+                     margin_start=28, margin_end=28, margin_bottom=22, margin_top=4)
+        btns.set_homogeneous(False)
+        def mk(lbl, cb, pri=False):
+            b=Gtk.Button(label=lbl); b.add_css_class("b");
+            if pri: b.add_css_class("pri")
+            b.connect("clicked", cb); return b
+        btns.append(mk("🎒 Abrir a Mochila", lambda *_: _run(["guata-central"],["paje"])))
+        btns.append(mk("🛍️ Loja (Ocara)", lambda *_: _run(["ocara"], ["gnome-software"])))
+        btns.append(mk("🔊 Testar o som", lambda *_: _run(["canberra-gtk-play","-f",SOM], ["paplay",SOM])))
+        btns.append(mk("Começar a usar", lambda *_: self.fechar(win), pri=True))
+        tv.get_child().append(btns)
+
+        win.present()
+
+    def fechar(self, win):
+        try:
+            os.makedirs(os.path.dirname(FLAG), exist_ok=True); open(FLAG,"w").close()
+        except Exception: pass
+        win.close()
+
+if __name__ == "__main__":
+    if os.path.exists(FLAG) and "--forcar" not in sys.argv:
+        sys.exit(0)
+    Welcome().run(None)

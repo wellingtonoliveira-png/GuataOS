@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+V="0.20"
+for f in /etc/os-release /usr/lib/os-release; do
+  [ -f "$f" ] || continue
+  sed -i "s/^VERSION_ID=.*/VERSION_ID=\"$V\"/" "$f" 2>/dev/null || true
+  sed -i "s/^VERSION=.*/VERSION=\"$V\"/" "$f" 2>/dev/null || true
+  sed -i "s|^PRETTY_NAME=.*|PRETTY_NAME=\"Guatá OS $V\"|" "$f" 2>/dev/null || true
+done

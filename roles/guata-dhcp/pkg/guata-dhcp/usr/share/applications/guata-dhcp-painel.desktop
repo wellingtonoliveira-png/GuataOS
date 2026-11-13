@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Guatá DHCP — Painel
+Comment=Servidor de IPs (escopos, concessões, reservas)
+Exec=xdg-open https://localhost:8082/
+Icon=guata-dhcp
+Terminal=false
+Categories=System;Settings;Network;
+Keywords=guata;servidor;painel;
+StartupNotify=true

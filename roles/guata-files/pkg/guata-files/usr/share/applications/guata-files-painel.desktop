@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Guatá Arquivos — Painel
+Comment=Servidor de arquivos (pastas, níveis, snapshots)
+Exec=xdg-open https://localhost:8080/
+Icon=guata-files
+Terminal=false
+Categories=System;Settings;Network;
+Keywords=guata;servidor;painel;
+StartupNotify=true

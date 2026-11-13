@@ -1,0 +1,24 @@
+#!/bin/bash
+clear; G=$'\e[1;32m'; B=$'\e[1;37m'; D=$'\e[0;90m'; N=$'\e[0m'; Y=$'\e[1;33m'
+echo
+if command -v figlet >/dev/null 2>&1; then echo "${G}$(figlet -w 80 'Guata ID')${N}"
+else echo "${G}======  G U A T Á   A D  ======${N}"; fi
+echo "${D}     Servidor de Domínio soberano — Samba AD DC, com a cara do Brasil${N}"; echo
+if grep -q "boot=live" /proc/cmdline 2>/dev/null; then
+  echo "  ${Y}Modo demonstração (pendrive).${N} Para usar de verdade, instale no disco."
+  echo; read -p "  ENTER para INSTALAR no disco (ou Ctrl+C)... " _; guata-id-instalar; exit 0
+fi
+IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+if [ -f /etc/guata-id/provisionado ]; then
+  . /etc/guata-id/dominio.conf 2>/dev/null
+  SVC=$(systemctl is-active samba-ad-dc 2>/dev/null)
+  echo "  ${B}Domínio:${N} ${REALM:-?}     ${B}Servidor:${N} ${HOST:-?}.${REALM:-?}     ${B}AD:${N} ${SVC}"
+  echo
+  echo "  ${Y}>> Painel bonito no navegador:  http://${IP}${N}"
+  echo "  ${D}(ou, no terminal: guata-id painel)${N}"
+else
+  echo "  ${Y}Este servidor ainda não tem domínio. Vamos criar (±3 min).${N}"
+  echo
+  read -p "  ENTER para começar (ou Ctrl+C para sair)... " _; guata-id-provisionar
+fi
+echo

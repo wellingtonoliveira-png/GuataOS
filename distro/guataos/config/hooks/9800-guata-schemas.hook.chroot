@@ -1,0 +1,5 @@
+#!/bin/sh
+# Recompila os gsettings por ÚLTIMO (garante que os overrides do Guatá entrem)
+glib-compile-schemas /usr/share/glib-2.0/schemas 2>&1 | grep -iE "error|override" || true
+glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
+echo "Guata: schemas recompilados (branding)."

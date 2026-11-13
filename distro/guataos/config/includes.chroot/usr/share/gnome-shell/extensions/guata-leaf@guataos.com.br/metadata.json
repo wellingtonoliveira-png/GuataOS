@@ -1,0 +1,7 @@
+{
+  "uuid": "guata-leaf@guataos.com.br",
+  "name": "Guatá — Folha no Menu",
+  "description": "Coloca a folha do Guatá no canto do painel; clicar abre as Atividades.",
+  "shell-version": ["48"],
+  "version": 1
+}

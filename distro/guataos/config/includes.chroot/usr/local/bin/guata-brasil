@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Brasil — descobrir o Brasil enquanto trabalha. Biomas e paisagens.
+Conteúdo factual e enxuto; fontes oficiais (IBGE/ICMBio/MMA/INPE) p/ dados detalhados."""
+import gi, os, glob, datetime
+gi.require_version("Gtk","4.0"); gi.require_version("Adw","1")
+from gi.repository import Gtk, Adw, Gdk, Gio, GdkPixbuf, GLib
+BG="/usr/share/backgrounds/guata"
+INFO={
+ "amazonia":("Amazônia","Maior floresta tropical do mundo e maior bioma brasileiro. Abriga grande parte da biodiversidade do planeta e a maior bacia hidrográfica."),
+ "cerrado":("Cerrado","A savana mais biodiversa do mundo. 'Berço das águas' — nasce aqui boa parte dos grandes rios brasileiros."),
+ "caatinga":("Caatinga","Único bioma exclusivamente brasileiro. Vegetação adaptada ao semiárido, cheia de vida mesmo na seca."),
+ "mataatlantica":("Mata Atlântica","Floresta ao longo da costa, uma das mais ameaçadas e biodiversas. Onde vive a maior parte da população."),
+ "pantanal":("Pantanal","Maior planície alagável do mundo. Espetáculo de fauna — aves, jacarés, capivaras e onças."),
+ "pampa":("Pampa","Campos do sul do Brasil. Coxilhas, capões e uma rica diversidade de gramíneas e aves."),
+ "manguezais":("Manguezais","Berçário da vida marinha, entre a terra e o mar. Protegem a costa e guardam muito carbono."),
+ "mantiqueira":("Serra da Mantiqueira","Montanhas entre SP, MG e RJ. Araucárias, quaresmeiras e mares de morros com névoa."),
+ "lencois":("Lençóis Maranhenses","Dunas brancas com lagoas de água doce azul-turquesa na estação das chuvas. Único no mundo."),
+ "iguacu":("Foz do Iguaçu","Uma das maiores quedas d'água do planeta, na Mata Atlântica. Patrimônio Natural da Humanidade."),
+ "noronha":("Fernando de Noronha","Arquipélago vulcânico, santuário de vida marinha. Águas cristalinas e o Morro Dois Irmãos."),
+}
+CSS="""
+.janela{background:#eef3ea}.janela{background:#f6f3ec}
+headerbar{background:#efe7d7;border:none;box-shadow:none}headerbar .title{font-weight:850;color:#5a4f3c}
+.titulo{font-size:24px;font-weight:850;color:#13231c}.sub{color:#7f8c7e;font-size:14px}
+.dia{background:linear-gradient(120deg,#e4f2ea,#fff);border:1px solid #e6ded0;border-radius:18px;padding:0;overflow:hidden}
+.card{background:#fff;border:1px solid #e6ded0;border-radius:14px;overflow:hidden;padding:0}
+.card:hover{border-color:#9ed4b7}
+.nm{font-size:14px;font-weight:800;color:#13231c;padding:9px 11px 2px}
+.ds{font-size:11.5px;color:#7f8c7e;padding:0 11px 10px}
+.b{font-size:13px;font-weight:800;background:#2f8f66;color:#fff;border:none;border-radius:10px;padding:8px 14px}.b:hover{background:#1f7a55}
+.nota{background:#e4f2ea;border-radius:12px;padding:10px 14px;color:#26332a;font-size:12px}
+@media(prefers-color-scheme:dark){.janela{background:#0a120d}.janela{background:#0e1712}headerbar{background:#152219}
+ .titulo{color:#fff}.sub,.ds{color:#8ea89c}.card{background:#14201a;border-color:#233029}.nm{color:#e7f1ec}.nota{background:#16271e;color:#cfe}.dia{background:linear-gradient(120deg,#16271e,#14201a);border-color:#233029}}
+"""
+class Brasil(Adw.Application):
+    def __init__(self):super().__init__(application_id="br.com.guataos.Brasil")
+    def do_activate(self):
+        css=Gtk.CssProvider();css.load_from_data(CSS.encode());Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(),css,1000)
+        self.bg=Gio.Settings.new("org.gnome.desktop.background")
+        self.win=Adw.ApplicationWindow(application=self);self.win.set_title("Brasil");self.win.set_default_size(860,720);self.win.add_css_class("janela")
+        tv=Adw.ToolbarView();hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True);hb.set_title_widget(Gtk.Label(label="🗺️ Brasil"));tv.add_top_bar(hb);self.win.set_content(tv)
+        sc=Gtk.ScrolledWindow(hexpand=True,vexpand=True);tv.set_content(sc)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=12,margin_top=18,margin_start=24,margin_end=24,margin_bottom=20);sc.set_child(root)
+        t=Gtk.Label(label="Descubra o Brasil enquanto trabalha",xalign=0);t.add_css_class("titulo");root.append(t)
+        # bioma do dia (determinístico por data)
+        keys=sorted(INFO.keys())
+        dia=keys[datetime.date.today().toordinal()%len(keys)]
+        root.append(self._dia(dia))
+        root.append(self._lbl("Todos os biomas e paisagens","sub"))
+        grid=Gtk.FlowBox();grid.set_selection_mode(Gtk.SelectionMode.NONE);grid.set_max_children_per_line(4);grid.set_column_spacing(12);grid.set_row_spacing(12);grid.set_homogeneous(True)
+        for k in keys:grid.append(self._card(k))
+        root.append(grid)
+        nota=self._lbl("","nota");nota.set_markup("🌱 Resumos factuais e enxutos. Para dados detalhados (área, espécies, conservação), o Guatá liga para fontes oficiais: IBGE, ICMBio, MMA e INPE.");root.append(nota)
+        self.win.present()
+    def _lbl(self,txt,cls):l=Gtk.Label(label=txt,xalign=0);l.add_css_class(cls);l.set_wrap(True);return l
+    def _path(self,k):
+        for p in (f"{BG}/{k}.png",f"{BG}/{k}.jpg"):
+            if os.path.exists(p):return p
+        return None
+    def _pic(self,path,w,h):
+        try:
+            pb=GdkPixbuf.Pixbuf.new_from_file_at_scale(path,w,h,False);return Gtk.Picture.new_for_pixbuf(pb)
+        except Exception:return Gtk.Box()
+    def _dia(self,k):
+        nome,desc=INFO[k];box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);box.add_css_class("dia")
+        p=self._path(k)
+        if p:pic=self._pic(p,820,220);pic.set_size_request(-1,200);box.append(pic)
+        inner=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=4,margin_top=12,margin_start=16,margin_end=16,margin_bottom=14)
+        tag=Gtk.Label(label="BIOMA DO DIA",xalign=0);tag.add_css_class("sub")
+        n=Gtk.Label(label=nome,xalign=0);n.add_css_class("titulo")
+        d=Gtk.Label(label=desc,xalign=0);d.add_css_class("sub");d.set_wrap(True)
+        b=Gtk.Button(label="🖼️ Usar como papel de parede");b.add_css_class("b");b.set_halign(Gtk.Align.START);b.set_margin_top(8);b.connect("clicked",self._wall,k)
+        for x in (tag,n,d,b):inner.append(x)
+        box.append(inner);return box
+    def _card(self,k):
+        nome,desc=INFO[k];b=Gtk.Button();b.add_css_class("card");b.connect("clicked",self._wall,k)
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        p=self._path(k)
+        if p:box.append(self._pic(p,200,120))
+        n=Gtk.Label(label=nome,xalign=0);n.add_css_class("nm");box.append(n)
+        d=Gtk.Label(label=desc[:60]+"…",xalign=0);d.add_css_class("ds");d.set_wrap(True);box.append(d)
+        b.set_child(box);return b
+    def _wall(self,_b,k):
+        p=self._path(k)
+        if p:
+            uri=GLib.filename_to_uri(p,None)
+            self.bg.set_string("picture-uri",uri);self.bg.set_string("picture-uri-dark",uri);self.bg.set_string("picture-options","zoom")
+            d=Adw.MessageDialog(transient_for=self.win,heading=f"{INFO[k][0]} na sua tela 🌿",body="Papel de parede trocado!");d.add_response("ok","Que lindo");d.present()
+if __name__=="__main__":Brasil().run(None)

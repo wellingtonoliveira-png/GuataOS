@@ -1,0 +1,114 @@
+#!/bin/bash
+# Guatá Files — origens de armazenamento (discos locais, partições Windows NTFS, NAS).
+# Honesto: em NTFS/exFAT/FAT não há ACL POSIX fina (tiers) — acesso é no nível do compartilhamento.
+# Uso:
+#   guata-files-discos listar                  -> JSON das partições/discos
+#   guata-files-discos origens                 -> origens registradas (nome|tipo|disp|mount|fs)
+#   guata-files-discos usar <dev> <nome>       -> monta partição e registra como origem
+#   guata-files-discos soltar <nome>           -> desmonta e remove a origem
+#   guata-files-discos nas <nome> <//host/comp> <user> <senha>  -> monta CIFS e registra
+set -u
+ETC=/etc/guata-files; REG=$ETC/origens.conf
+DROOT=/srv/guata-discos; NROOT=/srv/guata-redes
+mkdir -p "$ETC" "$DROOT" "$NROOT"; touch "$REG"
+
+san(){ echo "$1" | sed 's/[^A-Za-z0-9_ -]//g' | sed 's/ /_/g' | cut -c1-48; }
+
+listar(){
+  # type part|disk, com fs/tamanho/uso/mount/label. Marca se é disco de sistema.
+  local rootsrc; rootsrc=$(findmnt -no SOURCE / 2>/dev/null)
+  lsblk -J -b -o NAME,PATH,FSTYPE,SIZE,FSUSED,MOUNTPOINT,LABEL,TYPE,RM,MODEL,PKNAME 2>/dev/null \
+  | python3 -c '
+import json,sys
+try: d=json.load(sys.stdin)
+except Exception: d={"blockdevices":[]}
+root="'"$rootsrc"'"
+out=[]
+def walk(n):
+    t=n.get("type"); fs=n.get("fstype")
+    if t in ("part","disk","lvm","crypt") and fs and fs not in ("swap","LVM2_member","crypto_LUKS"):
+        sysd = (n.get("path")==root)
+        out.append({"nome":n.get("name"),"path":n.get("path"),"fs":fs,
+            "tam":n.get("size") or 0,"usado":n.get("fsused") or 0,
+            "mount":n.get("mountpoint") or "","label":n.get("label") or "",
+            "removivel":bool(n.get("rm")),"modelo":n.get("model") or "","sistema":sysd})
+    for c in n.get("children",[]) or []: walk(c)
+for b in d.get("blockdevices",[]): walk(b)
+print(json.dumps(out))
+'
+}
+
+usar(){ # dev nome
+  local dev="$1" nome; nome=$(san "$2")
+  [ -b "$dev" ] || { echo "ERRO: dispositivo inválido"; return 1; }
+  [ -n "$nome" ] || { echo "ERRO: nome inválido"; return 1; }
+  # não deixa montar o disco do sistema
+  local rootsrc; rootsrc=$(findmnt -no SOURCE / 2>/dev/null)
+  [ "$dev" = "$rootsrc" ] && { echo "ERRO: é o disco do sistema"; return 1; }
+  local fs uuid mp; fs=$(lsblk -no FSTYPE "$dev" | head -1); uuid=$(lsblk -no UUID "$dev" | head -1)
+  mp="$DROOT/$nome"; mkdir -p "$mp"
+  # já registrado?
+  grep -q "^$nome|" "$REG" && { echo "ERRO: já existe origem '$nome'"; return 1; }
+  local opts type
+  case "$fs" in
+    ntfs|ntfs3) type="ntfs-3g"; opts="uid=0,gid=0,umask=002,windows_names,nofail";;
+    exfat|vfat|fat|msdos) type="$fs"; opts="uid=0,gid=0,umask=002,nofail";;
+    *) type="$fs"; opts="defaults,nofail";;
+  esac
+  [ "$fs" = ntfs ] && command -v ntfs-3g >/dev/null 2>&1 || true
+  if ! mount -t "$type" -o "$opts" "$dev" "$mp" 2>/tmp/gfd.err; then
+    # fallback mount automático
+    mount "$dev" "$mp" 2>>/tmp/gfd.err || { echo "ERRO: $(cat /tmp/gfd.err)"; return 1; }
+  fi
+  # persiste no fstab (por UUID se houver), com marcador
+  if [ -n "$uuid" ]; then
+    sed -i "\#guata-files-origem:$nome#d" /etc/fstab
+    echo "UUID=$uuid $mp $type $opts 0 0  # guata-files-origem:$nome" >> /etc/fstab
+  fi
+  echo "$nome|disco|$dev|$mp|$fs" >> "$REG"
+  echo "OK $mp $fs"
+}
+
+soltar(){ # nome
+  local nome; nome=$(san "$1")
+  local mp; mp=$(grep "^$nome|" "$REG" | head -1 | cut -d'|' -f4)
+  [ -n "$mp" ] && { umount "$mp" 2>/dev/null; rmdir "$mp" 2>/dev/null; }
+  sed -i "\#guata-files-origem:$nome#d" /etc/fstab
+  grep -v "^$nome|" "$REG" > "$REG.tmp" && mv "$REG.tmp" "$REG"
+  echo "OK"
+}
+
+nas(){ # nome //host/comp user senha
+  local nome rem user pass; nome=$(san "$1"); rem="$2"; user="${3:-}"; pass="${4:-}"
+  [ -n "$nome" ] || { echo "ERRO: nome inválido"; return 1; }
+  # rejeita qualquer caractere de controle/espaço antes de tudo (evita injeção no /etc/fstab)
+  case "$rem" in *[$'\n\r\t ,#']*) echo "ERRO: caminho inválido"; return 1;; esac
+  # validação estrita da string INTEIRA (bash [[ =~ ]] testa tudo, não linha a linha)
+  if ! [[ "$rem" =~ ^//[A-Za-z0-9._-]+/[A-Za-z0-9._$-]+(/[A-Za-z0-9._$-]+)*$ ]]; then
+    echo "ERRO: caminho inválido (use //servidor/compartilhamento, sem espaços)"; return 1; fi
+  # usuário/senha não podem conter nova linha (quebraria o arquivo de credenciais)
+  case "$user$pass" in *[$'\n\r']*) echo "ERRO: usuário/senha inválidos"; return 1;; esac
+  grep -q "^$nome|" "$REG" && { echo "ERRO: já existe origem '$nome'"; return 1; }
+  command -v mount.cifs >/dev/null 2>&1 || { echo "ERRO: cifs-utils não instalado (apt install cifs-utils)"; return 1; }
+  local mp cred; mp="$NROOT/$nome"; mkdir -p "$mp"
+  cred="$ETC/.cred-$nome"
+  printf 'username=%s\npassword=%s\n' "$user" "$pass" > "$cred"; chmod 600 "$cred"
+  local opts="credentials=$cred,uid=0,gid=0,file_mode=0664,dir_mode=0775,nofail,_netdev"
+  [ -z "$user" ] && opts="guest,uid=0,gid=0,file_mode=0664,dir_mode=0775,nofail,_netdev"
+  if ! mount -t cifs "$rem" "$mp" -o "$opts" 2>/tmp/gfd.err; then
+    echo "ERRO: $(cat /tmp/gfd.err)"; rm -f "$cred"; return 1
+  fi
+  sed -i "\#guata-files-origem:$nome#d" /etc/fstab
+  echo "$rem $mp cifs $opts 0 0  # guata-files-origem:$nome" >> /etc/fstab
+  echo "$nome|nas|$rem|$mp|cifs" >> "$REG"
+  echo "OK $mp"
+}
+
+case "${1:-listar}" in
+  listar) listar;;
+  origens) cat "$REG";;
+  usar) usar "${2:-}" "${3:-}";;
+  soltar) soltar "${2:-}";;
+  nas) nas "${2:-}" "${3:-}" "${4:-}" "${5:-}";;
+  *) echo "uso: guata-files-discos listar|origens|usar|soltar|nas"; exit 1;;
+esac

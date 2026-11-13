@@ -1,0 +1,163 @@
+{
+  "_nota": "Todo texto que a Lumi diz vive aqui, não em código. Revisar tom exige ler as frases lado a lado — ver docs/ARQUITETURA_FLUTTER.md §3 e MOTOR_FENIX_v2.md §2.3. Regra: nada de 'você deveria ter', nenhuma promessa de resultado, nenhuma exclamação em momento ruim, e a Lumi lidera pelo estado da pessoa, não pelo saldo.",
+  "hoje": {
+    "sereno": [
+      "Seu plano está saudável hoje. Bom momento para guardar um pouco — mesmo que seja pouco.",
+      "Hoje dá para respirar. O essencial está coberto e ainda sobra folga.",
+      "Está tranquilo. Aproveita para deixar algo separado para o mês que vem."
+    ],
+    "atencao": [
+      "A semana está sob controle, sem folga. Hoje a missão é pequena e importante.",
+      "Está justo, mas está de pé. Vamos manter o registro em dia.",
+      "Dá para atravessar. Só não vamos abrir mão do essencial."
+    ],
+    "pressao": [
+      "Vai apertar, e tudo bem saber disso. Vamos proteger o essencial primeiro.",
+      "O mês está difícil. Uma coisa de cada vez, começando pelo que não pode faltar.",
+      "Está pesado. Vamos olhar só os próximos dias, não o mês inteiro."
+    ],
+    "emergencia": [
+      "Hoje não precisamos resolver sua vida inteira. Só atravessar esta semana.",
+      "Vamos garantir moradia e comida. O resto espera.",
+      "Um passo por vez. O primeiro é saber que o essencial está de pé."
+    ]
+  },
+  "missao": {
+    "sereno": "Guardar R$ 10 na reserva",
+    "atencao": "Registrar todos os gastos de hoje",
+    "pressao": "Listar o que vence esta semana",
+    "emergencia": "Confirmar que moradia e comida estão garantidas"
+  },
+  "limite": {
+    "positivo": "Cabe por dia, sem apertar o mês",
+    "negativo": "Falta este valor por dia para fechar o mês"
+  },
+  "me_segura": {
+    "abertura": "Vamos entender o impacto antes de decidir. Você continua no controle.",
+    "convite_emocao": "Antes dos números: como você está agora?",
+    "convite_motivacao": "O que motivou essa compra?",
+    "convite_respirar": "Vamos respirar juntos antes de decidir.",
+    "adiou": "Você parou, pensou e escolheu esperar. Decisão consciente.",
+    "comprou": "Essa compra aconteceu. Vamos ajustar a rota — sem culpa, sem sermão.",
+    "mes_nao_fecha": "O mês já está apertado. Se você comprar, podemos ajustar a rota.",
+    "emocao_ansioso": "Ansiedade pode deixar decisões financeiras mais difíceis. Vamos respirar antes de escolher.",
+    "emocao_triste": "Muitas pessoas gastam tentando aliviar um dia difícil. Vamos pensar juntos antes de decidir.",
+    "emocao_cansado": "Cansaço diminui a paciência para pensar. Só por isso vale respirar.",
+    "emocao_estressado": "Estresse empurra para decisões rápidas. Você não precisa decidir agora.",
+    "emocao_feliz": "Que bom que está bem. Vamos só conferir se essa compra cabe no plano.",
+    "emocao_comemorando": "Comemorar é importante. Só vamos garantir que a comemoração não vire preocupação amanhã.",
+    "emocao_entediado": "Tédio é um dos maiores gatilhos de compra. Saber disso já muda a decisão.",
+    "emocao_tranquilo": "Bom momento para decidir. Vamos ver os números juntos.",
+    "contexto_cabe": "Essa compra cabe no seu plano. A decisão é sua.",
+    "contexto_aperta": "Essa compra aperta o mês, mas não é o fim do mundo. Se comprar, ajustamos a rota.",
+    "contexto_nao_cabe": "O mês já não fecha. Se você comprar, vamos precisar reorganizar."
+  },
+  "entrevista": {
+    "respiro": "Antes de falar de dinheiro: como você está?",
+    "chao": "Agora o chão. Nada aqui é obrigatório — pode pular o que não quiser responder.",
+    "essencial": "O que não pode faltar. É com isso que eu calculo o resto.",
+    "peso": "Essa parte é a mais difícil de contar. Vai no seu ritmo.",
+    "intocavel": "O que não pode faltar de jeito nenhum este mês?",
+    "porque": "Se em um ano isso estivesse resolvido, o que mudaria na sua vida?",
+    "pular": "Sem problema. Podemos voltar nisso quando você quiser."
+  },
+  "preciso_falar": {
+    "abertura": "Como você está agora?",
+    "aviso_honesto": "Eu não sou uma pessoa. Não vou entender tudo que você escrever. Mas o que você escrever aqui fica só no seu aparelho, ninguém julga, e eu conheço alguns caminhos.",
+    "recebido": "Obrigada por me contar. Isso fica aqui.",
+    "normaliza": "Muita gente passa por isso e não fala com ninguém.",
+    "besteira": "Tudo bem. O que aconteceu?",
+    "besteira_2": "Já aconteceu, e não dá para voltar atrás. O que dá para fazer é impedir que vire um problema maior."
+  },
+  "gasto": {
+    "convite": "Me conta o que gastou — joga tudo junto, sem ordem.",
+    "dica": "Exemplo: 10 pão 5 bala 300 sapato 150 mc",
+    "entendi": "Entendi. Olha o que eu separei:",
+    "salvo": "Registrado. Esses gastos já entram no seu plano.",
+    "vazio": "Não achei nenhum valor. Tenta assim: 10 pão 5 bala 300 sapato"
+  },
+  "diario": {
+    "convite": "Como está sendo o seu dia?",
+    "salvo": "Guardado. Só você lê isso."
+  },
+  "divida": {
+    "abertura": "Mapear o que você deve é o primeiro passo. Não é fácil, mas é importante.",
+    "nenhuma": "Nenhuma dívida cadastrada.\nQuando estiver pronto, toque no + para mapear.",
+    "pagamento": "Cada pagamento te aproxima de sair dessa. Tá no caminho.",
+    "quitada": "Uma dívida a menos. Isso é enorme.",
+    "coragem": "Anotar uma dívida exige coragem. Isso já conta."
+  },
+  "rota": {
+    "titulo": "Recalculando rota",
+    "sem_culpa": "Já aconteceu. Não vamos gastar energia com isso.",
+    "aperta": "O limite do dia cai para {limite} nos próximos {dias} dias.",
+    "aperta_2": "Dois dias sem gasto variável já devolvem parte do fôlego.",
+    "nao_fecha": "Falta {falta} para chegar ao fim do período — vamos olhar o que dá para adiar.",
+    "nao_fecha_2": "Confirmar que moradia e comida estão garantidas antes de qualquer outra conta.",
+    "cabe": "O limite do dia passa a ser {limite} — segue dentro do plano.",
+    "cabe_2": "Nada precisa mudar. Seguimos."
+  },
+  "fase": {
+    "despertar": "Você deu o primeiro passo. Isso já é mais do que a maioria faz.",
+    "mapeamento": "Agora você enxerga o terreno. Quanto mais você registra, mais forte fica.",
+    "resistencia": "Você está firme. A fase mais difícil é essa, e você está aqui.",
+    "renascimento": "A fênix renasce. Você provou que consegue.",
+    "subiu": "Você avançou de fase. Novas missões desbloqueadas.",
+    "missao_completa": "Missão cumprida. Cada passo conta."
+  },
+  "crise": {
+    "acolhimento": "Não precisa resolver tudo agora. Vamos cuidar só do essencial.",
+    "respirar": "Respira comigo. Inspira... segura... solta devagar.",
+    "cvv": "Se precisar falar com alguém agora, o CVV atende 24h: ligue 188. É grátis e sigiloso.",
+    "proximos_passos": "Um passo por vez. Primeiro o que não pode faltar.",
+    "esperanca": "Muita gente já esteve aqui e encontrou caminho. Você não está sozinho."
+  },
+  "sobre": {
+    "descricao": "FÊNIX é um projeto social gratuito da WellSystem, criado para ajudar pessoas em reconstrução financeira. Sem lucro, sem dados, sem promessas.",
+    "licenca": "Este software é gratuito e de uso livre. É proibido clonar, revender, redistribuir como próprio, ou alegar autoria. FÊNIX é e sempre será gratuito.",
+    "creditos": "Criado por Wellington Oliveira — WellSystem\nDesenvolvido com carinho para quem precisa de um novo começo.",
+    "termos_de_uso": "O FENIX e uma ferramenta de organizacao pessoal. Ele nao substitui orientacao financeira profissional, terapia, aconselhamento psicologico, ou qualquer servico especializado.\n\nO app nao garante resultados financeiros. Cada pessoa tem uma situacao unica, e o FENIX serve como apoio, nao como solucao.\n\nA Lumi nao e uma pessoa real. As frases dela sao pre-escritas com cuidado, mas nao substituem conversa com alguem de confianca.\n\nSeus dados ficam exclusivamente no seu aparelho. Se voce apagar o app ou o celular, os dados serao perdidos a menos que voce tenha feito backup.\n\nAo usar o FENIX, voce concorda com estes termos.",
+    "politica_privacidade": "O FENIX nao coleta, transmite, armazena em servidor, ou compartilha nenhum dado pessoal seu.\n\nTudo o que voce registra — gastos, contas, dividas, diario, humor — fica salvo apenas no seu celular, em um banco de dados criptografado.\n\nA chave de criptografia e protegida pelo Android Keystore do seu aparelho. Ninguem, nem mesmo o criador do app, consegue acessar.\n\nO FENIX nao usa internet. Nao tem conta, login, servidor, analytics, rastreadores, ou inteligencia artificial.\n\nNenhum dado sai do seu aparelho. Nunca.\n\nSe voce exportar um backup, o arquivo contera seus dados em texto. Guarde esse arquivo com cuidado."
+  },
+  "checkin": {
+    "bem": "Bom saber. Aproveita o dia.",
+    "preocupado": "Preocupação faz parte. Vamos cuidar do que dá pra cuidar hoje.",
+    "ansioso": "Ansiedade pesa. Vai com calma — um passo de cada vez.",
+    "sobrecarregado": "Dia pesado. Se precisar, o Preciso Falar está ali."
+  },
+  "volta": {
+    "curta": "Que bom te ver.",
+    "longa": "Que bom te ver. Vamos recomeçar de onde dá, sem pressa."
+  },
+  "guia": {
+    "titulo": "Seus primeiros passos",
+    "subtitulo": "Comece por onde quiser. Não tem ordem certa.",
+    "pronto": "Tudo pronto. Agora vou te mostrar por onde começar."
+  },
+  "memoria": {
+    "humor_melhorou": "Semana passada você estava {anterior}. Hoje parece mais tranquilo.",
+    "dia_dificil": "Percebi que {dia} costuma ser mais difícil pra você. Se precisar, estou aqui.",
+    "impulso_apos_estresse": "Percebi que compras por impulso aparecem mais nos seus dias difíceis. Saber disso já ajuda.",
+    "compras_evitadas": "Você já parou pra pensar antes de comprar {total} vezes este mês. Cada pausa conta.",
+    "sequencia": "{dias} dias seguidos usando o FÊNIX. Firme no caminho.",
+    "divida_quitada": "Você quitou uma dívida recentemente. Cada uma a menos é enorme.",
+    "categoria_top": "Percebi que {categoria} é o que mais aparece nos seus impulsos. Saber disso já é um passo."
+  },
+  "companheiro": {
+    "saudacao": [
+      "Estou aqui. Use o que precisar, no seu tempo.",
+      "Sem pressa. Olha o que faz sentido pra hoje.",
+      "O importante está aqui. Vai no seu ritmo.",
+      "Um dia de cada vez. Estou junto."
+    ]
+  },
+  "me_segura_cat": {
+    "compras": "Compras por impulso",
+    "apostas": "apostas",
+    "delivery": "delivery",
+    "marketplace": "marketplace",
+    "parcelamentos": "parcelamentos",
+    "cartao": "cartão de crédito",
+    "assinaturas": "assinaturas"
+  }
+}

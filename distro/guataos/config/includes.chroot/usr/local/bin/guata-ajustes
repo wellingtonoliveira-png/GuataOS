@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Ajustes — personalizar o visual sem terminal, com cara de Guatá.
+Transparência do dock, tamanho dos ícones, som, tema claro/escuro e papel de parede.
+Tudo escreve direto nas configs do GNOME (gsettings), ao vivo."""
+import gi, os, subprocess
+gi.require_version("Gtk","4.0"); gi.require_version("Adw","1")
+from gi.repository import Gtk, Adw, Gdk, Gio, GLib
+
+DOCK="org.gnome.shell.extensions.dash-to-dock"
+IFACE="org.gnome.desktop.interface"
+SND="org.gnome.desktop.sound"
+ICON="/usr/share/icons/guata"
+
+CSS="""
+.janela{background:#eef3ea}
+headerbar{background:#efe7d7;border:none;box-shadow:none}headerbar .title{font-weight:850;color:#5a4f3c}
+.titulo{font-size:24px;font-weight:850;color:#13231c}
+.sub{color:#7f8c7e;font-size:13.5px}
+.card{background:#fff;border:1px solid #e6ded0;border-radius:18px;padding:16px 18px}
+.rotulo{font-size:15px;font-weight:800;color:#20402f}
+.dica{font-size:12px;color:#8aa093}
+.sec{font-size:13px;font-weight:850;color:#2f8f66;letter-spacing:.4px}
+scale trough{min-height:8px;border-radius:8px;background:#dfe9e0}
+scale highlight{background:linear-gradient(90deg,#4bbd86,#2f8f66);border-radius:8px}
+scale slider{background:#fff;border:2px solid #2f8f66;min-width:20px;min-height:20px;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.b{font-size:13.5px;font-weight:800;background:#2f8f66;color:#fff;border:none;border-radius:12px;padding:9px 16px}.b:hover{background:#1f7a55}
+.bo{font-size:13.5px;font-weight:800;background:#fff;color:#20402f;border:1.5px solid #cfe0d4;border-radius:12px;padding:9px 16px}.bo:hover{background:#f2f8f3}
+.cab{background:linear-gradient(120deg,#e4f2ea,#f6f3ec);border:1px solid #e6ded0;border-radius:20px;padding:16px 18px}
+.tagline{color:#2f8f66;font-size:12.5px;font-weight:800}
+@media(prefers-color-scheme:dark){.janela{background:#0e1712}headerbar{background:#152219}
+ .titulo{color:#fff}.sub{color:#8ea89c}.card{background:#14201a;border-color:#233029}.rotulo{color:#e7f1ec}.dica{color:#7f968a}
+ .bo{background:#14201a;color:#e7f1ec;border-color:#2b3a31}.bo:hover{background:#1a271f}
+ scale trough{background:#233029}
+ .cab{background:linear-gradient(120deg,#16271e,#14201a);border-color:#233029}.tagline{color:#58c79a}}
+"""
+
+def has_schema(sid):
+    try: return sid in Gio.Settings.list_schemas()
+    except Exception: return False
+
+class Ajustes(Adw.Application):
+    def __init__(self): super().__init__(application_id="br.com.guataos.Ajustes")
+    def do_activate(self):
+        css=Gtk.CssProvider(); css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(),css,1000)
+        self.iface=Gio.Settings.new(IFACE)
+        self.snd=Gio.Settings.new(SND)
+        self.dock=Gio.Settings.new(DOCK) if has_schema(DOCK) else None
+
+        self.win=Adw.ApplicationWindow(application=self); self.win.set_title("Ajustes"); self.win.add_css_class("janela")
+        self.win.set_default_size(620,760)
+        tv=Adw.ToolbarView(); hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True)
+        hb.set_title_widget(Gtk.Label(label="🎨 Ajustes do Guatá")); tv.add_top_bar(hb); self.win.set_content(tv)
+        sc=Gtk.ScrolledWindow(hexpand=True,vexpand=True); tv.set_content(sc)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=16,margin_top=20,margin_start=22,margin_end=22,margin_bottom=24); sc.set_child(root)
+
+        head=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=16); head.add_css_class("cab")
+        cap=os.path.join(ICON,"mascote-acenando.png")
+        if os.path.exists(cap):
+            im=Gtk.Image.new_from_file(cap); im.set_pixel_size(76); head.append(im)
+        hv=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,valign=Gtk.Align.CENTER,hexpand=True,spacing=2)
+        t=Gtk.Label(label="Deixe do seu jeito",xalign=0); t.add_css_class("titulo"); hv.append(t)
+        su=Gtk.Label(label="Tudo muda na hora — sem mexer em terminal.",xalign=0); su.add_css_class("sub"); su.set_wrap(True); hv.append(su)
+        tg=Gtk.Label(label="tecnologia também pode cuidar \U0001F33F",xalign=0); tg.add_css_class("tagline"); hv.append(tg)
+        head.append(hv); root.append(head)
+
+        # ---- BARRA (dock) ----
+        root.append(self._sec("A BARRA DE BAIXO"))
+        if self.dock:
+            op=self.dock.get_double("background-opacity")
+            self.s_tr=self._slider(root,"Transparência da barra",
+                "Esquerda = mais vidro, direita = mais sólida.",
+                0,100,int(round((1-op)*100)),"%",self._on_transp)
+            ic=self.dock.get_int("dash-max-icon-size")
+            self.s_ic=self._slider(root,"Tamanho dos ícones","",28,72,ic,"px",self._on_icon)
+            # presets
+            cp=Gtk.Box(spacing=8,margin_top=4)
+            for nome,val in (("Vidro",92),("Meio-termo",72),("Sólida",8)):
+                b=Gtk.Button(label=nome); b.add_css_class("bo"); b.connect("clicked",self._preset,val); cp.append(b)
+            root.append(self._card_wrap("Atalhos de transparência",cp))
+            try:
+                fixed=self.dock.get_boolean("dock-fixed")
+                self._switch(root,"Barra sempre visível","Não some quando você abre um programa.",fixed,self._on_fixed)
+            except Exception:
+                pass
+        else:
+            root.append(self._aviso_card("A barra do Guatá (dock) não está ativa agora. Os ajustes de transparência aparecem quando ela estiver ligada."))
+
+        # ---- APARÊNCIA ----
+        root.append(self._sec("APARÊNCIA"))
+        dark=self.iface.get_string("color-scheme")=="prefer-dark"
+        self._switch(root,"Tema escuro","Fundo escuro, mais aconchegante à noite.",dark,self._on_dark)
+
+        # ---- SOM ----
+        root.append(self._sec("SOM"))
+        se=self.snd.get_boolean("event-sounds")
+        self._switch(root,"Sons do sistema","Aquele toque suave do Guatá ao clicar e avisar.",se,self._on_sound)
+
+        # ---- PAPEL DE PAREDE ----
+        root.append(self._sec("PAPEL DE PAREDE"))
+        pp=Gtk.Box(spacing=8)
+        b1=Gtk.Button(label="🗺️ Escolher paisagem do Brasil"); b1.add_css_class("b"); b1.connect("clicked",lambda *_:self._abrir("guata-brasil"))
+        pp.append(b1)
+        root.append(self._card_wrap("Trocar o fundo da tela",pp,"Paisagens reais dos biomas brasileiros."))
+
+        self.win.present()
+
+    # ---------- helpers de UI ----------
+    def _sec(self,txt):
+        l=Gtk.Label(label=txt,xalign=0); l.add_css_class("sec"); l.set_margin_top(6); return l
+    def _card_wrap(self,rotulo,widget,dica=None):
+        c=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8); c.add_css_class("card")
+        r=Gtk.Label(label=rotulo,xalign=0); r.add_css_class("rotulo"); c.append(r)
+        if dica:
+            d=Gtk.Label(label=dica,xalign=0); d.add_css_class("dica"); d.set_wrap(True); c.append(d)
+        c.append(widget); return c
+    def _aviso_card(self,txt):
+        c=Gtk.Box(orientation=Gtk.Orientation.VERTICAL); c.add_css_class("card")
+        d=Gtk.Label(label=txt,xalign=0); d.add_css_class("dica"); d.set_wrap(True); c.append(d); return c
+    def _slider(self,root,rotulo,dica,lo,hi,val,suf,cb):
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=6)
+        row=Gtk.Box(spacing=12)
+        sl=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,lo,hi,1); sl.set_value(val); sl.set_hexpand(True); sl.set_draw_value(False)
+        lab=Gtk.Label(label=f"{val}{suf}"); lab.set_width_chars(5)
+        sl.connect("value-changed",lambda s:(lab.set_label(f"{int(s.get_value())}{suf}"),cb(int(s.get_value()))))
+        row.append(sl); row.append(lab); box.append(row)
+        root.append(self._card_wrap(rotulo,box,dica or None)); return sl
+    def _switch(self,root,rotulo,dica,estado,cb):
+        c=Gtk.Box(spacing=12); c.add_css_class("card")
+        txt=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=2,hexpand=True)
+        r=Gtk.Label(label=rotulo,xalign=0); r.add_css_class("rotulo"); txt.append(r)
+        if dica:
+            d=Gtk.Label(label=dica,xalign=0); d.add_css_class("dica"); d.set_wrap(True); txt.append(d)
+        sw=Gtk.Switch(); sw.set_active(estado); sw.set_valign(Gtk.Align.CENTER); sw.connect("state-set",lambda _s,v:(cb(v),False)[1])
+        c.append(txt); c.append(sw); root.append(c); return sw
+
+    # ---------- ações ----------
+    def _on_transp(self,pct):
+        if not self.dock: return
+        self.dock.set_string("transparency-mode","FIXED")
+        self.dock.set_boolean("customize-alphas",True)
+        op=max(0.0,min(1.0,1-pct/100.0))
+        self.dock.set_double("background-opacity",op)
+        self.dock.set_double("max-alpha",op); self.dock.set_double("min-alpha",max(0.0,op-0.1))
+    def _on_icon(self,px):
+        if self.dock: self.dock.set_int("dash-max-icon-size",px)
+    def _on_fixed(self,v):
+        if not self.dock: return
+        self.dock.set_boolean("dock-fixed",v)
+        if v:
+            self.dock.set_boolean("autohide",False); self.dock.set_boolean("intellihide",False)
+    def _preset(self,_b,val):
+        if hasattr(self,"s_tr"): self.s_tr.set_value(val)
+    def _on_dark(self,v):
+        self.iface.set_string("color-scheme","prefer-dark" if v else "default")
+        try: self.iface.set_string("gtk-theme","Adwaita-dark" if v else "Adwaita")
+        except Exception: pass
+    def _on_sound(self,v):
+        self.snd.set_boolean("event-sounds",v)
+    def _abrir(self,cmd):
+        try: subprocess.Popen([cmd])
+        except Exception:
+            d=Adw.MessageDialog(transient_for=self.win,heading="Paisagens",body="Abra o app “Brasil” na Mochila para escolher o papel de parede.")
+            d.add_response("ok","Entendi"); d.present()
+
+if __name__=="__main__":
+    Ajustes().run(None)

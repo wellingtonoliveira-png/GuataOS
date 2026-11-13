@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Atualizações — update do sistema pela internet, um clique, zero terminal."""
+import gi, subprocess, threading
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+
+CSS = """
+.janela{background:#f4f7f3}
+.titulo{font-size:24px;font-weight:850;color:#13231c}
+.sub{color:#6f8277;font-size:15px}
+.estado{font-size:18px;font-weight:800;color:#20302a}
+.ok{color:#1f9d63}.tem{color:#e08a3c}
+.b{font-size:16px;font-weight:800;border-radius:13px;padding:13px 22px;background:#fff;border:2px solid #e2e9e2;color:#20302a}
+.b:hover{background:#f3f9f5}
+.b.pri{background:#2f8f66;color:#fff;border-color:transparent}.b.pri:hover{background:#1f7a55}
+.log{font-family:monospace;font-size:12px;color:#55665d}
+.card{background:#fff;border:1px solid #e2e9e2;border-radius:16px;padding:20px}
+"""
+
+class Updater(Adw.Application):
+    def __init__(self): super().__init__(application_id="br.com.guataos.Atualizacoes")
+
+    def do_activate(self):
+        css=Gtk.CssProvider(); css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, 1000)
+        self.win=Adw.ApplicationWindow(application=self); self.win.add_css_class("janela"); self.win.set_title("Atualizações"); self.win.set_default_size(620,520)
+        tv=Adw.ToolbarView(); hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True); hb.set_title_widget(Gtk.Label(label="🔄 Atualizações do Guatá"))
+        tv.add_top_bar(hb); self.win.set_content(tv)
+
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin_top=20, margin_start=24, margin_end=24, margin_bottom=20)
+        tv.set_content(root)
+        root.append(self._l("Manter o Guatá sempre no ponto","titulo"))
+        root.append(self._l("Atualizações do sistema e dos apps do Guatá, direto da internet.","sub"))
+
+        card=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); card.add_css_class("card")
+        self.estado=self._l("Clique em “Procurar atualizações”.","estado"); card.append(self.estado)
+        self.spin=Gtk.Spinner(); card.append(self.spin)
+        root.append(card)
+
+        btns=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.bproc=Gtk.Button(label="🔍 Procurar atualizações"); self.bproc.add_css_class("b"); self.bproc.connect("clicked", self.procurar)
+        self.batu=Gtk.Button(label="⬇️ Atualizar agora"); self.batu.add_css_class("b"); self.batu.add_css_class("pri"); self.batu.set_sensitive(False); self.batu.connect("clicked", self.atualizar)
+        btns.append(self.bproc); btns.append(self.batu)
+        root.append(btns)
+
+        sc=Gtk.ScrolledWindow(hexpand=True, vexpand=True)
+        self.logv=Gtk.TextView(editable=False, monospace=True); self.logv.add_css_class("log")
+        sc.set_child(self.logv); root.append(sc)
+        self.win.present()
+
+    def _l(self, t, k): l=Gtk.Label(label=t, xalign=0); l.set_wrap(True); l.add_css_class(k); return l
+    def _log(self, s):
+        b=self.logv.get_buffer(); b.insert(b.get_end_iter(), s+"\n")
+    def _set_estado(self, t, klass=None):
+        self.estado.set_label(t)
+        for c in ("ok","tem"): self.estado.remove_css_class(c)
+        if klass: self.estado.add_css_class(klass)
+
+    # ---- procurar (apt update + list upgradable) ----
+    def procurar(self, *_):
+        self.bproc.set_sensitive(False); self.batu.set_sensitive(False); self.spin.start()
+        self._set_estado("Procurando atualizações…")
+        threading.Thread(target=self._procurar_bg, daemon=True).start()
+
+    def _procurar_bg(self):
+        try:
+            subprocess.run(["pkexec","apt-get","update"], capture_output=True, text=True, timeout=120)
+            r=subprocess.run(["apt-get","-s","upgrade"], capture_output=True, text=True, timeout=60)
+            ups=[l for l in r.stdout.splitlines() if l.startswith("Inst ")]
+            guata=[l for l in ups if "guata-" in l]
+            # Detecta o guata-desktop mesmo quando AINDA NÃO está instalado
+            # (a ISO entrega os arquivos soltos; só o 1º 'apt install' o registra).
+            inst=cand=None
+            pol=subprocess.run(["apt-cache","policy","guata-desktop"], capture_output=True, text=True, timeout=30).stdout
+            for l in pol.splitlines():
+                l=l.strip()
+                if l.startswith("Installed:"): inst=l.split(":",1)[1].strip()
+                elif l.startswith("Candidate:"): cand=l.split(":",1)[1].strip()
+            pendente = bool(cand) and cand!="(none)" and cand!=inst
+            if pendente and not any("guata-desktop" in g for g in guata):
+                de = "(não instalado)" if inst in (None,"(none)") else inst
+                guata.append(f"Guatá desktop {de} → {cand}")
+            total = len(ups) + (1 if pendente else 0)
+            GLib.idle_add(self._procurar_fim, total, guata)
+        except Exception as e:
+            GLib.idle_add(self._erro, str(e))
+
+    def _procurar_fim(self, n, guata):
+        self.spin.stop(); self.bproc.set_sensitive(True)
+        if n==0:
+            self._set_estado("✓ Tudo atualizado!", "ok"); self.batu.set_sensitive(False)
+        else:
+            extra=" (inclui o Guatá 🌿)" if guata else ""
+            self._set_estado(f"{n} atualização(ões) disponível(is){extra}", "tem")
+            self.batu.set_sensitive(True)
+            for g in guata: self._log(g)
+
+    # ---- atualizar (apt upgrade) ----
+    def atualizar(self, *_):
+        self.batu.set_sensitive(False); self.bproc.set_sensitive(False); self.spin.start()
+        self._set_estado("Atualizando… pode levar alguns minutos.")
+        threading.Thread(target=self._atualizar_bg, daemon=True).start()
+
+    def _atualizar_bg(self):
+        try:
+            p=subprocess.Popen(["pkexec","sh","-c","apt-get update && apt-get -y upgrade && apt-get install -y guata-desktop"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            for line in p.stdout:
+                GLib.idle_add(self._log, line.rstrip())
+            p.wait()
+            GLib.idle_add(self._atualizar_fim, p.returncode)
+        except Exception as e:
+            GLib.idle_add(self._erro, str(e))
+
+    def _atualizar_fim(self, rc):
+        self.spin.stop(); self.bproc.set_sensitive(True)
+        if rc==0: self._set_estado("✓ Atualizado com sucesso!", "ok")
+        else: self._set_estado("Algo não terminou. Tente de novo.", "tem")
+
+    def _erro(self, msg):
+        self.spin.stop(); self.bproc.set_sensitive(True)
+        self._set_estado("Não consegui agora. Veja a internet e tente de novo.", "tem"); self._log("erro: "+msg)
+
+if __name__ == "__main__":
+    Updater().run(None)

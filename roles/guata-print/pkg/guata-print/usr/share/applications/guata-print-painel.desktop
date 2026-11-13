@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Guatá Print
+Comment=Servidor de impressão — impressoras, bilhetagem, cotas e relatórios
+Exec=xdg-open https://localhost:8083
+Icon=guata-print
+Terminal=false
+Categories=System;Network;
+StartupNotify=true

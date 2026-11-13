@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Raízes
+Comment=Painel de energia pessoal
+Exec=guata-raizes
+Icon=/usr/share/icons/guata/app-raizes.png
+Terminal=false
+Categories=System;
+StartupWMClass=br.com.guataos.Raizes

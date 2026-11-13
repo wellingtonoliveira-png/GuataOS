@@ -1,0 +1,41 @@
+#!/bin/bash
+# Guatá Print — aplica compartilhamento CUPS + Samba point-and-print (Windows pega a fila).
+set -e
+case "$1" in
+  samba)
+    SMB=/etc/samba/smb.conf
+    [ -f "$SMB" ] || exit 0
+    # garante seção [printers] e [print$] no smb.conf (idempotente)
+    if ! grep -q '^\[printers\]' "$SMB"; then
+      cat >> "$SMB" <<'CONF'
+
+[printers]
+   comment = Impressoras (Guata Print)
+   path = /var/spool/samba
+   browseable = no
+   printable = yes
+   guest ok = no
+   read only = yes
+   create mask = 0700
+
+[print$]
+   comment = Drivers de impressora
+   path = /var/lib/samba/printers
+   browseable = yes
+   read only = yes
+   guest ok = no
+   write list = @"Domain Admins" root
+CONF
+    fi
+    mkdir -p /var/spool/samba /var/lib/samba/printers
+    chmod 1777 /var/spool/samba 2>/dev/null || true
+    # recarrega o samba certo (DC = samba-ad-dc; senão smbd)
+    if systemctl is-active --quiet samba-ad-dc; then
+      smbcontrol all reload-config >/dev/null 2>&1 || systemctl restart samba-ad-dc >/dev/null 2>&1 || true
+    else
+      smbcontrol smbd reload-config >/dev/null 2>&1 || systemctl reload smbd 2>/dev/null || systemctl restart smbd 2>/dev/null || true
+    fi
+    ;;
+  *) echo "uso: guata-print-regen samba" ;;
+esac
+exit 0

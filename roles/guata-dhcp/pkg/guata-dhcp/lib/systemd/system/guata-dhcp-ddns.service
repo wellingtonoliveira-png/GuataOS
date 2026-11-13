@@ -1,0 +1,5 @@
+[Unit]
+Description=Guatá DHCP — registra leases no DNS do Guatá AD (DDNS)
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/guata-dhcp-ddns-sync

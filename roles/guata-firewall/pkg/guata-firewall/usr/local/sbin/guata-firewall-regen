@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+# Guatá Firewall — gera o ruleset nftables a partir do registro e aplica.
+# Uso: guata-firewall-regen [apply|dump]
+#   apply  (padrão) -> grava /etc/guata-firewall/guata.nft e roda nft -f
+#   dump            -> imprime o ruleset gerado (transparência "Ver comando")
+import json, os, sys, subprocess, ipaddress
+
+ETC = "/etc/guata-firewall"
+REG = os.path.join(ETC, "regras.json")
+NFT = os.path.join(ETC, "guata.nft")
+
+PADRAO = {
+    "politica": "servidor",
+    "entrada": "drop",          # drop | accept
+    "registrar_bloqueios": True,
+    "portas": [],               # {id,nome,porta,proto,origem,ativo,log}
+    "forwards": []              # {id,nome,porta_ext,proto,destino_ip,destino_porta,ativo}
+}
+
+def carregar():
+    try:
+        with open(REG) as f:
+            d = json.load(f)
+        for k, v in PADRAO.items():
+            d.setdefault(k, v)
+        return d
+    except Exception:
+        return dict(PADRAO)
+
+def _val_porta(p):
+    try:
+        n = int(p); return n if 1 <= n <= 65535 else None
+    except Exception:
+        return None
+
+def _val_ip(s):
+    try:
+        ipaddress.ip_address(str(s).strip()); return str(s).strip()
+    except Exception:
+        return None
+
+def _proto(p):
+    return "udp" if str(p).lower() == "udp" else "tcp"
+
+def _origem(o):
+    # devolve cláusula de origem nft ou "" (qualquer)
+    o = (o or "qualquer").strip()
+    if o in ("", "qualquer", "any", "todos"):
+        return ""
+    try:
+        net = ipaddress.ip_network(o, strict=False)
+        fam = "ip6" if net.version == 6 else "ip"
+        return "%s saddr %s " % (fam, o)
+    except Exception:
+        ip = _val_ip(o)
+        if ip:
+            fam = "ip6" if ":" in ip else "ip"
+            return "%s saddr %s " % (fam, ip)
+    return ""
+
+def gerar(d):
+    entrada = "accept" if d.get("entrada") == "accept" else "drop"
+    L = []
+    L.append("#!/usr/sbin/nft -f")
+    L.append("# Gerado por Guatá Firewall — NÃO edite à mão (use o painel).")
+    L.append("table inet guata")
+    L.append("delete table inet guata")
+    L.append("table inet guata {")
+    # ---- input ----
+    L.append("  chain entrada {")
+    L.append("    type filter hook input priority 0; policy %s;" % entrada)
+    L.append("    iif \"lo\" accept")
+    L.append("    ct state established,related accept")
+    L.append("    ct state invalid drop")
+    L.append("    ip protocol icmp accept")
+    L.append("    ip6 nexthdr ipv6-icmp accept")
+    for p in d.get("portas", []):
+        if not p.get("ativo", True):
+            continue
+        n = _val_porta(p.get("porta"))
+        if n is None:
+            continue
+        pr = _proto(p.get("proto"))
+        org = _origem(p.get("origem"))
+        comment = str(p.get("nome", "")).replace('"', "'")[:48]
+        log = "log prefix \"guata-fw-ok: \" " if p.get("log") else ""
+        L.append("    %s%s dport %d %saccept comment \"%s\"" % (org, pr, n, log, comment))
+    if entrada == "drop" and d.get("registrar_bloqueios", True):
+        L.append("    log prefix \"guata-fw-bloqueio: \" flags all counter drop")
+    L.append("  }")
+    # ---- forward ----
+    fwd = [f for f in d.get("forwards", []) if f.get("ativo", True)
+           and _val_porta(f.get("porta_ext")) and _val_ip(f.get("destino_ip"))
+           and _val_porta(f.get("destino_porta"))]
+    L.append("  chain encaminhar {")
+    L.append("    type filter hook forward priority 0; policy %s;" % ("accept" if fwd else "drop"))
+    L.append("    ct state established,related accept")
+    for f in fwd:
+        pr = _proto(f.get("proto"))
+        dip = _val_ip(f.get("destino_ip"))
+        dpt = _val_porta(f.get("destino_porta"))
+        fam = "ip6" if ":" in dip else "ip"
+        L.append("    %s daddr %s %s dport %d accept" % (fam, dip, pr, dpt))
+    L.append("  }")
+    # ---- nat ----
+    if fwd:
+        L.append("  chain prerouting {")
+        L.append("    type nat hook prerouting priority dstnat; policy accept;")
+        for f in fwd:
+            pr = _proto(f.get("proto"))
+            ext = _val_porta(f.get("porta_ext"))
+            dip = _val_ip(f.get("destino_ip"))
+            dpt = _val_porta(f.get("destino_porta"))
+            fam = "ip6" if ":" in dip else "ip"
+            L.append("    %s dport %d dnat %s to %s:%d" % (pr, ext, fam, dip, dpt))
+        L.append("  }")
+        L.append("  chain postrouting {")
+        L.append("    type nat hook postrouting priority srcnat; policy accept;")
+        for f in fwd:
+            dip = _val_ip(f.get("destino_ip"))
+            fam = "ip6" if ":" in dip else "ip"
+            L.append("    %s daddr %s masquerade" % (fam, dip))
+        L.append("  }")
+    L.append("}")
+    return "\n".join(L) + "\n"
+
+def aplicar(txt, d):
+    os.makedirs(ETC, exist_ok=True)
+    with open(NFT, "w") as f:
+        f.write(txt)
+    os.chmod(NFT, 0o644)
+    # habilita ip_forward se houver forwards
+    if any(x.get("ativo", True) for x in d.get("forwards", [])):
+        try:
+            with open("/proc/sys/net/ipv4/ip_forward", "w") as f:
+                f.write("1")
+        except Exception:
+            pass
+    r = subprocess.run(["nft", "-f", NFT], capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.stderr.write(r.stderr)
+        return 1
+    return 0
+
+def main():
+    acao = sys.argv[1] if len(sys.argv) > 1 else "apply"
+    d = carregar()
+    txt = gerar(d)
+    if acao == "dump":
+        sys.stdout.write(txt)
+        return 0
+    return aplicar(txt, d)
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""GUATÁ Central — o painel único do Guatá OS. Um ícone, tudo num lugar.
+Cara Guatá: mascote + natureza + premium. Cada bloco lança um módulo."""
+import gi, os, subprocess, shutil, threading, pwd
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, GLib
+
+ICON = "/usr/share/icons/guata"
+
+CMD2ICON = {
+ "entrar-dominio":"app-dominio.png","kurumim":"kurumim.png","receitas":"app-caderno.png",
+ "expedicoes":"app-expedicoes.png","cantinho-gui":"app-cantinho.png",
+ "guata-energia":"app-energia.png","guata-reparar":"app-reparar.png","guata-raizes":"app-raizes.png",
+ "guata-pausa":"app-pausa.png","guata-brasil":"app-brasil.png","guata-diagnostico":"app-diagnostico.png",
+ "guata-atualizacoes":"app-atualizacoes.png","guata-ajustes":"app-ajustes.png","ocara":"ocara.png","guata-ia":"capivara-mascote.png","guata-drivers":"app-ferramentas.png","nidus":"nidus.png",
+ "paje":"app-ferramentas.png","guata-wallpapers":"app-wallpapers.png",
+}
+
+
+def primeiro_nome():
+    try:
+        g = pwd.getpwuid(os.getuid()).pw_gecos.split(",")[0].strip()
+        if g: return g.split()[0]
+    except Exception: pass
+    try: return (os.getlogin() or "amigo").split()[0].capitalize()
+    except Exception: return "amigo"
+
+def sh(cmd, t=6):
+    try: return subprocess.run(cmd, capture_output=True, text=True, timeout=t)
+    except Exception: return None
+
+CSS = """
+.janela{background:#eef3ea}
+.janela{background:#f6f3ec}
+headerbar{background:#efe7d7;border:none;box-shadow:none;min-height:46px}
+headerbar .title{font-weight:850;color:#5a4f3c;letter-spacing:.02em}
+.ola{font-size:26px;font-weight:850;color:#13231c} .ola .nome{color:#2f8f66}
+.sub{color:#7f8c7e;font-size:14px}
+.busca{background:#fff;border:1.5px solid #e6ded0;border-radius:14px;padding:4px 8px;font-size:15px}
+.busca:focus-within{border-color:#8fcbac}
+.h2{font-size:13px;font-weight:850;letter-spacing:.04em;color:#13231c}
+.cnt{font-size:11px;font-weight:700;color:#7f8c7e;background:#e4f2ea;padding:2px 9px;border-radius:999px}
+.st{background:#fff;border:1px solid #e6ded0;border-radius:15px;padding:13px 15px}
+.st .l{font-size:11px;font-weight:800;letter-spacing:.05em;color:#7f8c7e}
+.st .v{font-size:17px;font-weight:850;color:#13231c}
+.st .d{font-size:12px;color:#7f8c7e}
+.tile{background:#fff;border:1px solid #e6ded0;border-radius:16px;padding:15px;min-width:150px}
+.tile:hover{background:#fbfdfb;border-color:#9ed4b7}
+.tile.nat{background:linear-gradient(140deg,#e4f2ea,#ffffff)}
+.tile .ic{font-size:29px}
+.tile .n{font-weight:800;font-size:14.5px;color:#13231c}
+.tile .d{font-size:12px;color:#7f8c7e}
+.ass{background:linear-gradient(120deg,#e4f2ea,#ffffff);border:1px solid #e6ded0;border-radius:18px;padding:12px 16px}
+.ass .msg{font-size:14px;color:#26332a}.ass .q{color:#7f8c7e;font-size:12.5px}
+@media (prefers-color-scheme: dark){
+ .janela{background:#0a120d}.janela{background:#0e1712}
+ headerbar{background:#152219}.ola{color:#fff}.sub,.st .l,.st .d,.tile .d,.ass .q{color:#8ea89c}
+ .st,.tile{background:#14201a;border-color:#233029}.st .v,.tile .n{color:#e7f1ec}
+ .tile:hover{background:#18271e}.tile.nat{background:linear-gradient(140deg,#16271e,#14201a)}
+ .busca{background:#14201a;border-color:#233029;color:#e7f1ec}.cnt{background:#16271e}
+ .ass{background:linear-gradient(120deg,#16271e,#14201a);border-color:#233029}.ass .msg{color:#e7f1ec}
+ .h2{color:#e7f1ec}
+}
+"""
+
+# módulos: (emoji, nome, desc, acao)  acao: ["cmd",...] | ("settings","painel") | None(em breve)
+SECOES = [
+ ("🌱 Assistente Guatá", "ia", True, [
+    ("💬","Assistente","pergunte qualquer coisa — Linux, rede, apps", ["guata-ia"]),
+ ]),
+ ("🏢 Trabalho & Rede", "empresa", False, [
+    ("🏢","Entrar no Domínio","AD em 2 cliques", ["entrar-dominio"]),
+    ("👤","Suas Contas","Google, Microsoft, nuvem", ["gnome-control-center","online-accounts"]),
+    ("☁️","Trabalho","Microsoft 365, nuvem", ("web","https://www.office.com")),
+    ("📁","Arquivos","pastas de rede", ["nautilus"]),
+    ("🖨️","Impressoras","achar e instalar", ["gnome-control-center","printers"]),
+    ("🔐","VPN","conectar seguro", ["gnome-control-center","network"]),
+    ("🖥️","Acesso Remoto","RDP · VNC", ["remmina"]),
+ ]),
+ ("🌿 Natureza Útil", "cuidar", True, [
+    ("⚡","Energia","Folha · Equilíbrio · Potência", ["guata-energia"]),
+    ("🔧","Reparar","antes de trocar", ["guata-reparar"]),
+    ("🌱","Raízes","seu consumo (kWh)", ["guata-raizes"]),
+    ("🧘","Pausa","descanso e foco", ["guata-pausa"]),
+    ("🗺️","Brasil","bioma do dia", ["guata-brasil"]),
+ ]),
+ ("💛 Dia a dia", "pessoal", False, [
+    ("💰","Kurumim","finanças, offline", ["kurumim"]),
+    ("👩‍🍳","Receitas","o Caderno da Mãe", ["receitas"]),
+    ("📓","Caderno","escrever", ["caderno"]),
+    ("🧸","Cantinho","modo acolhedor", ["cantinho-gui"]),
+    ("🧭","Expedições","aprender brincando", ["expedicoes"]),
+    ("📺","NIDUS","TV, vídeos, fotos, música", ["nidus"]),
+ ]),
+ ("🩺 Cuidar do computador", "", False, [
+    ("🩺","Diagnóstico","explica e corrige", ["guata-diagnostico"]),
+    ("🔄","Atualizações","pela internet", ["guata-atualizacoes"]),
+    ("🎨","Ajustes","aparência e som", ["guata-ajustes"]),
+    ("🛍️","Loja Ocara","apps em 1 clique", ["ocara"]),
+    ("🧰","Ferramentas TI","Pajé · do técnico", ["paje"]),
+    ("🎮","Drivers","placa de vídeo (NVIDIA)", ["guata-drivers"]),
+    ("🖼️","Papéis de Parede","trocar o fundo", ["guata-wallpapers"]),
+    ("ℹ️","Sobre o Guatá","versão do sistema", ["guata-sobre"]),
+ ]),
+]
+
+class Central(Adw.Application):
+    def __init__(self): super().__init__(application_id="br.com.guataos.Central")
+
+    def do_activate(self):
+        css=Gtk.CssProvider(); css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, 1000)
+        self.nome=primeiro_nome(); self.tiles=[]
+        win=Adw.ApplicationWindow(application=self); win.set_title("GUATÁ Central"); win.set_default_size(1000,760)
+        win.add_css_class("janela")
+        tv=Adw.ToolbarView(); hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True)
+        tl=Gtk.Label(label="GUATÁ Central"); tl.add_css_class("title"); hb.set_title_widget(tl)
+        lf=os.path.join(ICON,"guata-icone-48.png")
+        if os.path.exists(lf): i=Gtk.Image.new_from_file(lf); i.set_pixel_size(24); hb.pack_start(i)
+        tv.add_top_bar(hb); win.set_content(tv)
+        sc=Gtk.ScrolledWindow(hexpand=True,vexpand=True); tv.set_content(sc)
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=18, margin_start=26, margin_end=26, margin_bottom=22)
+        sc.set_child(root)
+
+        # header
+        head=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18, margin_bottom=6)
+        cap=os.path.join(ICON,"mascote-acenando.png")
+        if os.path.exists(cap): im=Gtk.Image.new_from_file(cap); im.set_pixel_size(84); head.append(im)
+        hv=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True, valign=Gtk.Align.CENTER)
+        ola=Gtk.Label(xalign=0); ola.add_css_class("ola"); ola.set_markup(f'Tudo em um lugar, <span foreground="#2f8f66">{self.nome}</span>.')
+        sub=Gtk.Label(label="Trabalho, cuidado com o computador e a natureza do Brasil — num painel só.", xalign=0); sub.add_css_class("sub"); sub.set_wrap(True)
+        hv.append(ola); hv.append(sub); head.append(hv)
+        root.append(head)
+
+        # busca (filtra tiles)
+        self.busca=Gtk.SearchEntry(); self.busca.add_css_class("busca"); self.busca.set_placeholder_text("Pesquisar apps, impressoras, ajuda…")
+        self.busca.connect("search-changed", self._filtrar); self.busca.set_margin_top(10); self.busca.set_margin_bottom(6)
+        root.append(self.busca)
+
+        # status strip
+        self.strip=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12, homogeneous=True, margin_top=6, margin_bottom=4)
+        self.c_en=self._stcard("ENERGIA","…","")
+        self.c_seg=self._stcard("SEGURANÇA","…","")
+        self.c_up=self._stcard("ATUALIZAÇÕES","…","")
+        self.c_sau=self._stcard("SAÚDE DO PC","…","")
+        for c in (self.c_en,self.c_seg,self.c_up,self.c_sau): self.strip.append(c["box"])
+        root.append(self.strip)
+        threading.Thread(target=self._status_bg, daemon=True).start()
+
+        # seções
+        for titulo, cnt, nat, mods in SECOES:
+            h=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8, margin_top=18, margin_bottom=8)
+            lb=Gtk.Label(label=titulo, xalign=0); lb.add_css_class("h2"); h.append(lb)
+            if cnt: cl=Gtk.Label(label=cnt); cl.add_css_class("cnt"); cl.set_valign(Gtk.Align.CENTER); h.append(cl)
+            root.append(h)
+            fb=Gtk.FlowBox(); fb.set_selection_mode(Gtk.SelectionMode.NONE); fb.set_max_children_per_line(6); fb.set_column_spacing(12); fb.set_row_spacing(12); fb.set_homogeneous(True)
+            for emoji,nome,desc,acao in mods:
+                fb.append(self._tile(emoji,nome,desc,acao,nat))
+            root.append(fb)
+
+        # assistente
+        ass=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14, margin_top=20); ass.add_css_class("ass")
+        cp=os.path.join(ICON,"mascote-acenando.png")
+        if os.path.exists(cp): a=Gtk.Image.new_from_file(cp); a.set_pixel_size(46); ass.append(a)
+        msg=Gtk.Label(xalign=0); msg.add_css_class("msg"); msg.set_wrap(True)
+        msg.set_markup('<b>Tudo certo por aqui. 🌱</b>  <span foreground="#7f8c7e">Quando houver atualização grande, eu aviso com jeitinho.</span>')
+        ass.append(msg); root.append(ass)
+        win.present()
+
+    def _stcard(self, l, v, d):
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); box.add_css_class("st")
+        ll=Gtk.Label(label=l, xalign=0); ll.add_css_class("l")
+        vv=Gtk.Label(label=v, xalign=0); vv.add_css_class("v")
+        dd=Gtk.Label(label=d, xalign=0); dd.add_css_class("d"); dd.set_wrap(True)
+        box.append(ll); box.append(vv); box.append(dd)
+        return {"box":box,"v":vv,"d":dd}
+
+    def _tile(self, emoji, nome, desc, acao, nat):
+        b=Gtk.Button(); b.add_css_class("tile")
+        if nat: b.add_css_class("nat")
+        b.connect("clicked", self._abrir, acao, nome)
+        bx=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        cmd=(acao[0] if isinstance(acao,(list,tuple)) and acao and isinstance(acao[0],str) and acao[0] not in ("web","settings") else None)
+        icf=os.path.join(ICON, CMD2ICON.get(cmd,"")) if cmd else ""
+        if icf and os.path.exists(icf):
+            e=Gtk.Image.new_from_file(icf); e.set_pixel_size(50); e.add_css_class("icimg")
+        else:
+            e=Gtk.Label(label=emoji, xalign=0); e.add_css_class("ic")
+        n=Gtk.Label(label=nome, xalign=0); n.add_css_class("n")
+        d=Gtk.Label(label=desc, xalign=0); d.add_css_class("d"); d.set_wrap(True)
+        bx.append(e); bx.append(n); bx.append(d); b.set_child(bx)
+        self.tiles.append((b, (nome+" "+desc).lower()))
+        return b
+
+    def _filtrar(self, entry):
+        q=entry.get_text().strip().lower()
+        for b,txt in self.tiles:
+            b.get_parent().set_visible(q in txt if q else True)
+
+    def _abrir(self, _btn, acao, nome):
+        if acao is None:
+            self._dlg(f"{nome} — em breve 🌱", "Esse módulo faz parte do roadmap do Guatá e chega nas próximas versões."); return
+        if isinstance(acao, tuple) and acao[0]=="web":
+            self._run(["xdg-open", acao[1]]); return
+        if not self._run(acao):
+            self._dlg(f"{nome}", "Não consegui abrir agora. Talvez o app ainda não esteja instalado.")
+
+    def _run(self, cmd):
+        try: subprocess.Popen(cmd); return True
+        except Exception: return False
+
+    def _dlg(self, h, b):
+        d=Adw.MessageDialog(transient_for=self.get_active_window(), heading=h, body=b)
+        d.add_response("ok","Entendi"); d.present()
+
+    # ---- status (async) ----
+    def _status_bg(self):
+        # energia
+        en="—"; end=""
+        r=sh(["powerprofilesctl","get"])
+        if r and r.returncode==0:
+            m={"power-saver":"🍃 Folha","balanced":"🌿 Equilíbrio","performance":"⚡ Potência"}
+            en=m.get(r.stdout.strip(), r.stdout.strip())
+        rb=sh(["sh","-c","cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1"])
+        if rb and rb.stdout.strip(): end=f"bateria {rb.stdout.strip()}%"
+        GLib.idle_add(self._set, self.c_en, en, end)
+        # segurança / domínio
+        seg="Pessoal"; segd="fora de domínio"
+        if shutil.which("realm"):
+            rr=sh(["realm","list"])
+            if rr and rr.stdout.strip():
+                seg="Protegido"; segd="no domínio "+rr.stdout.splitlines()[0].strip()
+        GLib.idle_add(self._set, self.c_seg, seg, segd)
+        # saúde (disco)
+        sau="Tudo bem"; saud=""
+        rd=sh(["df","--output=pcent","/"])
+        if rd and rd.returncode==0:
+            try:
+                p=rd.stdout.strip().splitlines()[-1].strip()
+                saud="disco "+p
+                if int(p.replace("%",""))>=90: sau="Atenção"
+            except Exception: pass
+        GLib.idle_add(self._set, self.c_sau, sau, saud)
+        # atualizações
+        up="Verificando…"; upd=""
+        ru=sh(["apt-get","-s","upgrade"],25)
+        if ru:
+            n=len([l for l in ru.stdout.splitlines() if l.startswith("Inst ")])
+            up = "Tudo atualizado" if n==0 else f"{n} disponível(is)"
+            upd = "" if n==0 else "abra Atualizações"
+        GLib.idle_add(self._set, self.c_up, up, upd)
+
+    def _set(self, card, v, d):
+        card["v"].set_label(v); card["d"].set_label(d); return False
+
+if __name__ == "__main__":
+    Central().run(None)

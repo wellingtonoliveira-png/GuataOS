@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Primeiros Passos do Guatá
+Exec=guata-primeiros-passos
+Icon=/usr/share/icons/guata/capivara.svg
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=GNOME;
+NoDisplay=false

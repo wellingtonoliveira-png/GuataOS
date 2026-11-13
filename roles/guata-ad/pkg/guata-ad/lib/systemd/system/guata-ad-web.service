@@ -1,0 +1,14 @@
+[Unit]
+Description=Guatá AD — Painel web do domínio
+After=samba-ad-dc.service network-online.target
+ConditionPathExists=/etc/guata-ad/provisionado
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/guata-ad-web
+Restart=on-failure
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target

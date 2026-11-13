@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# Diagnóstico de rede — Pajé. Mostra IP, gateway, DNS e testa a conexão.
+# Só leitura, nada destrutivo.
+# ─────────────────────────────────────────────────────────────────────────────
+T="Pajé — Diagnóstico de rede"
+tmp="$(mktemp)"
+{
+  echo "═══ ENDEREÇOS ═══"
+  ip -brief address 2>/dev/null
+  echo
+  echo "═══ ROTA / GATEWAY ═══"
+  ip route 2>/dev/null | grep '^default' || echo "(sem rota padrão)"
+  echo
+  echo "═══ DNS ═══"
+  (grep -h nameserver /etc/resolv.conf 2>/dev/null; command -v resolvectl >/dev/null && resolvectl dns 2>/dev/null) | sort -u
+  echo
+  echo "═══ TESTE DE CONEXÃO (ping 8.8.8.8) ═══"
+  ping -c 3 -W 2 8.8.8.8 2>/dev/null || echo "Sem resposta — internet pode estar fora."
+  echo
+  echo "═══ RESOLUÇÃO DE NOME (google.com) ═══"
+  getent hosts google.com 2>/dev/null || echo "DNS não resolveu."
+} > "$tmp" 2>&1
+
+yad --title="$T" --width=640 --height=520 --text-info --filename="$tmp" --button="Fechar:0" --button="Copiar:2"
+[ $? = 2 ] && command -v xclip >/dev/null && xclip -selection clipboard < "$tmp"
+rm -f "$tmp"

@@ -1,0 +1,336 @@
+<title>Guatá ID — Lista Mestre</title>
+<style>
+  :root{
+    --bg:#eef1f7; --ground:#f8f9fc; --card:#ffffff; --line:#e4e8f1; --line2:#eef1f7;
+    --ink:#161c2b; --soft:#5b6478; --faint:#8b94a8;
+    --accent:#4f46e5; --accent-weak:#ecebfd; --navy:#141a2e; --navy2:#1d2540;
+    --done:#1f9d63; --done-bg:#e6f5ed; --doing:#c67a12; --doing-bg:#fbefdb;
+    --queue:#5566d6; --queue-bg:#eceefb; --wont:#b0506a; --wont-bg:#fbe9ee;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0a0f1c; --ground:#0c1222; --card:#121a2e; --line:#223048; --line2:#1a2740;
+      --ink:#e8edf8; --soft:#9aa6be; --faint:#6f7b93;
+      --accent:#8c92ff; --accent-weak:#1c2550; --navy:#0a0f1c; --navy2:#141d36;
+      --done:#53d08a; --done-bg:#102a1e; --doing:#e0a24e; --doing-bg:#2c2211;
+      --queue:#8e99ee; --queue-bg:#1a2150; --wont:#e38aa2; --wont-bg:#2c1620;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1f7; --ground:#f8f9fc; --card:#ffffff; --line:#e4e8f1; --line2:#eef1f7;
+    --ink:#161c2b; --soft:#5b6478; --faint:#8b94a8; --accent:#4f46e5; --accent-weak:#ecebfd;
+    --navy:#141a2e; --navy2:#1d2540; --done:#1f9d63; --done-bg:#e6f5ed; --doing:#c67a12; --doing-bg:#fbefdb;
+    --queue:#5566d6; --queue-bg:#eceefb; --wont:#b0506a; --wont-bg:#fbe9ee;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a0f1c; --ground:#0c1222; --card:#121a2e; --line:#223048; --line2:#1a2740;
+    --ink:#e8edf8; --soft:#9aa6be; --faint:#6f7b93; --accent:#8c92ff; --accent-weak:#1c2550;
+    --navy:#0a0f1c; --navy2:#141d36; --done:#53d08a; --done-bg:#102a1e; --doing:#e0a24e; --doing-bg:#2c2211;
+    --queue:#8e99ee; --queue-bg:#1a2150; --wont:#e38aa2; --wont-bg:#2c1620;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px 80px}
+
+  /* HERO */
+  header.hero{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#eef1ff;
+    border-radius:0 0 28px 28px;padding:30px 26px 26px;margin-bottom:26px;
+    box-shadow:0 20px 50px -28px rgba(10,15,30,.7)}
+  .hero-in{max-width:1120px;margin:0 auto}
+  .brandrow{display:flex;align-items:center;gap:13px}
+  .logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#6f76ff,#4f46e5);
+    display:grid;place-items:center;flex:none;box-shadow:0 6px 16px -4px rgba(79,70,229,.7)}
+  .logo svg{width:24px;height:24px}
+  .brandrow h1{font-size:23px;margin:0;letter-spacing:-.02em;font-weight:800}
+  .brandrow .sub{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#9fa9d8;font-weight:700;margin-top:2px}
+  .ver{margin-left:auto;text-align:right;font-family:var(--mono);font-size:12px;color:#aeb6e6}
+  .ver b{color:#fff;font-size:15px}
+
+  .tese{margin-top:18px;font-size:14.5px;color:#c7cdf0;max-width:70ch}
+  .tese b{color:#fff}
+
+  /* PROGRESS */
+  .prog{margin-top:22px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .ring{position:relative;width:96px;height:96px;flex:none}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .pct{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:21px;color:#fff}
+  .counts{display:flex;gap:10px;flex-wrap:wrap}
+  .count{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;
+    padding:10px 15px;min-width:92px}
+  .count .n{font-size:22px;font-weight:800;line-height:1}
+  .count .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#aab3dd;margin-top:5px;font-weight:700}
+  .count.done .n{color:#7ce3a6} .count.doing .n{color:#f0bd72}
+  .count.queue .n{color:#aab4ff} .count.wont .n{color:#f0a8bd}
+
+  /* LEGEND */
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 22px;padding:14px 18px;background:var(--card);
+    border:1px solid var(--line);border-radius:16px;font-size:12.5px;color:var(--soft)}
+  .legend span{display:inline-flex;align-items:center;gap:7px;font-weight:600}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .dot.done{background:var(--done)} .dot.doing{background:var(--doing)}
+  .dot.queue{background:var(--queue)} .dot.wont{background:var(--wont)}
+
+  /* SECTIONS */
+  section.grp{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:6px 6px 10px;margin-bottom:18px;overflow:hidden}
+  .grp-h{display:flex;align-items:center;gap:12px;padding:16px 18px 12px}
+  .grp-h .ico{width:34px;height:34px;border-radius:10px;background:var(--accent-weak);color:var(--accent);
+    display:grid;place-items:center;flex:none}
+  .grp-h .ico svg{width:19px;height:19px}
+  .grp-h h2{font-size:16px;margin:0;letter-spacing:-.01em;font-weight:750}
+  .grp-h .meta{margin-left:auto;font-size:11.5px;font-family:var(--mono);color:var(--faint)}
+
+  ul.items{list-style:none;margin:0;padding:0}
+  li.item{display:flex;gap:13px;align-items:flex-start;padding:11px 18px;border-top:1px solid var(--line2)}
+  li.item .mk{width:22px;height:22px;border-radius:7px;flex:none;display:grid;place-items:center;margin-top:1px}
+  li.item .mk svg{width:14px;height:14px}
+  li.item[data-st="done"] .mk{background:var(--done-bg);color:var(--done)}
+  li.item[data-st="doing"] .mk{background:var(--doing-bg);color:var(--doing)}
+  li.item[data-st="queue"] .mk{background:var(--queue-bg);color:var(--queue)}
+  li.item[data-st="wont"] .mk{background:var(--wont-bg);color:var(--wont)}
+  li.item .tx{min-width:0;flex:1}
+  li.item .tx b{font-weight:650;font-size:14.5px}
+  li.item[data-st="done"] .tx b{color:var(--ink)}
+  li.item .tx .note{display:block;color:var(--soft);font-size:12.8px;margin-top:2px}
+  li.item .tx .note code{font-family:var(--mono);font-size:11.8px;background:var(--line2);padding:1px 5px;border-radius:5px}
+  li.item .tag{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;flex:none;margin-top:1px;align-self:flex-start}
+  li.item[data-st="done"] .tag{background:var(--done-bg);color:var(--done)}
+  li.item[data-st="doing"] .tag{background:var(--doing-bg);color:var(--doing)}
+  li.item[data-st="queue"] .tag{background:var(--queue-bg);color:var(--queue)}
+  li.item[data-st="wont"] .tag{background:var(--wont-bg);color:var(--wont)}
+  li.item[data-st="wont"] .tx b{text-decoration:line-through;text-decoration-color:var(--faint);text-decoration-thickness:1px}
+
+  .foot{margin-top:28px;text-align:center;color:var(--faint);font-size:12.5px;line-height:1.7}
+  .foot b{color:var(--soft)}
+  @media(max-width:620px){ .ver{display:none} .brandrow h1{font-size:20px} }
+</style>
+
+<header class="hero">
+  <div class="hero-in">
+    <div class="brandrow">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <div>
+        <h1>Guatá ID — Lista Mestre</h1>
+        <div class="sub">Identidade Soberana · Samba AD DC</div>
+      </div>
+      <div class="ver">no ar<br><b>v1.44.0</b><br>08/11/2026</div>
+    </div>
+    <p class="tese">O Guatá ID <b>não esconde</b> o Active Directory — ele <b>traduz</b>. Tudo aqui é real por baixo (nenhum botão cosmético), com evidência técnica sempre à mão. Esta é a nossa lista viva: <b>você fala, eu adiciono; eu entrego, eu risco.</b></p>
+
+    <div class="prog">
+      <div class="ring" id="ring">
+        <svg width="96" height="96" viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r="42" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="9"/>
+          <circle id="ringfill" cx="48" cy="48" r="42" fill="none" stroke="#7ce3a6" stroke-width="9" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264"/>
+        </svg>
+        <div class="pct" id="ringpct">0%</div>
+      </div>
+      <div class="counts">
+        <div class="count done"><div class="n" id="c-done">0</div><div class="l">Feito</div></div>
+        <div class="count doing"><div class="n" id="c-doing">0</div><div class="l">Em andamento</div></div>
+        <div class="count queue"><div class="n" id="c-queue">0</div><div class="l">Na fila</div></div>
+        <div class="count wont"><div class="n" id="c-wont">0</div><div class="l">Não fingir</div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="legend">
+    <span><i class="dot done"></i> Feito e no ar</span>
+    <span><i class="dot doing"></i> Em andamento</span>
+    <span><i class="dot queue"></i> Na fila (vamos fazer)</span>
+    <span><i class="dot wont"></i> Não vamos fingir (honestidade)</span>
+  </div>
+
+  <!-- DIRETÓRIO -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+      <h2>Diretório — pessoas, grupos, máquinas</h2>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Pessoas — ficha completa</b><span class="note">abas Geral / Conta / Grupos / Organização, foto no AD (thumbnailPhoto), filtros (Todos/Ativos/Inativos/Admins) e badges.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Nova Pessoa — assistente guiado</b><span class="note">admissão em 4 passos: credenciais, OU, grupos e senha.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Conta — desbloquear, expirar, trocar senha, flags</b><span class="note">+ agendamento: liga no dia da admissão / desliga na data do desligamento.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Grupos — cards ricos</b><span class="note">criar (escopo/tipo/OU), membros add/remove, editar, apagar, filtros por categoria.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Lista de máquinas: nome → IP (estilo Windows DNS)</b><span class="note">cada computador mostra o <b>IP real</b> (resolvido pelo DNS) + "sem IP no DNS" quando não registrou; IP também na ficha.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Computadores — ficha + KPIs reais</b><span class="note">total, Windows·Linux, ativas (logon ≤15d), <b>inativas +30 dias</b>, remover do domínio.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Ingressar computador — 3 métodos</b><span class="note">guataOS (realmd/SSSD + <code>realm join</code>), Windows (acesso corporativo), passo-0 do DNS.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Unidades (OUs)</b><span class="note">criar, criar-dentro, renomear, apagar, mover usuário, ver conteúdo.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>OUs — criar sub-OU + preview do DN + bloquear herança</b><span class="note">assistente real: escolhe a OU pai, mostra o DN e o comando ao vivo, e bloqueia herança de GPO (<code>gpo setinheritance block</code>).</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>OUs — carregamento rápido (corrigido)</b><span class="note">a lista varria todos os objetos 1x por OU (N×M); e abrir uma OU fazia 2 chamadas autenticadas. Agora tudo via <code>ldbsearch</code> direto — instantâneo.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Organograma</b><span class="note">superior/lidera na ficha → árvore clicável (quem responde a quem).</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Pessoas — último logon + OU na lista</b><span class="note">cada pessoa mostra a <b>unidade (OU)</b> e o <b>último acesso</b> (ou "nunca acessou"), do seu mockup Pessoas.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Importar CSV / RH (admissão em lote)</b><span class="note">cola ou sobe um CSV (nome,login,email,cargo,ou,senha); senha em branco = gera forte; resultado por linha com erros e senhas geradas. (Exportar fica p/ depois.)</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- CONTROLE & SEGURANÇA -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h2>Controle &amp; Segurança</h2>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Segurança — política de senha editável</b><span class="note">tamanho, histórico, expiração, bloqueio por tentativas, complexidade.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Contas inseguras + transparência CLI</b><span class="note">lista de risco com cores + bloco mostrando os comandos <code>samba-tool</code> reais.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Políticas (GPO) — construtor com modelos</b><span class="note">bloquear USB, mensagem de login, wallpaper, bloqueio de tela, etc. → gera <code>Registry.pol</code> real; criar/vincular/desvincular/apagar.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>GPO — biblioteca de templates + assistente</b><span class="note">6 modelos prontos em cards (USB, mensagem de login, wallpaper, bloqueio de tela, esconder painel, bloquear cmd); "Usar modelo" cria a política e abre o construtor com o modelo já marcado.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Rede e DNS (aprimorado)</b><span class="note">zonas (diretas e reversas), filtros por tipo (A/AAAA/CNAME/SRV/PTR/MX/TXT/NS), badge de tipo, criar/editar/remover hosts + ficha com comando real.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>DNS — assistente de Novo Registro (SRV/CNAME/PTR/MX/TXT)</b><span class="note">cria qualquer tipo (A/AAAA/CNAME/MX/TXT/SRV/PTR/NS) com campo que se adapta ao tipo e preview do comando <code>samba-tool dns add</code> ao vivo.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Login com qualquer conta Domain Admin</b><span class="note">campo <b>usuário + senha</b> no login: entra com Administrator OU qualquer membro de <b>Domain Admins</b> (valida via Kerberos + checa o grupo). Nunca mais trancado pra fora.</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- SISTEMA & INFRA -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></div>
+      <h2>Sistema &amp; Infra</h2>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Saúde do domínio</b><span class="note">KPIs (DCs, FSMO 5/5, dbcheck, SYSVOL+GPOs), card do DC real (IP/OS/Samba/uptime/kernel/CPU/RAM/papéis FSMO), matriz DRS honesta, diagnósticos ao vivo.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Backup do domínio</b><span class="note"><code>samba-tool domain backup offline</code> + lista (baixar/apagar) + agendar (timer diário) + SHA-256 + transparência CLI.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Auditoria — timeline forense</b><span class="note">KPIs (eventos/sucessos/falhas/hoje), filtros (tudo/sucesso/falha), busca e linha do tempo por dia (Hoje/Ontem) com hora, cor por tipo de ação e quem/de-onde.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Controladores — view dedicada</b><span class="note">card do DC (IP/OS/Samba/uptime/kernel/papéis) + tabela FSMO traduzida (cada papel-mestre explicado em português e quem é responsável).</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- PAINEL & JORNADAS -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+      <h2>Painel &amp; Jornadas humanas</h2>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Jornadas guiadas</b><span class="note">Nova pessoa · Novo computador · Novo departamento · Pessoa saiu · Conta comprometida.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Painel com drill-down</b><span class="note">cards clicáveis (pessoas/computadores/grupos/segurança) + faixa de jornadas.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Painel — "Atenção operacional" (1 clique)</b><span class="note">faixa com pendências reais: conta bloqueada → <b>desbloquear</b>, conta grave → resolver, PC parado +30d → ver, e o <b>último backup</b> ali no painel.</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- INTEGRAÇÕES & FUTURO -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div>
+      <h2>Integrações &amp; futuro</h2>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Inventário NATIVO completo + QR (BEACON dentro do Guatá)</b><span class="note">todos os campos do BEACON agrupados (tipo/marca/modelo/série/patrimônio, setor/localização/responsável/estado, valor/fornecedor/NF/compra/garantia, CPU/RAM/disco) + <b>etiqueta QR</b> gerada no servidor (python3-qrcode) com Imprimir. Guardado em inventario.json. Ideia do Well: BEACON pra dentro, sem web.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Vínculo PC ↔ usuário</b><span class="note">no inventário do PC, "Responsável/usuário" sugere pessoas do domínio (datalist); na ficha da pessoa aparece "Computadores vinculados". Amarração nos dois sentidos.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>Servidor DHCP integrado</b><span class="note">concessões (leases), faixas por sub-rede, gateway/DNS e DDNS pro DNS do Samba — via isc-dhcp-server/Kea no mesmo servidor. Real, subsistema novo.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>SSO / Federação (SAML, OIDC)</b><span class="note">login único para apps web. Não é nativo do Samba — precisa de um IdP (ex: Keycloak) na frente do AD; roadmap real, entra como fila.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="doing"><span class="mk" data-mk></span><div class="tx"><b>Guatá ID ↔ Guatá Files (File Server) — amanhã</b><span class="note">grupo do AD = permissão em pastas / impressoras / VPN. Servidor de arquivos é o foco de amanhã.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Relatório de conformidade honesto</b><span class="note">botão na Segurança gera o retrato real (política de senha, contas inseguras, GPOs, backup, inventário) com "ok/rever" por item e botão Imprimir/PDF. Sem selo jurídico inventado.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Delegação administrativa (helper transparente)</b><span class="note">na ficha da OU, "Delegar controle": escolhe grupo + nível e o Guatá <b>gera o comando oficial</b> <code>samba-tool dsacl set</code> (com o SID resolvido) pra você copiar e aplicar. Não escreve ACL às cegas — você no comando.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>ISO do Guatá ID com a marca nova</b><span class="note">rebuild do appliance com a identidade Guatá ID.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>2º controlador (DC) + replicação DRS real</b><span class="note">quando você promover o 2º DC, a matriz de partições aparece sozinha — sem invenção.</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- GUATÁ FILES (FILE SERVER) -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+      <h2>Guatá Files — File Server</h2>
+      <span class="meta">em construção · v1.7.0 no ar</span>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Painel web + configurador (igual ao AD)</b><span class="note">painel web do Guatá Files (porta 8080) com login, sidebar navy, cards, barra de disco. <b>Configurador web</b> (wizard: entrar no domínio / tudo-junto-no-AD / simples) igual ao do Guatá ID.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Compartilhamentos (pastas)</b><span class="note">criar / listar / remover pastas compartilhadas pelo painel web; mostra tamanho e caminho de rede.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Níveis de acesso: Grupo / Usuário / Todos</b><span class="note">por pasta, dá acesso a um <b>grupo</b>, a um <b>usuário específico</b> ou a <b>Todos (everyone)</b>; nível Leitura / Edição / Total (owner) — igual Windows. Gera valid/read/write/admin + ACLs POSIX.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Camadas (Público → Interno → Confidencial → Restrito)</b><span class="note">cria as 4 camadas num clique; ligue cada uma a um grupo (aninhados no AD = herança).</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Multi-origem de armazenamento</b><span class="note">aba <b>Armazenamento</b>: lista discos/partições (lsblk), inclui <b>partições Windows NTFS</b> (ntfs-3g) e exFAT/FAT; "Usar como origem" monta e persiste (fstab por UUID); adicionar <b>NAS/rede</b> (CIFS). Ao criar pasta, escolhe a origem. Barra de capacidade por origem. Honesto: em NTFS/NAS o acesso é por compartilhamento (sem tiers finos). v1.8.0.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Snapshots — voltar no tempo (anti-ransomware)</b><span class="note">por pasta, via rsync+hardlinks (funciona em qualquer disco, inclusive ext4) + shadow_copy2 = aparece em "Versões Anteriores" no Windows; criar agora, agendar diário, restaurar seguro (pasta "Restaurado em…").</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Proteção contra ransomware (ClamAV)</b><span class="note">aba <b>Proteção</b> no painel do Files: varredura das pastas com clamscan, infectados vão pra <b>quarentena</b> (.quarentena), base de definições + última verificação visíveis, botão <b>Verificar agora</b> e <b>agendar diária</b> (03h). On-access em tempo real (clamd) fica pra testar no seu servidor. Entregue na v1.7.0.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>Backup nativo → futuro conecta no Guatá BackupOS</b><span class="note">backup das pastas; mais tarde aponta pro appliance Guatá BackupOS (PBS/restic).</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Auditoria de arquivos (quem acessou o quê)</b><span class="note">aba <b>Auditoria</b>: liga/desliga por pasta (vfs_full_audit → rsyslog), feed de quem <b>abriu / gravou / renomeou / apagou</b> com usuário, IP e hora. v1.8.0.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Análise profunda de segurança + endurecimento</b><span class="note">auditoria linha a linha (arquivo não pode vazar): <b>TLS</b> (senha não viaja em claro), <b>rate-limit</b> de login, primeira senha só via <b>localhost</b>, senha do AD fora do <code>ps</code> (stdin), PBKDF2, headers anti-clickjacking/cache, trustee validado. v1.9.0.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Entrega: pacote guata-files + loja Ocara</b><span class="note">na <b>loja Ocara</b> (categoria <b>Servidores</b>): instala em 1 clique e, depois de instalado, ganha um <b>lançador no menu com o ícone da marca</b> que abre o painel (onde aparece o configurador). AD, Arquivos e DHCP na loja; Firewall e Impressão como “em breve”.</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- DHCP -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></div>
+      <h2>Servidor DHCP — no ar (v1.0.0)</h2>
+      <span class="meta">Kea + DDNS · porta 8082 (HTTPS)</span>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Configurador de faixa (escopo) por sub-rede</b><span class="note">painel web (porta 8082, <b>HTTPS</b>) com configurador que <b>detecta a placa de rede</b> e auto-preenche a faixa pelo IP; escopos CRUD com rede/máscara, faixa, gateway, DNS, lease e domínio. Motor <b>Kea</b> (isc-dhcp saiu do Debian 13). Mesma cara do AD/Files.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Concessões (leases) ativas</b><span class="note">tabela ao vivo: IP, MAC, nome e quando expira, lida do <code>kea-leases4.csv</code>; botão “Reservar” direto de uma concessão.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Reservas (IP fixo por MAC)</b><span class="note">amarra um IP a um aparelho pelo MAC (CRUD); validação de MAC/IP; aplicado no Kea por sub-rede.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>DDNS → registra no DNS do Samba</b><span class="note">liga/desliga; a cada 2 min registra os hosts que pegaram IP como registro A no <b>DNS do Guatá AD</b> (via conta de máquina, sem senha guardada). Honesto: disponível quando o DHCP roda no próprio controlador.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="done"><span class="mk" data-mk></span><div class="tx"><b>Entrega: pacote guata-dhcp + loja Ocara</b><span class="note">pacote <code>guata-dhcp</code> no repo assinado; vira função no <code>guata-server</code> (“Adicionar função”). TLS self-signed, rate-limit, localhost-gate — mesmo endurecimento do Files.</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- FIREWALL -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v5M15 9v5M9 14v6"/></svg></div>
+      <h2>Guatá Firewall — função futura</h2>
+      <span class="meta">nftables traduzido · depois de File e DHCP</span>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>Painel web + configurador (igual ao AD)</b><span class="note">assistente de perfil (Servidor / Estação / Personalizado) define a política base; sidebar navy, cards, mascote do Firewall. Motor já esboçado (gerador nftables honesto com "Ver comando").</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>Administrar portas por serviço</b><span class="note">abrir/fechar portas com nome humano (SSH, HTTP, SMB, RDP…), origem (qualquer/IP/rede), liga-desliga e log por regra.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>Encaminhamentos (port forward / NAT)</b><span class="note">redirecionar porta externa → IP:porta interno (DNAT + masquerade), de forma visual.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>Registros de bloqueio em tempo real</b><span class="note">o que foi barrado (log do nft) e portas abertas agora (ss -tulpn). Futuro: alertas no ARGUS.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="queue"><span class="mk" data-mk></span><div class="tx"><b>Entrega: pacote guata-firewall + loja Ocara</b><span class="note">mais uma função de servidor instalável pela loja.</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <!-- NÃO VAMOS FINGIR -->
+  <section class="grp">
+    <div class="grp-h">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div>
+      <h2>O que NÃO vamos fingir</h2>
+      <span class="meta">doutrina: evidência real</span>
+    </div>
+    <ul class="items">
+      <li class="item" data-st="wont"><span class="mk" data-mk></span><div class="tx"><b>RSOP / Laudo LGPD com ICP-Brasil, PAdES, HSM</b><span class="note">o Samba não tem motor RSOP (<code>samba-tool gpo rsop</code> não existe) e não há assinatura ICP-Brasil nativa. Fingir isso queima numa auditoria real → fazemos o relatório honesto no lugar.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="wont"><span class="mk" data-mk></span><div class="tx"><b>Central de Certificados (CA)</b><span class="note">Samba AD não traz CA pronta — é um produto de PKI de verdade (step-ca/openssl). Ótimo roadmap, mas não é fakeável.</span></div><span class="tag" data-tag></span></li>
+      <li class="item" data-st="wont"><span class="mk" data-mk></span><div class="tx"><b>MFA/TOTP "Sem MFA", "TGT válido em tempo real"</b><span class="note">Samba não entrega TOTP nem estado de ticket Kerberos em tempo real de forma nativa.</span></div><span class="tag" data-tag></span></li>
+    </ul>
+  </section>
+
+  <p class="foot">
+    <b>Como funciona:</b> você me fala o que quer, eu adiciono aqui na fila. Quando entrego, risco e sobe a versão.<br>
+    Esta página é atualizada a cada versão do Guatá ID. · Feito com carinho pela equipe · <b>Wellsystem</b>
+  </p>
+</div>
+
+<script>
+  (function(){
+    var items=document.querySelectorAll('li.item');
+    var mkIcons={
+      done:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+      doing:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>',
+      queue:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>',
+      wont:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+    };
+    var tags={done:'feito',doing:'fazendo',queue:'fila',wont:'não fingir'};
+    var n={done:0,doing:0,queue:0,wont:0};
+    items.forEach(function(li){
+      var st=li.getAttribute('data-st'); n[st]=(n[st]||0)+1;
+      var mk=li.querySelector('[data-mk]'); if(mk) mk.innerHTML=mkIcons[st]||'';
+      var tg=li.querySelector('[data-tag]'); if(tg) tg.textContent=tags[st]||'';
+    });
+    document.getElementById('c-done').textContent=n.done;
+    document.getElementById('c-doing').textContent=n.doing;
+    document.getElementById('c-queue').textContent=n.queue;
+    document.getElementById('c-wont').textContent=n.wont;
+    var buildable=n.done+n.doing+n.queue;
+    var pct=buildable? Math.round(n.done*100/buildable):0;
+    document.getElementById('ringpct').textContent=pct+'%';
+    var C=264; document.getElementById('ringfill').style.strokeDashoffset=String(C-(C*pct/100));
+  })();
+</script>

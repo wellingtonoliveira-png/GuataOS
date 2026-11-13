@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guatá AD — Painel do Domínio</title>
+<style>
+  :root{
+    --bg:#eef4ef; --card:#ffffff; --card2:#f4f8f5; --linha:#e0e9e3;
+    --ink:#17271e; --suave:#5f7668; --forte:#0c1b13;
+    --jade:#2f8f66; --jade2:#17694c; --jade-s:#e7f3ec;
+    --sol:#d98a2b; --sol-s:#f8eede; --ceu:#3f86c4; --ceu-s:#e6f0f9; --vermelho:#c0453a; --verm-s:#fbe9e7;
+    /* sidebar escura (sempre) */
+    --sb:#0a2016; --sb2:#0f2c1f; --sb-ink:#dcecE2; --sb-ink:#dcece2; --sb-suave:#7f9e8e; --sb-linha:#1c3a2a;
+    --raio:16px; --sombra:0 18px 44px -26px rgba(16,50,33,.3); --sombra-s:0 8px 22px -16px rgba(16,50,33,.2);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#06150e;--card:#0d2418;--card2:#102c1d;--linha:#1d3a29;--ink:#e8f3ec;--suave:#9fbcac;--forte:#fff;
+      --jade:#4fb286;--jade2:#6fce9f;--jade-s:#11291d;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715;
+      --sombra:0 20px 50px -24px rgba(0,0,0,.6)}
+  }
+  :root[data-theme=dark]{--bg:#06150e;--card:#0d2418;--card2:#102c1d;--linha:#1d3a29;--ink:#e8f3ec;--suave:#9fbcac;--forte:#fff;--jade:#4fb286;--jade2:#6fce9f;--jade-s:#11291d;--sol:#e3a455;--sol-s:#2a2112;--ceu:#6fb0e0;--ceu-s:#122331;--vermelho:#e3736a;--verm-s:#2c1715}
+  :root[data-theme=light]{--bg:#eef4ef;--card:#fff;--card2:#f4f8f5;--linha:#e0e9e3;--ink:#17271e;--suave:#5f7668;--forte:#0c1b13;--jade:#2f8f66;--jade2:#17694c;--jade-s:#e7f3ec}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button,input,select{font-family:inherit}
+  h1,h2,h3{margin:0;color:var(--forte);line-height:1.2}
+  .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .leaf{fill:var(--jade);stroke:none}
+
+  /* ---------- LOGIN ---------- */
+  #login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1100px 480px at 50% -10%,color-mix(in srgb,var(--jade) 20%,transparent),transparent)}
+  .loginbox{background:var(--card);border:1px solid var(--linha);border-radius:24px;box-shadow:var(--sombra);padding:36px 32px;width:min(410px,100%);text-align:center}
+  .loginbox .masc{width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 2px;filter:drop-shadow(0 10px 18px rgba(16,50,33,.18))}
+  .loginbox h1{font-size:23px}
+  .loginbox p{margin:2px 0 20px;color:var(--suave);font-size:14px}
+  .field{text-align:left;margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--suave);margin-bottom:6px}
+  .field .muted{font-weight:500}
+  input,select{width:100%;padding:11px 13px;border:1.5px solid var(--linha);border-radius:11px;background:var(--card2);color:var(--ink);font-size:14.5px;outline:none}
+  input:focus,select:focus{border-color:var(--jade);box-shadow:0 0 0 3px var(--jade-s)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14.5px;border-radius:11px;padding:11px 16px;border:1.5px solid var(--linha);background:var(--card);color:var(--forte);cursor:pointer}
+  .btn:hover{filter:brightness(.99)}
+  .btn.pri{background:linear-gradient(135deg,var(--jade),var(--jade2));border-color:transparent;color:#fff}
+  .btn.sm{padding:7px 11px;font-size:12.5px;border-radius:9px}
+  .btn.block{width:100%}
+  .btn.ghost{background:var(--card2)}
+  .btn.danger{color:var(--vermelho);border-color:color-mix(in srgb,var(--vermelho) 35%,var(--linha))}
+  .btn.ok{color:var(--jade2);border-color:color-mix(in srgb,var(--jade) 40%,var(--linha))}
+
+  /* ---------- SHELL ---------- */
+  #app{display:none;min-height:100vh}
+  .shell{display:grid;grid-template-columns:262px 1fr;min-height:100vh}
+  aside{background:var(--sb);color:var(--sb-ink);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--sb-linha)}
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 18px 14px}
+  .brand img{width:40px;height:40px;object-fit:contain;border-radius:10px}
+  .brand b{color:#fff;font-size:17px;font-weight:800;line-height:1}
+  .brand small{display:block;color:var(--sb-suave);font-size:11.5px;margin-top:3px}
+  nav.menu{display:flex;flex-direction:column;gap:3px;padding:8px 12px;flex:1;overflow:auto}
+  .mi{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;color:var(--sb-ink);text-decoration:none;font-weight:600;font-size:14.5px;cursor:pointer;border:none;background:none;text-align:left;width:100%}
+  .mi .ic{width:19px;height:19px;color:var(--sb-suave)}
+  .mi:hover{background:rgba(255,255,255,.055)}
+  .mi.on{background:color-mix(in srgb,var(--jade) 22%,transparent);color:#fff}
+  .mi.on .ic{color:var(--jade2)}
+  .mi .soon{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sb-suave);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:999px}
+  .sb-foot{padding:14px;border-top:1px solid var(--sb-linha)}
+  .sb-foot .masc{width:120px;display:block;margin:0 auto 8px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4))}
+  .saude-sb{background:var(--sb2);border:1px solid var(--sb-linha);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--sb-suave)}
+  .saude-sb b{display:flex;align-items:center;gap:7px;color:#bfe8cf;font-size:12.5px}
+  .saude-sb .dot{width:8px;height:8px;border-radius:50%;background:#49d08b}
+
+  main{min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:12px;padding:16px 26px;border-bottom:1px solid var(--linha);background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+  .topbar h2{font-size:21px}.topbar .sp{flex:1}
+  .burger{display:none;background:var(--card);border:1px solid var(--linha);width:40px;height:40px;border-radius:11px;color:var(--ink);cursor:pointer;place-items:center}
+  .content{padding:24px 26px 60px;max-width:1080px}
+
+  .view{display:none} .view.on{display:block}
+
+  /* dashboard */
+  .dom-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .dom-head .nome{font-size:24px;font-weight:800;color:var(--forte)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px}
+  .pill.on{background:var(--jade-s);color:var(--jade2)} .pill.off{background:var(--verm-s);color:var(--vermelho)}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .dom-head .sp{flex:1}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .stat{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);padding:17px 18px;box-shadow:var(--sombra-s)}
+  .stat .l{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--suave)}
+  .stat .l .ic{width:16px;height:16px;color:var(--jade)}
+  .stat .v{font-size:30px;font-weight:800;color:var(--forte);margin:4px 0 2px;line-height:1}
+  .stat .s{font-size:12.5px;color:var(--suave)}
+  .stat.alerta{cursor:pointer} .stat.alerta .v{color:var(--sol)}
+  .stat.alerta.zero .v{color:var(--jade2)}
+
+  /* painel */
+  .panel{background:var(--card);border:1px solid var(--linha);border-radius:var(--raio);box-shadow:var(--sombra-s);overflow:hidden;margin-bottom:18px}
+  .ph{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--linha)}
+  .ph h3{font-size:16px}.ph .sp{flex:1}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--linha)}
+  .row:last-child{border-bottom:none}
+  .row .av{width:38px;height:38px;border-radius:10px;background:var(--jade-s);color:var(--jade2);display:grid;place-items:center;font-weight:800;flex:0 0 auto}
+  .row .av.off{background:color-mix(in srgb,var(--suave) 20%,transparent);color:var(--suave)}
+  .row .nm{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .muted{color:var(--suave);font-size:12.7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .sp{flex:1;min-width:8px}
+  .empty{padding:34px 18px;text-align:center;color:var(--suave)}
+  .empty img{width:120px;opacity:.95;margin-bottom:6px}
+  .muted{color:var(--suave)} .small{font-size:12.5px}
+  .badge{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
+  .badge.off{background:var(--verm-s);color:var(--vermelho)}
+  .badge.alta{background:var(--verm-s);color:var(--vermelho)}
+  .badge.media{background:var(--sol-s);color:var(--sol)}
+  .badge.baixa{background:var(--ceu-s);color:var(--ceu)}
+  .badge.info{background:var(--jade-s);color:var(--jade2)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--jade-s);color:var(--jade2);border:1px solid var(--linha);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+  .memrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--linha)}
+  .memrow:last-child{border:none}
+
+  /* form grid (segurança) */
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+  .fgrid .field{margin:0}
+  .switch{display:flex;align-items:center;gap:10px;padding:10px 0}
+  .switch input{width:auto}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha)}
+  .toggle-row:last-child{border:none}
+  .sw{position:relative;width:44px;height:25px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw .sl{position:absolute;inset:0;background:var(--linha);border-radius:999px;transition:.2s;cursor:pointer}
+  .sw .sl:before{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .sl{background:var(--jade)}
+  .sw input:checked + .sl:before{transform:translateX(19px)}
+
+  /* modal + toast */
+  .mask{display:none;position:fixed;inset:0;background:rgba(6,20,13,.55);z-index:50;place-items:center;padding:18px;overflow:auto}
+  .mask.open{display:grid}
+  .modal{background:var(--card);border:1px solid var(--linha);border-radius:18px;box-shadow:var(--sombra);width:min(460px,100%);padding:24px;max-height:92vh;overflow:auto}
+  .modal h3{font-size:19px;margin-bottom:3px}.modal .sub{color:var(--suave);font-size:13.5px;margin-bottom:16px}
+  .modal .acts{display:flex;gap:10px;margin-top:20px}.modal .acts .btn{flex:1}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(18px);opacity:0;transition:.25s;background:var(--forte);color:var(--bg);padding:12px 20px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)} #toast.erro{background:var(--vermelho);color:#fff}
+  .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media(max-width:860px){
+    .shell{grid-template-columns:1fr}
+    aside{position:fixed;left:0;top:0;width:262px;z-index:40;transform:translateX(-100%);transition:.25s}
+    aside.open{transform:none}
+    .burger{display:grid}
+    .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+    .backdrop.open{display:block}
+    .fgrid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="mk" viewBox="0 0 50 50"><path class="leaf" d="M44 6 C 20 6, 6 22, 6 46 C 10 46, 14 45.4, 18 44.2 C 17 36, 20 27, 27 20 C 24 29, 23 37, 23.6 42 C 33 37, 44 27, 44 6 Z"/></symbol></svg>
+
+<!-- LOGIN -->
+<div id="login">
+  <form class="loginbox" id="loginForm">
+    <img class="masc" src="assets/mascote.png" alt="" onerror="this.style.display='none'">
+    <h1>Guatá AD</h1>
+    <p>Painel do domínio — entre com a senha do Administrador</p>
+    <div class="field"><label>Senha do Administrador</label><input type="password" id="senha" autocomplete="current-password" autofocus></div>
+    <button class="btn pri block" type="submit" id="btnEntrar">Entrar</button>
+  </form>
+</div>
+
+<!-- APP -->
+<div id="app">
+ <div class="backdrop" id="backdrop" onclick="fecharMenu()"></div>
+ <div class="shell">
+  <aside id="aside">
+    <div class="brand">
+      <img src="assets/logo.png" alt="" onerror="this.outerHTML='<svg class=ic style=\'width:38px;height:38px\'><use href=#mk></use></svg>'">
+      <div><b>Guatá AD</b><small>identidade soberana</small></div>
+    </div>
+    <nav class="menu" id="menu">
+      <button class="mi on" data-v="painel"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Painel</button>
+      <button class="mi" data-v="usuarios"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Usuários</button>
+      <button class="mi" data-v="grupos"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 .01M23 21v-2a4 4 0 0 0-3-3.87"/></svg> Grupos</button>
+      <button class="mi" data-v="computadores"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Computadores</button>
+      <button class="mi" data-v="seguranca"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg> Segurança</button>
+      <button class="mi" disabled style="opacity:.55;cursor:default"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg> Políticas (GPO) <span class="soon">em breve</span></button>
+      <button class="mi" disabled style="opacity:.55;cursor:default"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18A15 15 0 0 1 12 3"/></svg> Rede (DNS) <span class="soon">em breve</span></button>
+    </nav>
+    <div class="sb-foot">
+      <img class="masc" src="assets/mascote.png" alt="" onerror="this.style.display='none'">
+      <div class="saude-sb"><b><span class="dot"></span> Domínio saudável</b><span id="sbSaude">carregando…</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <button class="burger" onclick="abrirMenu()"><svg class="ic" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+      <h2 id="tituloView">Painel</h2>
+      <span class="sp"></span>
+      <button class="btn sm ghost" id="btnSair"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sair</button>
+    </div>
+    <div class="content">
+
+      <!-- PAINEL -->
+      <section class="view on" data-view="painel">
+        <div class="dom-head">
+          <span class="nme nome" id="domNome">—</span>
+          <span class="pill on" id="domPill"><span class="dot"></span> Domínio saudável</span>
+          <span class="sp"></span>
+          <button class="btn ghost" onclick="abrirIngressar()">Ingressar máquina</button>
+          <button class="btn pri" onclick="abrirCriarUsuario()"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M12 5v14M5 12h14"/></svg> Usuário</button>
+        </div>
+        <div class="cards" id="statCards"></div>
+      </section>
+
+      <!-- USUÁRIOS -->
+      <section class="view" data-view="usuarios">
+        <div class="panel"><div class="ph"><h3>Usuários</h3><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirCriarUsuario()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Novo usuário</button></div>
+          <div id="listaUsuarios"><div class="empty">carregando…</div></div></div>
+      </section>
+
+      <!-- GRUPOS -->
+      <section class="view" data-view="grupos">
+        <div class="panel"><div class="ph"><h3>Grupos</h3><span class="sp"></span>
+          <button class="btn sm pri" style="width:auto" onclick="abrirCriarGrupo()"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Novo grupo</button></div>
+          <div id="listaGrupos"><div class="empty">carregando…</div></div></div>
+      </section>
+
+      <!-- COMPUTADORES -->
+      <section class="view" data-view="computadores">
+        <div class="panel"><div class="ph"><h3>Computadores no domínio</h3></div>
+          <div id="listaComputadores"><div class="empty">carregando…</div></div></div>
+      </section>
+
+      <!-- SEGURANÇA -->
+      <section class="view" data-view="seguranca">
+        <div class="panel">
+          <div class="ph"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--jade)"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg><h3>Regras de senha e bloqueio</h3><span class="sp"></span><button class="btn sm pri" style="width:auto" id="btnSalvarPol">Salvar regras</button></div>
+          <div class="fgrid" id="polForm"><div class="muted">carregando…</div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--sol)"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><h3>Contas que pedem atenção</h3><span class="sp"></span><span class="muted small" id="insecResumo"></span></div>
+          <div id="listaInseguras"><div class="empty">carregando…</div></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+ </div>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+async function api(path,method="GET",body){
+  const o={method,headers:{}};
+  if(body){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(body);}
+  const r=await fetch(path,o); let j={}; try{j=await r.json();}catch(e){}
+  if(r.status===401 && path!=="/api/login"){mostrarLogin();throw new Error("sessao");}
+  return {ok:r.ok,status:r.status,data:j};
+}
+const sons={};["ad-acesso","sucesso","alerta","notificacao"].forEach(n=>{try{const a=new Audio("assets/sons/"+n+".ogg");a.volume=.45;sons[n]=a;}catch(e){}});
+function som(n){try{const a=sons[n];if(a){a.currentTime=0;a.play().catch(()=>{});}}catch(e){}}
+function toast(m,erro){const t=$("#toast");t.textContent=m;t.className=(erro?"erro ":"")+"show";som(erro?"alerta":"sucesso");setTimeout(()=>t.className=t.className.replace("show",""),3000);}
+function esc(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function inicial(s){return (s&&s.trim()?s.trim()[0]:'?').toUpperCase();}
+function vazio(masc,msg,extra){return `<div class="empty"><img src="assets/masc-${masc}.png" alt="" onerror="this.style.display='none'"><div>${msg}</div>${extra?`<div class="muted small" style="margin-top:4px">${extra}</div>`:''}</div>`;}
+const SVG_GRUPO='<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 .01M23 21v-2a4 4 0 0 0-3-3.87"/></svg>';
+const visivel=g=>!["krbtgt"].includes((g||"").toLowerCase()) && !/^dns-|^DnsAdmins|^RAS and/i.test(g||"");
+
+/* sessão / navegação */
+function mostrarLogin(){$("#app").style.display="none";$("#login").style.display="grid";$("#senha").value="";setTimeout(()=>$("#senha").focus(),50);}
+function mostrarApp(){$("#login").style.display="none";$("#app").style.display="block";som("ad-acesso");carregarGruposCache();irPara("painel");}
+const titulos={painel:"Painel",usuarios:"Usuários",grupos:"Grupos",computadores:"Computadores",seguranca:"Segurança"};
+function irPara(v){
+  document.querySelectorAll(".mi").forEach(m=>m.classList.toggle("on",m.dataset.v===v));
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.dataset.view===v));
+  $("#tituloView").textContent=titulos[v]||"Painel";
+  fecharMenu();
+  if(v==="painel")carregarPainel();
+  if(v==="usuarios")carregarUsuarios();
+  if(v==="grupos")carregarGrupos();
+  if(v==="computadores")carregarComputadores();
+  if(v==="seguranca")carregarSeguranca();
+}
+document.querySelectorAll(".mi[data-v]").forEach(m=>m.addEventListener("click",()=>irPara(m.dataset.v)));
+function abrirMenu(){$("#aside").classList.add("open");$("#backdrop").classList.add("open");}
+function fecharMenu(){$("#aside").classList.remove("open");$("#backdrop").classList.remove("open");}
+
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();const b=$("#btnEntrar");b.disabled=true;b.innerHTML='<span class="spin"></span> Entrando…';
+  try{const r=await api("/api/login","POST",{senha:$("#senha").value});if(r.ok)mostrarApp();else toast(r.data.erro||"Falha",true);}
+  catch(e){}finally{b.disabled=false;b.textContent="Entrar";}
+});
+$("#btnSair").addEventListener("click",async()=>{try{await api("/api/logout","POST",{});}catch(e){}mostrarLogin();});
+
+/* PAINEL */
+async function carregarPainel(){
+  try{const {data:e}=await api("/api/estado");
+    $("#domNome").textContent=e.dominio||"domínio";
+    const on=(e.servico==="active"||e.servico==="activating");
+    const pill=$("#domPill");pill.className="pill "+(on?"on":"off");
+    pill.innerHTML='<span class="dot"></span> '+(on?"Domínio saudável":"Serviço parado");
+    $("#sbSaude").textContent=(e.controladores||1)+" "+((e.controladores||1)===1?"controlador":"controladores")+" · "+(on?"no ar":"parado");
+    const card=(ic,l,v,s,cls,on2)=>`<div class="stat ${cls||''} ${on2===0?'zero':''}" ${cls==='alerta'?`onclick="irPara('seguranca')"`:''}><div class="l">${ic} ${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    const U='<svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    const C='<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+    const G=SVG_GRUPO; const S='<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>';
+    $("#statCards").innerHTML=
+      card(U,"Usuários",e.usuarios,`${e.usuarios_ativos} ativos · ${e.usuarios_inativos} inativos`)+
+      card(C,"Computadores",e.computadores,`${e.computadores_windows} Windows · ${e.computadores_outros} Linux/outros`)+
+      card(G,"Grupos",e.grupos,"no domínio")+
+      card(S,"Segurança",e.inseguras,(e.inseguras===0?"tudo em ordem":"contas em atenção"),"alerta",e.inseguras);
+  }catch(e){}
+}
+
+/* USUÁRIOS */
+const usuariosSistema=["krbtgt","guest"];
+async function carregarUsuarios(){
+  try{const {data}=await api("/api/usuarios");
+    const itens=(data.itens||[]).filter(u=>!usuariosSistema.includes((u.login||"").toLowerCase()));
+    const el=$("#listaUsuarios");
+    if(!itens.length){el.innerHTML=vazio('usuarios','Nenhum usuário ainda.','Clique em “Novo usuário”.');return;}
+    el.innerHTML=itens.map(u=>`<div class="row">
+      <div class="av ${u.ativo?'':'off'}">${esc(inicial(u.nome||u.login))}</div>
+      <div style="min-width:0">
+        <div class="nm">${esc(u.nome||u.login)} ${u.ativo?'':'<span class="badge off">inativo</span>'}</div>
+        <div class="muted">${esc(u.login)}${u.email?' · '+esc(u.email):''}${u.cargo?' · '+esc(u.cargo):''}</div>
+      </div><span class="sp"></span>
+      <button class="btn sm ghost" onclick="abrirEditar('${esc(u.login)}')">Editar</button>
+      ${u.ativo?`<button class="btn sm danger" onclick="mudarEstado('${esc(u.login)}','desativar')">Desativar</button>`
+               :`<button class="btn sm ok" onclick="mudarEstado('${esc(u.login)}','ativar')">Ativar</button>`}
+    </div>`).join("");
+  }catch(e){}
+}
+let gruposCache=[];
+async function carregarGruposCache(){try{const {data}=await api("/api/grupos");gruposCache=(data.itens||[]).map(g=>g.nome);}catch(e){}}
+function opcoesGrupo(sel){return '<option value="">— nenhum —</option>'+gruposCache.map(g=>`<option ${g===sel?'selected':''}>${esc(g)}</option>`).join("");}
+function sugereLogin(n){return n.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,".").replace(/^\.|\.$/g,"").slice(0,40);}
+
+function abrirCriarUsuario(){
+  abrir(`<h3>Novo usuário</h3><p class="sub">Crie o acesso de uma pessoa ao domínio.</p>
+    <div class="field"><label>Nome completo</label><input id="m_nome" placeholder="Ex: João Silva"></div>
+    <div class="field"><label>Login</label><input id="m_login" placeholder="joao.silva"></div>
+    <div class="field"><label>E-mail <span class="muted">(opcional)</span></label><input id="m_email" type="email" placeholder="joao.silva@empresa.local"></div>
+    <div class="field"><label>Cargo <span class="muted">(opcional)</span></label><input id="m_cargo" placeholder="Ex: Analista"></div>
+    <div class="field"><label>Grupo <span class="muted">(opcional)</span></label><select id="m_grupo">${opcoesGrupo()}</select></div>
+    <div class="field"><label>Senha inicial</label><input id="m_senha" type="password" placeholder="mín. 8, com Maiúscula, minúscula e número"></div>
+    <div class="switch"><input type="checkbox" id="m_trocar" checked><label for="m_trocar" style="margin:0">Exigir troca de senha no 1º acesso</label></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Criar usuário</button></div>`);
+  const nm=$("#m_nome"),lg=$("#m_login");let ed=false;lg.addEventListener("input",()=>ed=true);
+  nm.addEventListener("input",()=>{if(!ed)lg.value=sugereLogin(nm.value);});
+  $("#m_ok").onclick=async()=>{
+    const login=lg.value.trim();
+    const body={nome:nm.value.trim(),login,email:$("#m_email").value.trim(),cargo:$("#m_cargo").value.trim(),grupo:$("#m_grupo").value,senha:$("#m_senha").value};
+    const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/usuario-criar","POST",body);
+    if(r.ok && $("#m_trocar").checked){await api("/api/usuario-flag","POST",{login,flag:"trocar_logon",valor:true});}
+    b.disabled=false;b.textContent="Criar usuário";
+    if(r.ok){fechar();toast("Usuário '"+login+"' criado!");carregarUsuarios();carregarPainel();}
+    else toast(r.data.erro||"Não consegui criar",true);
+  };
+}
+async function abrirEditar(login){
+  abrir(`<h3>Editar usuário</h3><p class="sub">Carregando…</p>`);
+  const {data:u}=await api("/api/usuario?login="+encodeURIComponent(login));
+  const grps=(u.grupos||[]).filter(visivel);
+  abrir(`<h3>${esc(u.nome||login)}</h3><p class="sub">${esc(login)}${u.ativo?'':' · <b>inativo</b>'}</p>
+    <div class="field"><label>E-mail</label><input id="m_email" type="email" value="${esc(u.email||'')}"></div>
+    <div class="field"><label>Cargo</label><input id="m_cargo" value="${esc(u.cargo||'')}"></div>
+    <div class="field"><label>Grupos</label><div class="chips">${grps.length?grps.map(g=>`<span class="chip">${esc(g)}</span>`).join(""):'<span class="muted small">nenhum grupo ainda</span>'}</div></div>
+    <div class="field"><label>Adicionar a um grupo</label><div style="display:flex;gap:8px"><select id="m_addg" style="flex:1">${opcoesGrupo()}</select><button class="btn sm" id="m_add">Adicionar</button></div></div>
+    <div class="toggle-row"><span>Senha nunca expira</span><label class="sw"><input type="checkbox" id="m_ne" ${u.nunca_expira?'checked':''}><span class="sl"></span></label></div>
+    <div class="toggle-row"><span>Exigir troca no próximo acesso</span><label class="sw"><input type="checkbox" id="m_tl" ${u.trocar_logon?'checked':''}><span class="sl"></span></label></div>
+    <div class="acts" style="flex-wrap:wrap">
+      <button class="btn ghost" style="flex:1" onclick="abrirSenha('${esc(login)}')">Resetar senha</button>
+      <button class="btn pri" style="flex:1" id="m_ok">Salvar</button></div>`);
+  $("#m_add").onclick=async()=>{const g=$("#m_addg").value;if(!g)return;const r=await api("/api/grupo-membro","POST",{grupo:g,login});if(r.ok){toast("Adicionado a '"+g+"'");abrirEditar(login);}else toast(r.data.erro||"Erro",true);};
+  $("#m_ok").onclick=async()=>{
+    const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/usuario-editar","POST",{login,email:$("#m_email").value.trim(),cargo:$("#m_cargo").value.trim()});
+    if($("#m_ne").checked!==u.nunca_expira)await api("/api/usuario-flag","POST",{login,flag:"nunca_expira",valor:$("#m_ne").checked});
+    if($("#m_tl").checked!==u.trocar_logon)await api("/api/usuario-flag","POST",{login,flag:"trocar_logon",valor:$("#m_tl").checked});
+    b.disabled=false;b.textContent="Salvar";
+    if(r.ok){fechar();toast("Dados de '"+login+"' salvos!");carregarUsuarios();carregarSeguranca();}else toast(r.data.erro||"Erro",true);
+  };
+}
+function abrirSenha(login){
+  abrir(`<h3>Resetar senha</h3><p class="sub">Nova senha para <b>${esc(login)}</b>.</p>
+    <div class="field"><label>Nova senha</label><input id="m_senha" type="password" placeholder="mín. 8, com Maiúscula, minúscula e número"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Salvar</button></div>`);
+  $("#m_ok").onclick=async()=>{const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/usuario-senha","POST",{login,senha:$("#m_senha").value});b.disabled=false;b.textContent="Salvar";
+    if(r.ok){fechar();toast("Senha de '"+login+"' alterada!");}else toast(r.data.erro||"Erro",true);};
+}
+async function mudarEstado(login,acao){
+  if(acao==="desativar"&&!confirm("Desativar o acesso de '"+login+"'?"))return;
+  const r=await api("/api/usuario-estado","POST",{login,acao});
+  if(r.ok){toast(acao==="desativar"?"'"+login+"' desativado.":"'"+login+"' ativado.");carregarUsuarios();carregarPainel();}else toast(r.data.erro||"Erro",true);
+}
+
+/* GRUPOS */
+async function carregarGrupos(){
+  try{const {data}=await api("/api/grupos");const itens=(data.itens||[]);
+    const el=$("#listaGrupos");
+    if(!itens.length){el.innerHTML=vazio('grupos','Nenhum grupo ainda.','Crie grupos para organizar permissões.');return;}
+    el.innerHTML=itens.map(g=>`<div class="row"><div class="av">${SVG_GRUPO}</div>
+      <div style="min-width:0"><div class="nm">${esc(g.nome)}</div><div class="muted">${g.membros} ${g.membros===1?'membro':'membros'}${g.descricao?' · '+esc(g.descricao):''}</div></div>
+      <span class="sp"></span><button class="btn sm ghost" onclick="abrirGrupo('${esc(g.nome)}')">Gerenciar</button></div>`).join("");
+  }catch(e){}
+}
+function abrirCriarGrupo(){
+  abrir(`<h3>Novo grupo</h3><p class="sub">Grupos organizam permissões (ex: Financeiro).</p>
+    <div class="field"><label>Nome do grupo</label><input id="m_nome" placeholder="Ex: Financeiro"></div>
+    <div class="acts"><button class="btn ghost" onclick="fechar()">Cancelar</button><button class="btn pri" id="m_ok">Criar grupo</button></div>`);
+  $("#m_ok").onclick=async()=>{const b=$("#m_ok");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+    const r=await api("/api/grupo-criar","POST",{nome:$("#m_nome").value.trim()});b.disabled=false;b.textContent="Criar grupo";
+    if(r.ok){fechar();toast("Grupo criado!");carregarGruposCache();carregarGrupos();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function abrirGrupo(nome){
+  abrir(`<h3>${esc(nome)}</h3><p class="sub">Carregando…</p>`);
+  const {data}=await api("/api/grupo?nome="+encodeURIComponent(nome));const membros=data.membros||[];
+  abrir(`<h3>${esc(nome)}</h3><p class="sub">${membros.length} ${membros.length===1?'membro':'membros'}</p>
+    <div class="field"><label>Membros</label><div>${membros.length?membros.map(m=>`<div class="memrow"><span>${esc(m)}</span><button class="btn sm danger" onclick="removerMembro('${esc(nome)}','${esc(m)}')">Remover</button></div>`).join(""):'<div class="muted small" style="padding:6px 0">Nenhum membro ainda.</div>'}</div></div>
+    <div class="field"><label>Adicionar usuário</label><div style="display:flex;gap:8px"><input id="g_add" placeholder="login" style="flex:1"><button class="btn sm" id="g_addb">Adicionar</button></div></div>
+    <div class="acts"><button class="btn danger" id="g_del">Apagar grupo</button><button class="btn pri" onclick="fechar()">Fechar</button></div>`);
+  $("#g_addb").onclick=async()=>{const u=$("#g_add").value.trim();if(!u)return;const r=await api("/api/grupo-membro","POST",{grupo:nome,login:u});if(r.ok){toast("Adicionado!");abrirGrupo(nome);carregarGrupos();}else toast(r.data.erro||"Erro",true);};
+  $("#g_del").onclick=async()=>{if(!confirm("Apagar o grupo '"+nome+"'?"))return;const r=await api("/api/grupo-apagar","POST",{nome});if(r.ok){fechar();toast("Grupo apagado.");carregarGruposCache();carregarGrupos();carregarPainel();}else toast(r.data.erro||"Erro",true);};
+}
+async function removerMembro(g,u){const r=await api("/api/grupo-remover-membro","POST",{grupo:g,login:u});if(r.ok){toast("Removido");abrirGrupo(g);carregarGrupos();}else toast(r.data.erro||"Erro",true);}
+
+/* COMPUTADORES */
+async function carregarComputadores(){
+  try{const {data}=await api("/api/computadores");const itens=(data.itens||[]);const el=$("#listaComputadores");
+    if(!itens.length){el.innerHTML=vazio('computadores','Nenhum computador no domínio ainda.','Aponte o DNS do PC para este servidor e entre no domínio.');return;}
+    el.innerHTML=itens.map(c=>`<div class="row"><div class="av"><svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="nm">${esc(c)}</div></div>`).join("");
+  }catch(e){}
+}
+
+/* SEGURANÇA */
+async function carregarSeguranca(){
+  try{const {data:p}=await api("/api/politica-senha");
+    const campo=(id,l,v,suf)=>`<div class="field"><label>${l}</label><input id="${id}" type="number" min="0" value="${v!=null?v:''}"> ${suf?`<span class="muted small">${suf}</span>`:''}</div>`;
+    $("#polForm").innerHTML=
+      campo("p_min","Tamanho mínimo da senha",p.min_tamanho,"caracteres")+
+      campo("p_hist","Não repetir as últimas",p.historico,"senhas")+
+      campo("p_max","Senha expira em",p.max_idade,"dias (0 = nunca)")+
+      campo("p_bloq","Bloquear após",p.bloqueio_tentativas,"tentativas erradas (0 = não bloqueia)")+
+      campo("p_dur","Ficar bloqueada por",p.bloqueio_duracao,"minutos")+
+      `<div class="field"><label>Exigir complexidade</label><div class="switch"><label class="sw"><input type="checkbox" id="p_cx" ${p.complexidade?'checked':''}><span class="sl"></span></label><span class="muted small">maiúscula, minúscula e número</span></div></div>`;
+  }catch(e){}
+  carregarInseguras();
+}
+$("#btnSalvarPol").onclick=async()=>{
+  const b=$("#btnSalvarPol");b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  const body={min_tamanho:$("#p_min").value,historico:$("#p_hist").value,max_idade:$("#p_max").value,
+    bloqueio_tentativas:$("#p_bloq").value,bloqueio_duracao:$("#p_dur").value,complexidade:$("#p_cx").checked};
+  const r=await api("/api/politica-senha","POST",body);b.disabled=false;b.textContent="Salvar regras";
+  if(r.ok)toast("Regras de senha salvas!");else toast(r.data.erro||"Erro",true);
+};
+async function carregarInseguras(){
+  try{const {data}=await api("/api/contas-inseguras");const itens=(data.itens||[]);const el=$("#listaInseguras");
+    $("#insecResumo").textContent=itens.length?itens.length+" conta(s)":"tudo em ordem";
+    if(!itens.length){el.innerHTML=vazio('usuarios','Nenhuma conta insegura. ','O domínio está saudável.');return;}
+    el.innerHTML=itens.map(c=>`<div class="row">
+      <div class="av ${c.sev==='alta'?'off':''}">${esc(inicial(c.nome||c.login))}</div>
+      <div style="min-width:0"><div class="nm">${esc(c.nome||c.login)}</div>
+        <div class="chips" style="margin-top:3px">${c.flags.map(f=>`<span class="badge ${f.sev}">${esc(f.txt)}</span>`).join("")}</div></div>
+      <span class="sp"></span><button class="btn sm ghost" onclick="abrirEditar('${esc(c.login)}')">Resolver</button></div>`).join("");
+  }catch(e){}
+}
+
+/* INGRESSAR MÁQUINA */
+async function abrirIngressar(){
+  const {data:e}=await api("/api/estado");
+  abrir(`<h3>Ingressar uma máquina</h3><p class="sub">Para um computador entrar no domínio <b>${esc(e.dominio||'')}</b>:</p>
+    <ol style="padding-left:18px;color:var(--ink);font-size:14px;line-height:1.7">
+      <li>No computador, defina o <b>DNS</b> como <b>${esc(e.ip||'este servidor')}</b>.</li>
+      <li>Entre no domínio <b>${esc(e.dominio||'')}</b> (no Windows: Sistema → Domínio).</li>
+      <li>Use <b>Administrator</b> e a senha do domínio.</li>
+      <li>Reinicie e faça login com um usuário do domínio.</li>
+    </ol>
+    <div class="acts"><button class="btn pri" onclick="fechar()">Entendi</button></div>`);
+}
+
+/* MODAL base */
+function fechar(){$("#mask").classList.remove("open");}
+function abrir(html){$("#modal").innerHTML=html;$("#mask").classList.add("open");const i=$("#modal input");if(i)setTimeout(()=>i.focus(),50);}
+$("#mask").addEventListener("click",e=>{if(e.target.id==="mask")fechar();});
+
+/* início */
+(async()=>{try{const r=await api("/api/sessao");if(r.data.logado)mostrarApp();else mostrarLogin();}catch(e){mostrarLogin();}})();
+</script>
+</body>
+</html>

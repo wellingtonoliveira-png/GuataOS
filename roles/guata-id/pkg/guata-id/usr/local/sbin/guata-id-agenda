@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+# Guatá ID — processa agendamentos (ativar/desativar contas na data marcada)
+import json,time,subprocess,os
+AG="/etc/guata-id/agenda.jsonl"; AUD="/var/log/guata-id/audit.jsonl"
+def audit(acao,obj,ok):
+    try:
+        os.makedirs("/var/log/guata-id",exist_ok=True)
+        with open(AUD,"a") as f:
+            f.write(json.dumps({"ts":int(time.time()),"usuario":"Agenda","acao":acao,"objeto":obj,
+                   "resultado":("sucesso" if ok else "falha"),"ip":"agendado"},ensure_ascii=False)+"\n")
+    except Exception: pass
+try: linhas=open(AG).read().splitlines()
+except Exception: linhas=[]
+agora=time.time(); restantes=[]
+for l in linhas:
+    if not l.strip(): continue
+    try: it=json.loads(l)
+    except Exception: continue
+    if it.get("quando",0)<=agora and it.get("login"):
+        acao="enable" if it.get("acao")=="ativar" else "disable"
+        r=subprocess.run(["samba-tool","user",acao,it["login"]],capture_output=True)
+        audit(("ativar conta (agendado)" if acao=="enable" else "desativar conta (agendado)"),it["login"],r.returncode==0)
+    else:
+        restantes.append(l)
+try: open(AG,"w").write("\n".join(restantes)+("\n" if restantes else ""))
+except Exception: pass

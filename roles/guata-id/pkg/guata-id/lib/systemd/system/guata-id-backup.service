@@ -1,0 +1,9 @@
+[Unit]
+Description=Guatá ID — Backup do domínio (samba-tool domain backup)
+After=samba-ad-dc.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/guata-id-backup
+Nice=10
+IOSchedulingClass=idle

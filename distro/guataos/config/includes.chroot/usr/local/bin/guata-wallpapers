@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Papéis de Parede do Guatá — escolha visual (o GNOME 48 tirou a grade nativa)."""
+import gi, os, glob
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, Gdk, Gio, GdkPixbuf, GLib
+
+BASE = "/usr/share/backgrounds/guata"
+NOMES = {
+ "amazonia":"Amazônia","caatinga":"Caatinga","cerrado":"Cerrado","iguacu":"Foz do Iguaçu",
+ "lencois":"Lençóis Maranhenses","manguezais":"Manguezais","mantiqueira":"Serra da Mantiqueira",
+ "mataatlantica":"Mata Atlântica","noronha":"Fernando de Noronha","pampa":"Pampa","pantanal":"Pantanal",
+ "aurora":"Abstrato · Aurora","folhas":"Abstrato · Folhas","ondas":"Abstrato · Ondas",
+ "aurora-copilot":"Abstrato · Onda","onda-folha-copilot":"Abstrato · Onda & Folha",
+}
+CSS = """
+.janela{background:#f4f7f3}
+.titulo{font-size:26px;font-weight:850;color:#13231c}
+.sub{color:#6f8277;font-size:15px}
+.card{background:#fff;border:2px solid #e2e9e2;border-radius:16px;padding:6px}
+.card:hover{border-color:#2f8f66;background:#f3f9f5}
+.nome{font-size:13px;font-weight:700;color:#20302a;padding:6px 2px 2px}
+.ok{color:#1f9d63;font-weight:800}
+"""
+
+class Wall(Adw.Application):
+    def __init__(self): super().__init__(application_id="br.com.guataos.Wallpapers")
+
+    def do_activate(self):
+        css=Gtk.CssProvider(); css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, 1000)
+        self.settings = Gio.Settings.new("org.gnome.desktop.background")
+
+        win=Adw.ApplicationWindow(application=self); win.add_css_class("janela"); win.set_title("Papéis de Parede"); win.set_default_size(960,720)
+        tv=Adw.ToolbarView(); hb=Adw.HeaderBar(); hb.set_show_end_title_buttons(True)
+        t=Gtk.Label(label="🖼️ Papéis de Parede do Guatá"); t.add_css_class("title"); hb.set_title_widget(t)
+        tv.add_top_bar(hb); win.set_content(tv)
+
+        root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=14, margin_start=20, margin_end=20, margin_bottom=16)
+        tv.set_content(root)
+        root.append(self._lbl("Escolha o papel de parede",  "titulo"))
+        self.status=self._lbl("Clique numa imagem pra aplicar na hora.", "sub"); root.append(self.status)
+
+        sc=Gtk.ScrolledWindow(hexpand=True, vexpand=True)
+        fb=Gtk.FlowBox(); fb.set_valign(Gtk.Align.START); fb.set_max_children_per_line(4); fb.set_selection_mode(Gtk.SelectionMode.NONE)
+        fb.set_column_spacing(14); fb.set_row_spacing(14); fb.set_margin_top(12)
+        sc.set_child(fb); root.append(sc)
+
+        arqs = sorted(glob.glob(f"{BASE}/*.png")) + sorted(glob.glob(f"{BASE}/abstratos/*.png"))
+        for p in arqs:
+            fb.append(self._card(p))
+        win.present()
+
+    def _lbl(self, txt, klass):
+        l=Gtk.Label(label=txt, xalign=0); l.add_css_class(klass); return l
+
+    def _card(self, path):
+        key=os.path.splitext(os.path.basename(path))[0]
+        nome=NOMES.get(key, key.capitalize())
+        b=Gtk.Button(); b.add_css_class("card"); b.connect("clicked", self._aplicar, path, nome)
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        try:
+            pb=GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 220, 138, True)
+            img=Gtk.Picture.new_for_pixbuf(pb); img.set_size_request(220,138)
+        except Exception:
+            img=Gtk.Label(label="?")
+        box.append(img)
+        n=Gtk.Label(label=nome, xalign=0); n.add_css_class("nome"); box.append(n)
+        b.set_child(box); return b
+
+    def _aplicar(self, _btn, path, nome):
+        uri=GLib.filename_to_uri(path, None)
+        self.settings.set_string("picture-uri", uri)
+        self.settings.set_string("picture-uri-dark", uri)
+        self.settings.set_string("picture-options", "zoom")
+        self.status.set_label(f"✓ Aplicado: {nome}"); self.status.add_css_class("ok")
+
+if __name__ == "__main__":
+    Wall().run(None)

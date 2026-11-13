@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# PAJÉ — a Caixa de Ferramentas do Guatá (o curandeiro que cura a máquina).
+# Filosofia "clicar e usar": ferramentas de TI de verdade, sem decorar
+# comando. Tudo que é destrutivo pergunta antes, com clareza.
+# ─────────────────────────────────────────────────────────────────────────────
+TITULO="Pajé — Caixa de Ferramentas"
+
+# roda um comando num terminal e espera uma tecla (pra ver o resultado)
+term() {
+  if command -v gnome-terminal >/dev/null; then gnome-terminal -- bash -c "$1; echo; read -n1 -r -p 'Pressione uma tecla para fechar...'"
+  elif command -v x-terminal-emulator >/dev/null; then x-terminal-emulator -e bash -c "$1; echo; read -n1 -r -p 'Pressione uma tecla...'"
+  else xterm -e bash -c "$1; read -n1"; fi
+}
+
+while true; do
+  escolha=$(yad --title="$TITULO" --window-icon=utilities-terminal --width=640 --height=480 \
+    --list --radiolist --separator="" --print-column=2 \
+    --text="<big><b>🧰 O que você precisa resolver?</b></big>" \
+    --column=" " --column="Ferramenta" --column="O que faz" \
+    FALSE "Clonar disco"             "Copiar um HD/SSD inteiro para outro — ou para um arquivo de imagem" \
+    FALSE "Gravar ISO no pen drive"  "Transformar um .iso/.img num pen drive bootável" \
+    FALSE "Criar ISO de uma pasta"   "Gerar um arquivo .iso a partir de uma pasta" \
+    FALSE "Particionar (GParted)"    "Criar, redimensionar e formatar partições" \
+    FALSE "Saúde do disco (S.M.A.R.T.)" "Ver se o HD/SSD está dando sinais de morte" \
+    FALSE "Recuperar arquivos"       "PhotoRec: recuperar fotos e documentos apagados" \
+    FALSE "Testar memória (RAM)"     "Procurar defeito na memória" \
+    FALSE "Diagnóstico de rede"      "IP, gateway, DNS e teste de conexão" \
+    FALSE "Informações do PC"        "Hardware e sistema, num resumo" \
+    --button="Fechar!gtk-close:1" --button="Abrir!gtk-ok:0") || exit 0
+
+  case "$escolha" in
+    "Clonar disco")                paje-clonar-disco ;;
+    "Gravar ISO no pen drive")     paje-gravar-usb ;;
+    "Criar ISO de uma pasta")      paje-criar-iso ;;
+    "Particionar (GParted)")       pkexec gparted & ;;
+    "Saúde do disco (S.M.A.R.T.)") (gnome-disks >/dev/null 2>&1 &) || (gsmartcontrol >/dev/null 2>&1 &) ;;
+    "Recuperar arquivos")          paje-recuperar ;;
+    "Testar memória (RAM)")        term "echo 'Testando 512 MB da RAM (1 passagem)...'; sudo memtester 512M 1" ;;
+    "Diagnóstico de rede")         paje-rede ;;
+    "Informações do PC")           term "inxi -Fxxz 2>/dev/null || sudo lshw -short" ;;
+    *) ;;
+  esac
+done

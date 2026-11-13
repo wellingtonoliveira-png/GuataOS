@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Pausa
+Comment=Foco e descanso
+Exec=guata-pausa
+Icon=/usr/share/icons/guata/app-pausa.png
+Terminal=false
+Categories=Utility;
+StartupWMClass=br.com.guataos.Pausa

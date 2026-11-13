@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Guatá — som de abertura
+Exec=guata-som-abertura
+OnlyShowIn=GNOME;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

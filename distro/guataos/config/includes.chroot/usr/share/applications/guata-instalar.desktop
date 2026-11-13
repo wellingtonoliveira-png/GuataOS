@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Instalar o guataOS
+Comment=Instalar o guataOS no computador (disco)
+Exec=pkexec calamares
+Icon=/usr/share/icons/guata/app-ferramentas.png
+Terminal=false
+Categories=System;
+Keywords=instalar;install;calamares;guata;
+StartupNotify=true

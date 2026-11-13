@@ -1,0 +1,8 @@
+[org/gnome/login-screen]
+logo='/usr/share/icons/guata/login-logo.png'
+banner-message-enable=true
+banner-message-text='Guatá OS — tecnologia que nasce da natureza.'
+
+[org/gnome/desktop/interface]
+accent-color='green'
+color-scheme='prefer-dark'

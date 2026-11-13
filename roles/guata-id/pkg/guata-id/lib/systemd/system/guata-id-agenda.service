@@ -1,0 +1,7 @@
+[Unit]
+Description=Guatá ID — processar agendamentos de contas
+After=samba-ad-dc.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/guata-id-agenda
+User=root

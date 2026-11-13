@@ -1,0 +1,93 @@
+#!/bin/bash
+# Guatá Files — configuração NÃO-interativa (chamada pelo painel web).
+# Variáveis de ambiente: MODO (mesmo|empresa|simples), HOST, REALM, ADIP, ADMIN, ADPASS
+set -uo pipefail
+ETC=/etc/guata-files; STAT=/run/guata-files-config.status
+mkdir -p "$ETC" /srv/guata-files
+touch /var/log/guata-files.log 2>/dev/null && chmod 600 /var/log/guata-files.log 2>/dev/null || true
+st(){ echo "$1|$2" > "$STAT"; }   # pct|mensagem
+MODO=${MODO:-simples}; HOST=${HOST:-guata-files}
+HOST=$(echo "$HOST"|tr 'A-Z' 'a-z'|tr -cd 'a-z0-9-'); [ -z "$HOST" ] && HOST=guata-files
+st 5 "Definindo nome do servidor..."
+hostnamectl set-hostname "$HOST" 2>/dev/null || hostname "$HOST" 2>/dev/null || true
+
+if [ "$MODO" = empresa ]; then
+  REALM=$(echo "${REALM:-}"|tr 'A-Z' 'a-z'); NB=$(echo "$REALM"|cut -d. -f1|tr 'a-z' 'A-Z'); REALMU=$(echo "$REALM"|tr 'a-z' 'A-Z')
+  [ -z "$REALM" ] && { st 100 "ERRO: informe o domínio."; exit 1; }
+  [ -z "${ADIP:-}" ] && { st 100 "ERRO: informe o IP do AD."; exit 1; }
+  ADMIN=${ADMIN:-Administrator}
+  st 15 "Apontando o DNS para o Guatá AD..."
+  systemctl disable --now systemd-resolved >/dev/null 2>&1 || true
+  chattr -i /etc/resolv.conf 2>/dev/null || true
+  printf "search %s\nnameserver %s\n" "$REALM" "$ADIP" > /etc/resolv.conf
+  grep -q "$HOST" /etc/hosts || echo "127.0.1.1 $HOST.$REALM $HOST" >> /etc/hosts
+  st 35 "Preparando o Samba (membro do domínio)..."
+  cat > /etc/samba/smb.conf <<EOF
+[global]
+   workgroup = $NB
+   realm = $REALMU
+   security = ADS
+   netbios name = $(echo "$HOST"|tr 'a-z' 'A-Z'|cut -c1-15)
+   winbind use default domain = yes
+   winbind refresh tickets = yes
+   winbind enum users = yes
+   winbind enum groups = yes
+   template shell = /bin/bash
+   template homedir = /home/%U
+   idmap config * : backend = tdb
+   idmap config * : range = 3000-7999
+   idmap config $NB : backend = rid
+   idmap config $NB : range = 10000-999999
+   vfs objects = acl_xattr
+   map acl inherit = yes
+   store dos attributes = yes
+   load printers = no
+   printing = bsd
+   printcap name = /dev/null
+EOF
+  cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf 2>/dev/null || \
+    printf "[libdefaults]\n default_realm = %s\n dns_lookup_realm = false\n dns_lookup_kdc = true\n" "$REALMU" > /etc/krb5.conf
+  st 55 "Configurando nsswitch (winbind)..."
+  sed -i -E 's/^(passwd:.*)/\1 winbind/; s/^(group:.*)/\1 winbind/' /etc/nsswitch.conf
+  grep -q winbind /etc/nsswitch.conf || { echo "passwd: files winbind" >> /etc/nsswitch.conf; echo "group: files winbind" >> /etc/nsswitch.conf; }
+  st 70 "Sincronizando o relógio..."
+  systemctl enable --now chrony >/dev/null 2>&1 || true
+  st 82 "Entrando no domínio..."
+  systemctl unmask smbd nmbd winbind >/dev/null 2>&1 || true
+  # senha via stdin (não aparece no "ps", evita vazar a senha do AD)
+  printf '%s\n' "${ADPASS:-}" | net ads join -U "$ADMIN" >>/var/log/guata-files.log 2>&1 || true
+  st 92 "Ligando os serviços..."
+  systemctl enable --now smbd nmbd winbind >>/var/log/guata-files.log 2>&1 || true
+  { echo "MODO=empresa"; echo "REALM=$REALM"; echo "NB=$NB"; echo "ADIP=$ADIP"; } > "$ETC/config"; date > "$ETC/configurado"
+  if net ads testjoin >/dev/null 2>&1; then st 100 "OK: entrou no domínio $REALM!"; else st 100 "ATENÇÃO: ingresso pode não ter concluído — veja /var/log/guata-files.log"; fi
+
+elif [ "$MODO" = mesmo ] || [ "$MODO" = dc ]; then
+  st 40 "Usando os grupos deste Guatá AD..."
+  grep -q "include = /etc/guata-files/shares.conf" /etc/samba/smb.conf 2>/dev/null || \
+    echo "   include = /etc/guata-files/shares.conf" >> /etc/samba/smb.conf
+  touch /etc/guata-files/shares.conf
+  smbcontrol smbd reload-config >/dev/null 2>&1 || systemctl restart samba-ad-dc >/dev/null 2>&1 || true
+  REALM=$(grep -i "^\s*realm" /etc/samba/smb.conf | head -1 | awk -F= '{print tolower($2)}' | tr -d ' ')
+  { echo "MODO=dc"; echo "REALM=$REALM"; } > "$ETC/config"; date > "$ETC/configurado"
+  st 100 "OK: tudo junto — este Guatá AD agora serve arquivos!"
+
+else
+  st 40 "Preparando modo simples (standalone)..."
+  cat > /etc/samba/smb.conf <<EOF
+[global]
+   workgroup = WORKGROUP
+   security = user
+   map to guest = bad user
+   netbios name = $(echo "$HOST"|tr 'a-z' 'A-Z'|cut -c1-15)
+   vfs objects = acl_xattr
+   map acl inherit = yes
+   store dos attributes = yes
+   load printers = no
+   printing = bsd
+   printcap name = /dev/null
+EOF
+  systemctl unmask smbd nmbd >/dev/null 2>&1 || true
+  systemctl enable --now smbd nmbd >/dev/null 2>&1 || true
+  echo "MODO=simples" > "$ETC/config"; date > "$ETC/configurado"
+  st 100 "OK: modo simples pronto!"
+fi

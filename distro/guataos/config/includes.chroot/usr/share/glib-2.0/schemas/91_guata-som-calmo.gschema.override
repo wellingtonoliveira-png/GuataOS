@@ -1,0 +1,5 @@
+[org.gnome.desktop.sound]
+theme-name='guata'
+event-sounds=true
+input-feedback-sounds=false
+allow-volume-above-100-percent=false

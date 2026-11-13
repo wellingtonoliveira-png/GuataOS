@@ -1,0 +1,7 @@
+[Unit]
+Description=Guatá Files — varredura antivírus (ClamAV) das pastas
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/guata-files-scan scan
+Nice=15
+IOSchedulingClass=idle

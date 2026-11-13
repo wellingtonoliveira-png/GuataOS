@@ -1,0 +1,20 @@
+#!/bin/bash
+clear; G=$'\e[1;32m'; B=$'\e[1;37m'; D=$'\e[0;90m'; N=$'\e[0m'; Y=$'\e[1;33m'
+echo
+if command -v figlet >/dev/null 2>&1; then echo "${G}$(figlet -w 80 'Guata Files')${N}"
+else echo "${G}======  G U A T Á   F I L E S  ======${N}"; fi
+echo "${D}     Servidor de arquivos soberano — pastas, acessos e voltar no tempo${N}"; echo
+if grep -q "boot=live" /proc/cmdline 2>/dev/null; then
+  echo "  ${Y}Modo demonstração (pendrive).${N} Para usar de verdade, instale no disco."
+  echo; read -p "  ENTER para INSTALAR no disco (ou Ctrl+C)... " _; guata-files-instalar; exit 0
+fi
+if [ -f /etc/guata-files/configurado ]; then
+  . /etc/guata-files/config 2>/dev/null
+  IP=$(ip -o -4 addr show scope global 2>/dev/null|awk '{print $4}'|head -1)
+  echo "  ${B}Modo:${N} ${MODO:-?}    ${B}IP:${N} ${IP:-?}    ${B}Na rede:${N} \\\\$(hostname)"
+  echo; echo "  ${Y}guata-files painel${N}  → pastas e níveis de acesso"
+else
+  echo "  ${Y}Ainda não configurado.${N}"; echo
+  read -p "  ENTER para configurar (ou Ctrl+C)... " _; guata-files-configurar
+fi
+echo

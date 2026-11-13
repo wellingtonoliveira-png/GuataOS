@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+# desliga o pacote antigo guata-ad, se existir (libera a porta 80)
+systemctl disable --now guata-ad-web >/dev/null 2>&1 || true
+systemctl mask guata-ad-web >/dev/null 2>&1 || true
+systemctl mask samba-ad-dc smbd nmbd winbind >/dev/null 2>&1 || true
+chmod +x /usr/local/sbin/guata-id-* /usr/local/bin/guata-id 2>/dev/null || true
+mkdir -p /etc/guata-id
+if [ -d /etc/guata-ad ] && [ ! -e /etc/guata-id/dominio.conf ]; then
+  cp -a /etc/guata-ad/. /etc/guata-id/ 2>/dev/null || true
+fi
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl enable guata-id-web >/dev/null 2>&1 || true
+ systemctl enable --now guata-id-agenda.timer >/dev/null 2>&1 || true
+systemctl restart guata-id-web >/dev/null 2>&1 || true
+cat <<'MSG'
+
+  ┌──────────────────────────────────────────────────────────┐
+  │   Guatá ID instalado!  Abra no navegador:                 │
+  │        http://localhost   (ou http://ip-do-servidor)       │
+  │   Dica: se já abriu antes, recarregue com Ctrl+Shift+R.    │
+  └──────────────────────────────────────────────────────────┘
+
+MSG
+# atualiza menu e cache de ícones (lançador do painel)
+update-desktop-database >/dev/null 2>&1 || true
+gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+exit 0

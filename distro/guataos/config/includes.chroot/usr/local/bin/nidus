@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""NIDUS — Central Multimídia do Guatá. Leve, sem servidor: usa as SUAS pastas
+(Imagens/Vídeos/Música) e toca vídeo/áudio por trás no VLC. TV ao vivo por embed
+oficial (YouTube) e streams públicos legais no VLC. Imagens num visualizador próprio."""
+import gi, os, json, shutil, subprocess, threading, urllib.parse
+gi.require_version("Gtk", "3.0"); gi.require_version("WebKit2", "4.1")
+from gi.repository import Gtk, WebKit2, GLib
+
+HTML = "file:///usr/share/nidus/index.html"
+CFG_DIR = os.path.expanduser("~/.config/guata")
+CFG_TV = os.path.join(CFG_DIR, "nidus-tv.json")
+EXT_IMG = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".heic", ".avif"}
+EXT_VID = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v", ".mpg", ".mpeg", ".wmv", ".flv"}
+EXT_AUD = {".mp3", ".flac", ".ogg", ".wav", ".m4a", ".aac", ".opus", ".wma"}
+
+
+def pasta_xdg(nome, padrao):
+    """Pega a pasta do usuário (Imagens/Vídeos/Música) respeitando o idioma."""
+    try:
+        p = subprocess.run(["xdg-user-dir", nome], capture_output=True, text=True, timeout=5).stdout.strip()
+        if p and os.path.isdir(p):
+            return p
+    except Exception:
+        pass
+    alt = os.path.expanduser("~/" + padrao)
+    return alt if os.path.isdir(alt) else os.path.expanduser("~")
+
+
+def tocar(paths):
+    """Toca no VLC (preferido) ou no player padrão do sistema."""
+    if not paths:
+        return
+    if shutil.which("vlc"):
+        cmd = ["vlc", "--fullscreen", "--no-video-title-show", "--play-and-exit"] + paths
+    elif shutil.which("mpv"):
+        cmd = ["mpv", "--fullscreen"] + paths
+    else:
+        cmd = ["xdg-open", paths[0]]
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+
+class Nidus:
+    def __init__(self):
+        self.win = Gtk.Window(title="NIDUS — Central Multimídia")
+        self.win.set_default_size(1100, 720)
+        try:
+            self.win.set_icon_from_file("/usr/share/icons/guata/nidus.png")
+        except Exception:
+            pass
+        self.ucm = WebKit2.UserContentManager()
+        for h in ("listar", "tocar", "escolher", "tv", "tv_listar", "tv_salvar"):
+            self.ucm.register_script_message_handler(h)
+            self.ucm.connect("script-message-received::" + h, getattr(self, "on_" + h))
+        self.wv = WebKit2.WebView(user_content_manager=self.ucm)
+        s = self.wv.get_settings()
+        s.set_property("enable-developer-extras", False)
+        try:
+            s.set_property("media-playback-requires-user-gesture", False)
+        except Exception:
+            pass
+        self.wv.load_uri(HTML)
+        self.win.add(self.wv); self.win.connect("destroy", Gtk.main_quit); self.win.show_all()
+
+    # ---- pontes JS -> Python ----
+    def _val(self, val):
+        try:
+            return val.to_string()
+        except AttributeError:
+            return val.get_js_value().to_string()
+
+    def on_listar(self, ucm, val):
+        tipo = self._val(val)
+        threading.Thread(target=self._listar_bg, args=(tipo, None), daemon=True).start()
+
+    def on_escolher(self, ucm, val):
+        tipo = self._val(val)
+        dlg = Gtk.FileChooserDialog(title="Escolha a pasta", parent=self.win,
+                                    action=Gtk.FileChooserAction.SELECT_FOLDER)
+        dlg.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+        dlg.add_button("Abrir", Gtk.ResponseType.OK)
+        pasta = dlg.get_filename() if dlg.run() == Gtk.ResponseType.OK else None
+        dlg.destroy()
+        if pasta:
+            threading.Thread(target=self._listar_bg, args=(tipo, pasta), daemon=True).start()
+
+    def _listar_bg(self, tipo, pasta):
+        exts = {"imagens": EXT_IMG, "videos": EXT_VID, "musica": EXT_AUD}.get(tipo, set())
+        if not pasta:
+            pasta = {"imagens": pasta_xdg("PICTURES", "Imagens"),
+                     "videos": pasta_xdg("VIDEOS", "Vídeos"),
+                     "musica": pasta_xdg("MUSIC", "Música")}.get(tipo, os.path.expanduser("~"))
+        itens = []
+        try:
+            for raiz, _dirs, arqs in os.walk(pasta):
+                for a in sorted(arqs):
+                    if os.path.splitext(a)[1].lower() in exts:
+                        full = os.path.join(raiz, a)
+                        itens.append({"nome": a, "path": full,
+                                      "url": "file://" + urllib.parse.quote(full)})
+                if len(itens) > 600:
+                    break
+        except Exception:
+            pass
+        payload = json.dumps({"tipo": tipo, "pasta": pasta, "itens": itens}, ensure_ascii=False)
+        self._js("window.receberLista && window.receberLista(%s)" % payload)
+
+    def on_tocar(self, ucm, val):
+        try:
+            dados = json.loads(self._val(val))
+        except Exception:
+            dados = {"paths": [self._val(val)]}
+        tocar(dados.get("paths", []))
+
+    def on_tv(self, ucm, val):
+        # stream HLS/externo -> VLC (YouTube embed é tratado no HTML)
+        url = self._val(val)
+        if url:
+            tocar([url])
+
+    def on_tv_listar(self, ucm, val):
+        try:
+            with open(CFG_TV) as f:
+                canais = json.load(f)
+        except Exception:
+            canais = []
+        self._js("window.receberCanais && window.receberCanais(%s)" % json.dumps(canais, ensure_ascii=False))
+
+    def on_tv_salvar(self, ucm, val):
+        try:
+            canais = json.loads(self._val(val))
+        except Exception:
+            return
+        try:
+            os.makedirs(CFG_DIR, exist_ok=True)
+            tmp = CFG_TV + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(canais, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, CFG_TV)
+        except Exception:
+            pass
+
+    def _js(self, js):
+        GLib.idle_add(lambda: (self.wv.run_javascript(js, None, None, None), False)[1])
+
+
+if __name__ == "__main__":
+    Nidus()
+    Gtk.main()

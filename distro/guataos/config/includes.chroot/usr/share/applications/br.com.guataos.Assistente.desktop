@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Assistente Guatá
+Name[pt_BR]=Assistente Guatá
+Comment=Copiloto do Guatá OS — pergunte sobre Linux, rede e programas
+Comment[pt_BR]=Copiloto do Guatá OS — pergunte sobre Linux, rede e programas
+Exec=guata-ia
+Icon=/usr/share/icons/guata/capivara-mascote.png
+Terminal=false
+Categories=Utility;GNOME;GTK;
+Keywords=ia;assistente;ajuda;copiloto;guata;claude;
+StartupNotify=true

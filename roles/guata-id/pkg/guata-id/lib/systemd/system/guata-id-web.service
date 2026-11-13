@@ -1,0 +1,14 @@
+[Unit]
+Description=Guatá ID — Painel web (configurador + domínio)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/guata-id-web
+Restart=on-failure
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+#!/bin/bash
+case "${1:-}" in
+  painel|panel) exec sudo guata-files-painel ;;
+  configurar|setup) exec sudo guata-files-configurar ;;
+  *) if [ -f /etc/guata-files/configurado ]; then exec sudo guata-files-painel; else exec sudo guata-files-configurar; fi ;;
+esac

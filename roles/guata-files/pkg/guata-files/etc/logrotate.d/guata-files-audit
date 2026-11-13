@@ -1,0 +1,8 @@
+/var/log/guata-files-audit.log {
+  weekly
+  rotate 8
+  compress
+  missingok
+  notifempty
+  copytruncate
+}

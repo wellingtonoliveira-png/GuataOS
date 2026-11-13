@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ferramentas do Técnico
+Name[pt_BR]=Pajé
+GenericName=Caixa de Ferramentas
+Comment=Diagnóstico e resgate: clonar disco, criar ISO, gravar pen drive, recuperar arquivos, rede
+Exec=paje
+Icon=/usr/share/icons/guata/app-ferramentas.png
+Terminal=false
+Categories=System;Utility;
+Keywords=ferramentas;caixa;clonar;disco;iso;usb;pendrive;recuperar;rede;diagnostico;resgate;paje;

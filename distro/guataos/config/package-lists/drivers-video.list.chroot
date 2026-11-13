@@ -1,0 +1,10 @@
+# GUATÁ — aceleração de vídeo (userspace, SEM DKMS; seguro no live)
+# Mesa cobre Intel/AMD aberto; NVIDIA proprietário fica p/ utilitário pós-instalação.
+mesa-vulkan-drivers
+mesa-va-drivers
+mesa-vdpau-drivers
+va-driver-all
+vdpau-driver-all
+intel-media-va-driver-non-free
+libvulkan1
+xserver-xorg-video-all

@@ -1,0 +1,1485 @@
+#!/usr/bin/env python3
+# Guatá ID — Painel web (stdlib puro). Conversa com o Samba via samba-tool.
+# Roda como root (precisa ler o banco do AD). Login = Administrator do domínio (Kerberos).
+import json, os, re, ssl, subprocess, secrets, time, html, mimetypes, socket
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+WEBDIR = "/usr/share/guata-id/web"
+PORT = int(os.environ.get("GUATA_AD_WEB_PORT", "80"))
+SESS = {}            # token -> expiry
+TTL = 60 * 60 * 8    # 8h
+
+def realm():
+    try:
+        for ln in open("/etc/guata-id/dominio.conf"):
+            if ln.startswith("REALM="): return ln.strip().split("=",1)[1].upper()
+    except Exception: pass
+    try:
+        for ln in open("/etc/krb5.conf"):
+            if "default_realm" in ln: return ln.split("=",1)[1].strip()
+    except Exception: pass
+    return ""
+
+def run(args, inp=None, env=None, timeout=40):
+    try:
+        p = subprocess.run(args, input=inp, capture_output=True, text=True, timeout=timeout, env=env)
+        return p.returncode, p.stdout.strip(), p.stderr.strip()
+    except Exception as e:
+        return 1, "", str(e)
+
+import threading, shutil
+ETC="/etc/guata-id"
+PROVISIONADO=ETC+"/provisionado"
+AUDIT_LOG="/var/log/guata-id/audit.jsonl"
+def audit(acao, objeto, ok, ip=""):
+    try:
+        os.makedirs("/var/log/guata-id",exist_ok=True)
+        import time as _t
+        rec={"ts":int(_t.time()),"usuario":"Administrator","acao":acao,"objeto":objeto,
+             "resultado":("sucesso" if ok else "falha"),"ip":ip}
+        with open(AUDIT_LOG,"a") as f: f.write(json.dumps(rec,ensure_ascii=False)+"\n")
+    except Exception: pass
+def auditoria_recente(n=200):
+    try:
+        linhas=open(AUDIT_LOG).read().splitlines()[-n:]
+        out=[]
+        for l in reversed(linhas):
+            try: out.append(json.loads(l))
+            except Exception: pass
+        return out
+    except Exception: return []
+AGENDA="/etc/guata-id/agenda.jsonl"
+def agenda_listar(login=None):
+    try: linhas=open(AGENDA).read().splitlines()
+    except Exception: return []
+    out=[]
+    for l in linhas:
+        try: it=json.loads(l)
+        except Exception: continue
+        if login and it.get("login")!=login: continue
+        out.append(it)
+    return sorted(out,key=lambda x:x.get("quando",0))
+PROV={"pct":0,"etapa":"","pronto":False,"erro":""}
+def is_provisionado(): return os.path.exists(PROVISIONADO)
+def do_provision(p):
+    global PROV
+    def passo(pct,txt): PROV.update({"pct":pct,"etapa":txt})
+    try:
+        realm=p.get("dominio","").strip().lower()
+        netbios=p.get("netbios","").strip().upper()[:15]
+        senha=p.get("senha","")
+        host=(p.get("hostname","dc01") or "dc01").strip().lower()
+        ipcidr=p.get("ip","").strip(); gw=p.get("gateway","").strip(); fwd=(p.get("dns","1.1.1.1") or "1.1.1.1").strip()
+        iponly=ipcidr.split("/")[0]
+        # validação estrita — estes campos entram em smb.conf/hosts/networkd (root). Anti-injeção.
+        import ipaddress
+        if not re.fullmatch(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+", realm):
+            raise Exception("Domínio inválido (ex: minhaempresa.local).")
+        if not re.fullmatch(r"[A-Z0-9][A-Z0-9-]{0,14}", netbios):
+            raise Exception("NetBIOS inválido (letras/números/hífen, até 15).")
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,14}", host):
+            raise Exception("Nome da máquina inválido.")
+        try:
+            _ifc=ipaddress.ip_interface(ipcidr); ipaddress.ip_address(gw); ipaddress.ip_address(fwd)
+        except Exception:
+            raise Exception("IP/máscara, gateway ou DNS inválido.")
+        iponly=str(_ifc.ip)
+        os.makedirs(ETC,exist_ok=True)
+        passo(8,"Preparando o sistema...")
+        run(["hostnamectl","set-hostname",host])
+        try:
+            hosts=open("/etc/hosts").read().splitlines()
+            hosts=[l for l in hosts if "127.0.1.1" not in l]
+            hosts.append("%s   %s.%s %s"%(iponly,host,realm,host))
+            open("/etc/hosts","w").write("\n".join(hosts)+"\n")
+        except Exception: pass
+        passo(22,"Configurando a rede (IP fixo)...")
+        iface=(run(["sh","-c","ip -o -4 route show to default | awk '{print $5}' | head -1"])[1] or "eth0").strip()
+        if run(["systemctl","is-active","NetworkManager"])[1]=="active":
+            con=run(["sh","-c","nmcli -t -f NAME,DEVICE connection show --active | awk -F: -v d=%s '$2==d{print $1;exit}'"%iface])[1] or "guata-id"
+            run(["nmcli","connection","modify",con,"ipv4.method","manual","ipv4.addresses",ipcidr,"ipv4.gateway",gw,"ipv4.dns","127.0.0.1","ipv4.dns-search",realm])
+        else:
+            os.makedirs("/etc/systemd/network",exist_ok=True)
+            open("/etc/systemd/network/10-guata-id.network","w").write(
+              "[Match]\nName=%s\n[Network]\nAddress=%s\nGateway=%s\nDNS=127.0.0.1\nDomains=%s\n"%(iface,ipcidr,gw,realm))
+            run(["systemctl","enable","systemd-networkd"])
+        passo(38,"Liberando a porta de DNS (53)...")
+        run(["systemctl","disable","--now","systemd-resolved"])
+        run(["sh","-c","chattr -i /etc/resolv.conf 2>/dev/null; rm -f /etc/resolv.conf"])
+        open("/etc/resolv.conf","w").write("search %s\nnameserver 127.0.0.1\n"%realm)
+        passo(52,"Parando serviços conflitantes...")
+        for s in ("smbd","nmbd","winbind"): run(["systemctl","disable","--now",s]); run(["systemctl","mask",s])
+        passo(62,"Criando o domínio (pode levar 1 minuto)...")
+        try: shutil.move("/etc/samba/smb.conf","/etc/samba/smb.conf.original")
+        except Exception: pass
+        rc,o,e=run(["samba-tool","domain","provision","--use-rfc2307",
+            "--realm="+realm.upper(),"--domain="+netbios,"--server-role=dc",
+            "--dns-backend=SAMBA_INTERNAL","--adminpass="+senha,"--host-name="+host], timeout=600)
+        if rc!=0: raise Exception("Falha ao criar o domínio: "+(e or o)[-400:])
+        passo(82,"Configurando Kerberos e DNS...")
+        try: shutil.copy("/var/lib/samba/private/krb5.conf","/etc/krb5.conf")
+        except Exception: pass
+        try:
+            sc=open("/etc/samba/smb.conf").read()
+            if "dns forwarder" not in sc:
+                sc=sc.replace("[global]","[global]\n\tdns forwarder = "+fwd,1)
+                open("/etc/samba/smb.conf","w").write(sc)
+        except Exception: pass
+        passo(90,"Ajustando o relógio...")
+        run(["systemctl","enable","--now","chrony"])
+        passo(95,"Ligando o controlador de domínio...")
+        run(["systemctl","unmask","samba-ad-dc"]); run(["systemctl","enable","samba-ad-dc"])
+        run(["systemctl","restart","samba-ad-dc"])
+        open(ETC+"/dominio.conf","w").write(
+          "REALM=%s\nNETBIOS=%s\nHOST=%s\nIPCIDR=%s\nGW=%s\nFWD=%s\n"%(realm,netbios,host,ipcidr,gw,fwd))
+        open(PROVISIONADO,"w").write("web\n")
+        PROV.update({"pct":100,"etapa":"Pronto!","pronto":True,"ip":iponly,"dominio":realm})
+    except Exception as ex:
+        PROV.update({"erro":str(ex),"pronto":False})
+
+def st(args):  # samba-tool helper
+    return run(["samba-tool"]+args)
+
+import base64
+DB = "/var/lib/samba/private/sam.ldb"
+BIN_ATTRS={"thumbnailphoto","jpegphoto"}
+def parse_ldif(text):
+    # desdobra linhas continuadas (LDIF: continuação começa com espaço)
+    linhas=[]
+    for raw in text.split("\n"):
+        if raw[:1]==" " and linhas: linhas[-1]+=raw[1:]
+        else: linhas.append(raw)
+    recs=[]; cur={}
+    def store(k,v):
+        if k in cur:
+            if not isinstance(cur[k],list): cur[k]=[cur[k]]
+            cur[k].append(v)
+        else: cur[k]=v
+    for raw in linhas:
+        if not raw.strip():
+            if cur: recs.append(cur); cur={}
+            continue
+        if raw.startswith("#") or ":" not in raw: continue
+        k,_,v=raw.partition(":")
+        k=k.strip(); kl=k.lower()
+        if v.startswith(":"):  # valor base64
+            b64=v[1:].strip()
+            if kl in BIN_ATTRS: store(k,"b64:"+b64)   # binário: mantém base64 cru
+            else:
+                try: store(k, base64.b64decode(b64).decode("utf-8","replace"))
+                except Exception: store(k, b64)
+        else: store(k, v.strip())
+    if cur: recs.append(cur)
+    return recs
+def foto_uri(v):
+    v=_s(v)
+    return ("data:image/jpeg;base64,"+v[4:]) if v.startswith("b64:") else ""
+def ldbsearch(filt, attrs, base=None, scope=None):
+    cmd=["ldbsearch","-H",DB]
+    if base: cmd+=["-b",base]
+    if scope: cmd+=["-s",scope]   # base | one | sub
+    cmd+=[filt]+attrs
+    rc,out,err = run(cmd)
+    return parse_ldif(out) if rc==0 else []
+def ou_conteudo(dn):
+    # conteúdo + GPOs vinculadas lidos direto do banco (ldbsearch), sem samba-tool em rede
+    kids=ldbsearch("(objectClass=*)",["name","cn"],base=dn,scope="one")
+    itens=sorted([ (_s(k.get("name")) or _s(k.get("cn"))) for k in kids if (_s(k.get("name")) or _s(k.get("cn"))) ], key=lambda s:s.lower())
+    obj=ldbsearch("(objectClass=*)",["gPLink"],base=dn,scope="base")
+    gplink=_s(obj[0].get("gPLink")) if obj else ""
+    guids=re.findall(r"\{[0-9A-Fa-f-]+\}", gplink or "")
+    gpos=[]
+    if guids:
+        mp={}
+        for g in ldbsearch("(objectClass=groupPolicyContainer)",["cn","displayName"]):
+            cn=_s(g.get("cn"))
+            if cn: mp[cn.lower()]=_s(g.get("displayName")) or cn
+        gpos=[mp.get(gu.lower(),gu) for gu in guids]
+    return {"itens":itens,"gpos":gpos}
+def _s(v): return v[0] if isinstance(v,list) else (v or "")
+def _ou_do_dn(dn):
+    for p in (dn or "").split(","):
+        p=p.strip()
+        if p.upper().startswith("OU="): return p[3:]
+        if p.upper().startswith("CN=USERS"): return "Users"
+    return ""
+def usuarios_ricos():
+    recs=ldbsearch("(&(objectCategory=person)(objectClass=user))",
+                   ["sAMAccountName","displayName","mail","userAccountControl","title","pwdLastSet","thumbnailPhoto","lastLogonTimestamp","distinguishedName"])
+    out=[]
+    for r in recs:
+        login=_s(r.get("sAMAccountName"))
+        if not login: continue
+        try: uac=int(_s(r.get("userAccountControl","0")) or 0)
+        except Exception: uac=0
+        dn=_s(r.get("dn")) or _s(r.get("distinguishedName"))
+        out.append({"login":login,"nome":_s(r.get("displayName")) or login,
+                    "email":_s(r.get("mail")),"cargo":_s(r.get("title")),
+                    "ativo": not bool(uac & 2),
+                    "nunca_expira": bool(uac & UAC_DONT_EXPIRE),
+                    "trocar_logon": (_s(r.get("pwdLastSet","")) or "")=="0",
+                    "ou": _ou_do_dn(dn),
+                    "ultimo_logon": _data_ad(r.get("lastLogonTimestamp")),
+                    "foto": foto_uri(r.get("thumbnailPhoto"))})
+    return sorted(out,key=lambda x:x["login"].lower())
+def grupos_do(login):
+    rc,out,_=st(["user","getgroups",login])
+    return [l.strip() for l in out.splitlines() if l.strip()] if rc==0 else []
+def grupos_ricos():
+    recs=ldbsearch("(objectClass=group)",["sAMAccountName","member","description","gidNumber","groupType"])
+    out=[]
+    for r in recs:
+        nome=_s(r.get("sAMAccountName"))
+        if not nome: continue
+        m=r.get("member")
+        n=0 if m is None else (len(m) if isinstance(m,list) else 1)
+        out.append({"nome":nome,"membros":n,"descricao":_s(r.get("description")),"gid":_s(r.get("gidNumber"))})
+    return sorted(out,key=lambda x:x["nome"].lower())
+def membros_do(grupo):
+    rc,out,_=st(["group","listmembers",grupo])
+    return [l.strip() for l in out.splitlines() if l.strip()] if rc==0 else []
+def _cn(dn):
+    import re as _r; m=_r.match(r"CN=([^,]+)",dn or ""); return m.group(1) if m else (dn or "")
+def grupo_detalhe(nome):
+    recs=ldbsearch("(sAMAccountName=%s)"%nome,["description","mail","groupType","memberOf"])
+    r=recs[0] if recs else {}
+    try: gt=int(_s(r.get("groupType","0")) or 0) & 0xFFFFFFFF
+    except Exception: gt=0
+    tipo="Segurança" if (gt & 0x80000000) else "Distribuição"
+    escopo="Global" if (gt&2) else ("Local do domínio" if (gt&4) else ("Universal" if (gt&8) else "—"))
+    mof=r.get("memberOf")
+    mof=[] if mof is None else (mof if isinstance(mof,list) else [mof])
+    return {"nome":nome,"membros":membros_do(nome),"memberof":[_cn(x) for x in mof],
+            "descricao":_s(r.get("description")),"email":_s(r.get("mail")),"escopo":escopo,"tipo":tipo}
+def _data_ad(v):
+    v=_s(v)
+    if not v: return ""
+    if v.isdigit():  # FILETIME (100ns desde 1601)
+        try:
+            import datetime
+            n=int(v)
+            if n==0: return ""
+            secs=n/1e7-11644473600
+            return datetime.datetime.utcfromtimestamp(secs).strftime("%d/%m/%Y")
+        except Exception: return ""
+    if len(v)>=8 and v[:8].isdigit():  # generalizedTime YYYYMMDD...
+        return "%s/%s/%s"%(v[6:8],v[4:6],v[0:4])
+    return ""
+INV_FILE="/var/lib/guata-id/inventario.json"
+INV_CAMPOS=["tipo","marca","modelo","serie","patrimonio",
+            "setor","localizacao","responsavel","status",
+            "valor","fornecedor","nota_fiscal","data_compra","garantia_ate",
+            "processador","memoria","disco","observacao"]
+def inventario_tudo():
+    try: return json.load(open(INV_FILE))
+    except Exception: return {}
+def inventario_de(maquina):
+    return inventario_tudo().get((maquina or "").upper().rstrip("$"), {})
+def maquinas_do_usuario(login, nome):
+    alvos=set(x.strip().lower() for x in [login,nome] if x and x.strip())
+    if not alvos: return []
+    out=[]
+    for maq,iv in inventario_tudo().items():
+        resp=(iv.get("responsavel","") or "").strip().lower()
+        if resp and resp in alvos: out.append(maq)
+    return sorted(out)
+def inventario_salvar(maquina, campos):
+    maquina=(maquina or "").upper().rstrip("$").strip()
+    if not maquina: return False
+    d=inventario_tudo(); atual=d.get(maquina,{})
+    for k in INV_CAMPOS:
+        if k in campos: atual[k]=str(campos.get(k) or "").strip()[:200]
+    import time as _t
+    atual["_atualizado"]=int(_t.time())
+    d[maquina]=atual
+    os.makedirs(os.path.dirname(INV_FILE),exist_ok=True)
+    tmp=INV_FILE+".tmp"
+    json.dump(d, open(tmp,"w"), ensure_ascii=False)
+    os.replace(tmp, INV_FILE)
+    return True
+def _idade_dias_ad(v):
+    v=_s(v)
+    if not v or not v.isdigit(): return None
+    try:
+        import time as _t
+        n=int(v)
+        if n==0: return None
+        return int((_t.time()-(n/1e7-11644473600))/86400)
+    except Exception: return None
+def _resolve_ip(host):
+    if not host: return ""
+    try:
+        ip=socket.gethostbyname(host)
+        return ip if not ip.startswith("127.") else ""
+    except Exception: return ""
+def computadores_ricos():
+    recs=ldbsearch("(objectClass=computer)",
+        ["sAMAccountName","operatingSystem","operatingSystemVersion","dNSHostName","lastLogonTimestamp","whenCreated"])
+    rl=realm().lower()
+    inv=inventario_tudo()
+    out=[]
+    for r in recs:
+        nome=_s(r.get("sAMAccountName")).rstrip("$")
+        if not nome: continue
+        os_=_s(r.get("operatingSystem"))
+        dns=_s(r.get("dNSHostName"))
+        ip=_resolve_ip(dns or (nome+"."+rl if rl else nome))
+        iv=inv.get(nome.upper(),{})
+        out.append({"nome":nome,"os":os_ or "—","versao":_s(r.get("operatingSystemVersion")),
+                    "dns":dns,"ip":ip,"windows":("windows" in os_.lower()),
+                    "patrimonio":iv.get("patrimonio",""),"setor":iv.get("setor",""),
+                    "dias":_idade_dias_ad(r.get("lastLogonTimestamp")),
+                    "ultimo":_data_ad(r.get("lastLogonTimestamp")),"criado":_data_ad(r.get("whenCreated"))})
+    return sorted(out,key=lambda x:x["nome"].lower())
+def computadores_resumo(itens):
+    total=len(itens)
+    win=sum(1 for c in itens if c["windows"])
+    inativas=sum(1 for c in itens if (c.get("dias") is not None and c["dias"]>30))
+    recentes=sum(1 for c in itens if (c.get("dias") is not None and c["dias"]<=15))
+    return {"total":total,"windows":win,"linux":total-win,"inativas_30":inativas,"recentes_15":recentes}
+def _proc_uptime():
+    try:
+        with open("/proc/uptime") as f: s=float(f.read().split()[0])
+        d=int(s//86400); h=int((s%86400)//3600); m=int((s%3600)//60)
+        if d: return "%dd %dh"%(d,h)
+        if h: return "%dh %dmin"%(h,m)
+        return "%dmin"%m
+    except Exception: return "—"
+def _meminfo():
+    try:
+        d={}
+        with open("/proc/meminfo") as f:
+            for ln in f:
+                k,_,v=ln.partition(":")
+                if v.strip(): d[k.strip()]=int(v.strip().split()[0])
+        total=d.get("MemTotal",0); avail=d.get("MemAvailable",d.get("MemFree",0))
+        used=total-avail
+        pct=int(used*100/total) if total else 0
+        return {"usado_gb":round(used/1048576.0,1),"total_gb":round(total/1048576.0,1),"pct":pct}
+    except Exception: return {"usado_gb":0,"total_gb":0,"pct":0}
+def _cpu_pct():
+    try:
+        with open("/proc/loadavg") as f: la=float(f.read().split()[0])
+        return min(100,int(la*100/(os.cpu_count() or 1)))
+    except Exception: return 0
+def _os_nome():
+    try:
+        d={}
+        with open("/etc/os-release") as f:
+            for ln in f:
+                k,_,v=ln.partition("="); d[k]=v.strip().strip('"')
+        return d.get("PRETTY_NAME") or d.get("NAME") or "Linux"
+    except Exception: return "Linux"
+def _primeiro_ip():
+    import re as _re
+    out=run(["hostname","-I"])[1] or ""
+    for tok in out.split():
+        if _re.match(r"^\d{1,3}(\.\d{1,3}){3}$",tok) and not tok.startswith("127."):
+            return tok
+    r=run(["ip","-4","route","get","1.1.1.1"])[1] or ""
+    m=_re.search(r"src (\d{1,3}(?:\.\d{1,3}){3})",r)
+    if m: return m.group(1)
+    toks=out.split()
+    return toks[0] if toks else ""
+def _nome_dc_local(drs,fsmo):
+    loc=(drs.get("local") or "")
+    if "\\" in loc:
+        n=loc.split("\\")[-1].strip()
+        if n: return n
+    donos=[p["dc"] for p in fsmo if p["dc"]]
+    if donos and len({d.upper() for d in donos})==1:
+        return donos[0]
+    return run(["hostname","-s"])[1] or run(["hostname"])[1] or "DC"
+def _dc_name_from_dn(dn):
+    # CN=NTDS Settings,CN=<DC>,CN=Servers,... -> <DC>
+    partes=[p.strip() for p in dn.split(",")]
+    for i,p in enumerate(partes):
+        if p.upper().startswith("CN=NTDS SETTINGS") and i+1<len(partes):
+            return partes[i+1][3:] if partes[i+1].upper().startswith("CN=") else partes[i+1]
+    return ""
+FSMO_LABELS=[("SchemaMasterRole","Schema Master","schema"),
+    ("DomainNamingMasterRole","Domain Naming Master","naming"),
+    ("PdcEmulationMasterRole","PDC Emulator","pdc"),
+    ("RidAllocationMasterRole","RID Master","rid"),
+    ("InfrastructureMasterRole","Infrastructure Master","infra")]
+def _fsmo_show():
+    rc,o,e=st(["fsmo","show"])
+    papeis=[]
+    txt=o or e
+    for key,label,ic in FSMO_LABELS:
+        dc=""
+        for ln in txt.splitlines():
+            if ln.strip().startswith(key):
+                _,_,owner=ln.partition(":")
+                dc=_dc_name_from_dn(owner.strip())
+                break
+        papeis.append({"papel":label,"dc":dc,"ic":ic})
+    return papeis
+def _drs_parse():
+    # samba-tool drs showrepl: extrai vizinhos (partição, parceiro, falhas, último sucesso)
+    rc,o,e=st(["drs","showrepl"])
+    txt=o or e
+    local=""; invoc=""; vizinhos=[]
+    linhas=txt.splitlines()
+    for ln in linhas:
+        s=ln.strip()
+        if s and "\\" in s and not local and "NEIGHBORS" not in s and ":" not in s:
+            local=s
+        if s.startswith("DSA invocationId"):
+            invoc=s.split(":",1)[1].strip()
+    # blocos de vizinhos
+    import re as _re
+    cur_nc=None; cur=None
+    for ln in linhas:
+        raw=ln.rstrip()
+        s=raw.strip()
+        if not s: continue
+        if s.startswith("DC=") or s.startswith("CN="):
+            cur_nc=s; continue
+        m=_re.match(r".+\\[-\w]+ via (RPC|TCP|\S+)",s)
+        if m and ("via " in s):
+            if cur: vizinhos.append(cur)
+            parceiro=s.split(" via ")[0].strip()
+            cur={"nc":cur_nc or "","parceiro":parceiro,"transporte":s.split(" via ")[1].strip(),
+                 "falhas":0,"ok":True,"ultimo":""}
+            continue
+        if cur is not None:
+            mf=_re.search(r"(\d+) consecutive failure",s)
+            if mf: cur["falhas"]=int(mf.group(1)); cur["ok"]=(cur["falhas"]==0)
+            if "was successful" in s or "Last success" in s:
+                cur["ok"]=cur["ok"] and True
+                if "Last success" in s: cur["ultimo"]=s.replace("Last success","").strip(" @")
+                elif not cur["ultimo"] and "@" in s: cur["ultimo"]=s.split("@",1)[1].replace("was successful","").strip()
+            if "WERR" in s or "failed" in s.lower(): cur["ok"]=False
+    if cur: vizinhos.append(cur)
+    return {"local":local,"invocation":invoc,"vizinhos":vizinhos}
+def _lista_dcs(fsmo,drs,local_short):
+    nomes=[]; vistos=set()
+    def add(n):
+        if n and n.upper() not in vistos:
+            vistos.add(n.upper()); nomes.append(n)
+    add(local_short)
+    for p in fsmo: add(p["dc"])
+    for v in drs["vizinhos"]: add(v["parceiro"].split("\\")[-1])
+    return nomes
+def saude():
+    svc=run(["systemctl","is-active","samba-ad-dc"])[1]
+    # dbcheck é PESADO (varre o banco todo) — não roda no load; fica no botão "Rodar dbcheck"
+    db_ok=None
+    db_msg="toque em Rodar dbcheck"
+    fsmo=_fsmo_show()
+    drs=_drs_parse()
+    repl_falhas=sum(v["falhas"] for v in drs["vizinhos"])
+    repl_ok=(not drs["vizinhos"]) or all(v["ok"] for v in drs["vizinhos"])
+    mem=_meminfo(); cpu=_cpu_pct()
+    rl=realm().lower()
+    sysvol_path="/var/lib/samba/sysvol/%s/Policies"%rl
+    sysvol_ok=os.path.isdir(sysvol_path)
+    try: ngpo=len([d for d in os.listdir(sysvol_path) if d.startswith("{")]) if sysvol_ok else 0
+    except Exception: ngpo=0
+    local_short=_nome_dc_local(drs,fsmo)
+    dcnomes=_lista_dcs(fsmo,drs,local_short)
+    sver=(run(["samba","--version"])[1] or run(["samba-tool","-V"])[1] or "")
+    sver=sver.replace("Version","").strip()[:40]
+    LU=local_short.upper()
+    dc_local={"nome":local_short,"ip":_primeiro_ip(),"os":_os_nome(),
+        "samba":sver,
+        "kernel":run(["uname","-r"])[1],"uptime":_proc_uptime(),
+        "cpu":cpu,"mem":mem,"servico":svc,"local":True,
+        "papeis":[p["papel"] for p in fsmo if (p["dc"] or "").upper()==LU],
+        "invocation":drs.get("invocation","")}
+    outros=[]
+    for n in dcnomes:
+        if n.upper()==LU: continue
+        outros.append({"nome":n,"local":False,
+            "papeis":[p["papel"] for p in fsmo if (p["dc"] or "").upper()==n.upper()]})
+    return {"servico":svc,"banco_ok":db_ok,"banco_msg":db_msg,
+        "replicacao_ok":repl_ok,"repl_falhas":repl_falhas,
+        "controladores":max(len(dcnomes),1),"fsmo":fsmo,"fsmo_total":len(fsmo),
+        "drs":drs,"dc_local":dc_local,"outros_dcs":outros,
+        "sysvol_ok":sysvol_ok,"sysvol_path":sysvol_path,"gpos":ngpo,"realm":realm()}
+
+# ===== BACKUP do domínio (samba-tool domain backup) =====
+BACKUP_DIR="/var/lib/guata-id/backups"
+BKP={"rodando":False,"ok":None,"msg":"","arquivo":"","inicio":0}
+def _fmt_tam(n):
+    for u in ["B","KB","MB","GB","TB"]:
+        if n<1024: return ("%.0f %s"%(n,u)) if u=="B" else ("%.1f %s"%(n,u))
+        n/=1024.0
+    return "%.1f PB"%n
+def _sha256(path):
+    import hashlib
+    h=hashlib.sha256()
+    try:
+        with open(path,"rb") as f:
+            for ch in iter(lambda:f.read(1<<20),b""): h.update(ch)
+        return h.hexdigest()
+    except Exception: return ""
+def backups_listar():
+    itens=[]
+    try: nomes=sorted(os.listdir(BACKUP_DIR),reverse=True)
+    except Exception: nomes=[]
+    for nome in nomes:
+        if nome.endswith(".sha256"): continue
+        p=os.path.join(BACKUP_DIR,nome)
+        if not os.path.isfile(p): continue
+        try: stt=os.stat(p)
+        except Exception: continue
+        sha=""
+        sp=p+".sha256"
+        if os.path.exists(sp):
+            try: sha=open(sp).read().split()[0]
+            except Exception: sha=""
+        itens.append({"arquivo":nome,"tamanho":_fmt_tam(stt.st_size),"bytes":stt.st_size,
+            "ts":int(stt.st_mtime),"sha":sha[:16],"sha_full":sha})
+    return itens
+def _agenda_backup_estado():
+    rc,o,_=run(["systemctl","is-enabled","guata-id-backup.timer"])
+    return (o.strip()=="enabled")
+def _rotaciona_backups(keep=5):
+    try:
+        bks=[n for n in os.listdir(BACKUP_DIR) if (n.endswith(".tar.bz2") or n.endswith(".tar.gz"))]
+        bks.sort(reverse=True)
+        for velho in bks[keep:]:
+            try:
+                os.remove(os.path.join(BACKUP_DIR,velho))
+                sp=os.path.join(BACKUP_DIR,velho+".sha256")
+                if os.path.exists(sp): os.remove(sp)
+            except Exception: pass
+    except Exception: pass
+def backup_criar():
+    global BKP
+    import time as _t
+    BKP={"rodando":True,"ok":None,"msg":"Gerando backup do domínio…","arquivo":"","inicio":int(_t.time())}
+    try:
+        os.makedirs(BACKUP_DIR,exist_ok=True)
+        antes=set(os.listdir(BACKUP_DIR))
+        rc,o,e=run(["samba-tool","domain","backup","offline","--targetdir="+BACKUP_DIR],timeout=1800)
+        if rc!=0:
+            BKP.update({"rodando":False,"ok":False,"msg":(e or o or "falha no samba-tool")[:300]}); return
+        novos=[n for n in os.listdir(BACKUP_DIR) if n not in antes and (n.endswith(".tar.bz2") or n.endswith(".tar.gz"))]
+        arq=sorted(novos)[-1] if novos else ""
+        if arq:
+            sha=_sha256(os.path.join(BACKUP_DIR,arq))
+            if sha:
+                open(os.path.join(BACKUP_DIR,arq+".sha256"),"w").write(sha+"  "+arq+"\n")
+            _rotaciona_backups(5)
+            BKP.update({"rodando":False,"ok":True,"msg":"Backup concluído.","arquivo":arq})
+        else:
+            BKP.update({"rodando":False,"ok":True,"msg":"Backup executado (arquivo não localizado na pasta).","arquivo":""})
+    except Exception as ex:
+        BKP.update({"rodando":False,"ok":False,"msg":str(ex)[:300]})
+
+UAC_DISABLED=0x2; UAC_PWD_NOTREQD=0x20; UAC_DONT_EXPIRE=0x10000
+def _uac(login):
+    r=ldbsearch("(sAMAccountName=%s)"%login,["userAccountControl"])
+    try: return int(_s(r[0].get("userAccountControl","0")) or 0) if r else 0
+    except Exception: return 0
+def set_uac_flag(login, bit, on):
+    uac=_uac(login)
+    novo=(uac | bit) if on else (uac & ~bit)
+    return set_attr(login,"userAccountControl",str(novo))
+def set_trocar_logon(login, on):
+    # pwdLastSet=0 força troca no próximo logon; -1 marca como "setada agora"
+    return set_attr(login,"pwdLastSet","0" if on else "-1")
+def contas_inseguras():
+    recs=ldbsearch("(&(objectCategory=person)(objectClass=user))",
+                   ["sAMAccountName","displayName","userAccountControl","pwdLastSet"])
+    admins=set(m.split("\\")[-1].lower() for m in membros_do("Domain Admins"))
+    rank={"alta":3,"media":2,"baixa":1,"info":0}
+    out=[]
+    for r in recs:
+        login=_s(r.get("sAMAccountName"))
+        if not login or login.lower() in ("krbtgt","guest"): continue
+        try: uac=int(_s(r.get("userAccountControl","0")) or 0)
+        except Exception: uac=0
+        pls=_s(r.get("pwdLastSet","")) or ""
+        fl=[]
+        if uac & UAC_PWD_NOTREQD: fl.append(("Senha não exigida","alta"))
+        if uac & UAC_DONT_EXPIRE: fl.append(("Senha nunca expira","media"))
+        if uac & UAC_DISABLED: fl.append(("Conta desativada","baixa"))
+        if pls=="0": fl.append(("Precisa trocar a senha","baixa"))
+        if login.lower() in admins: fl.append(("Administrador do domínio","info"))
+        if fl:
+            sev=max(fl,key=lambda x:rank[x[1]])[1]
+            out.append({"login":login,"nome":_s(r.get("displayName")) or login,
+                        "sev":sev,"flags":[{"txt":t,"sev":s} for t,s in fl]})
+    out.sort(key=lambda x:-rank[x["sev"]])
+    return out
+
+def painel_atencao():
+    itens=[]
+    for r in ldbsearch("(&(objectCategory=person)(objectClass=user))",["sAMAccountName","displayName","lockoutTime"]):
+        login=_s(r.get("sAMAccountName"))
+        if not login or login.lower() in ("krbtgt","guest"): continue
+        try: lt=int(_s(r.get("lockoutTime","0")) or 0)
+        except Exception: lt=0
+        if lt>0:
+            itens.append({"tipo":"conta_bloqueada","login":login,"titulo":_s(r.get("displayName")) or login,
+                "detalhe":"conta bloqueada (tentativas de senha)","sev":"alta","acao":"desbloquear"})
+    for c in contas_inseguras():
+        if c["sev"]=="alta":
+            itens.append({"tipo":"conta","login":c["login"],"titulo":c["nome"],
+                "detalhe":", ".join(f["txt"] for f in c["flags"]),"sev":"alta","acao":"resolver"})
+    for cp in computadores_ricos():
+        if cp.get("dias") is not None and cp["dias"]>30:
+            itens.append({"tipo":"pc","login":cp["nome"],"titulo":cp["nome"],
+                "detalhe":"sem acesso ha %d dias"%cp["dias"],"sev":"media","acao":"ver"})
+    try: bks=backups_listar()
+    except Exception: bks=[]
+    ub=bks[0] if bks else None
+    return {"itens":itens[:10],"total":len(itens),
+            "ultimo_backup":({"arquivo":ub["arquivo"],"ts":ub["ts"]} if ub else None),
+            "agenda_backup":_agenda_backup_estado()}
+def politica_show():
+    rc,out,_=run(["samba-tool","domain","passwordsettings","show"])
+    p={}
+    for ln in out.splitlines():
+        if ":" not in ln: continue
+        k,v=ln.split(":",1); k=k.strip().lower(); v=v.strip()
+        if "complexity" in k: p["complexidade"]= (v.lower()=="on")
+        elif "history length" in k: p["historico"]=_int(v)
+        elif "minimum password length" in k: p["min_tamanho"]=_int(v)
+        elif "minimum password age" in k: p["min_idade"]=_int(v)
+        elif "maximum password age" in k: p["max_idade"]=_int(v)
+        elif "lockout duration" in k: p["bloqueio_duracao"]=_int(v)
+        elif "lockout threshold" in k: p["bloqueio_tentativas"]=_int(v)
+        elif "reset account lockout" in k: p["bloqueio_reset"]=_int(v)
+    return p
+def _int(v):
+    import re as _re
+    m=_re.search(r"-?\d+",v); return int(m.group()) if m else 0
+def user_dn(login):
+    recs=ldbsearch("(sAMAccountName=%s)"%login,["dn"])
+    return _s(recs[0].get("dn")) if recs else None
+def set_attr(login, attr, valor):
+    dn=user_dn(login)
+    if not dn: return False,"usuário não encontrado"
+    if valor:
+        ldif="dn: %s\nchangetype: modify\nreplace: %s\n%s: %s\n"%(dn,attr,attr,valor)
+    else:
+        ldif="dn: %s\nchangetype: modify\ndelete: %s\n"%(dn,attr)
+    rc,o,e=run(["ldbmodify","-H",DB], inp=ldif)
+    return rc==0,(e or o)
+def set_attr_bin(login, attr, b64):
+    dn=user_dn(login)
+    if not dn: return False,"usuário não encontrado"
+    if b64:
+        ldif="dn: %s\nchangetype: modify\nreplace: %s\n%s:: %s\n"%(dn,attr,attr,b64)
+    else:
+        ldif="dn: %s\nchangetype: modify\ndelete: %s\n"%(dn,attr)
+    rc,o,e=run(["ldbmodify","-H",DB], inp=ldif)
+    return rc==0,(e or o)
+def mapa_dn():
+    recs=ldbsearch("(&(objectCategory=person)(objectClass=user))",["sAMAccountName"])
+    d2l={}; l2d={}
+    for r in recs:
+        dn=_s(r.get("dn")); login=_s(r.get("sAMAccountName"))
+        if dn and login: d2l[dn.lower()]=login; l2d[login.lower()]=dn
+    return d2l,l2d
+def usuario_detalhe(login):
+    recs=ldbsearch("(sAMAccountName=%s)"%login,
+        ["department","telephoneNumber","company","thumbnailPhoto","manager","distinguishedName",
+         "description","physicalDeliveryOfficeName","accountExpires","lockoutTime"])
+    r=recs[0] if recs else {}
+    base=next((x for x in usuarios_ricos() if x["login"]==login), None)
+    if not base: return None
+    d=dict(base)
+    d["departamento"]=_s(r.get("department"))
+    d["telefone"]=_s(r.get("telephoneNumber"))
+    d["empresa"]=_s(r.get("company"))
+    d["descricao"]=_s(r.get("description"))
+    d["escritorio"]=_s(r.get("physicalDeliveryOfficeName"))
+    ae=_s(r.get("accountExpires")) or "0"
+    d["expira"]= "" if ae in ("0","9223372036854775807") else _data_ad(ae)
+    lt=_s(r.get("lockoutTime")) or "0"
+    d["bloqueada"]= lt not in ("0","")
+    d["foto"]=foto_uri(r.get("thumbnailPhoto"))
+    d["grupos"]=grupos_do(login)
+    d2l,l2d=mapa_dn()
+    mgr=_s(r.get("manager"))
+    d["superior"]=d2l.get(mgr.lower(),"") if mgr else ""
+    meudn=_s(r.get("dn")) or l2d.get(login.lower(),"")
+    reps=ldbsearch("(manager=%s)"%meudn,["sAMAccountName"]) if meudn else []
+    d["lidera"]=sorted(_s(x.get("sAMAccountName")) for x in reps if _s(x.get("sAMAccountName")))
+    d["local"]=meudn.split(",",1)[1] if "," in meudn else ""
+    return d
+def base_dn():
+    r=(realm() or "").lower()
+    return ",".join("DC=%s"%p for p in r.split(".") if p)
+def ou_rel(dn):
+    b=base_dn()
+    if dn.lower().endswith(","+b.lower()): return dn[:-(len(b)+1)]
+    return dn
+def ous_lista():
+    recs=ldbsearch("(objectClass=organizationalUnit)",["ou","name","description","distinguishedName"])
+    # busca TODOS os objetos uma vez só (antes era 1 busca por OU = lento)
+    objs=ldbsearch("(|(objectClass=user)(objectClass=computer))",["distinguishedName"])
+    dns=[d.lower() for d in (_s(o.get("dn")) or _s(o.get("distinguishedName")) for o in objs) if d]
+    out=[]
+    for r in recs:
+        dn=_s(r.get("dn")) or _s(r.get("distinguishedName"))
+        nome=_s(r.get("ou")) or _s(r.get("name"))
+        if not nome: continue
+        qtd=0
+        if dn:
+            suf=","+dn.lower()
+            qtd=sum(1 for d in dns if d.endswith(suf))
+        out.append({"nome":nome,"dn":dn,"descricao":_s(r.get("description")),"itens":qtd})
+    return sorted(out,key=lambda x:x["nome"].lower())
+def stc(args, cred):
+    # cred = "usuario%senha" (credencial do admin logado) — GPO/DNS exigem
+    if cred: return run(["samba-tool"]+args+["-U",cred], timeout=60)
+    return run(["samba-tool"]+args, timeout=60)
+def stldb(args):
+    # samba-tool LOCAL via sam.ldb (sem rede/SMB/auth) — evita timeout de GPO no DC
+    return run(["samba-tool"]+args+["-H",DB], timeout=90)
+def gpos_lista(pw):
+    rc,out,e=stldb(["gpo","listall"])
+    if rc!=0: return [], (e or out)
+    gpos=[]; cur={}
+    for ln in out.splitlines():
+        if ln.startswith("GPO") and ":" in ln:
+            if cur: gpos.append(cur)
+            cur={"guid":ln.split(":",1)[1].strip()}
+        elif "display name" in ln.lower() and ":" in ln: cur["nome"]=ln.split(":",1)[1].strip()
+    if cur: gpos.append(cur)
+    return [g for g in gpos if g.get("nome")], ""
+def gpos_do_ou(dn,pw):
+    rc,out,_=stldb(["gpo","getlink",dn])
+    nomes=[]
+    if rc==0:
+        for ln in out.splitlines():
+            if "GPO" in ln and ":" in ln and "{" in ln:
+                nomes.append(ln.split(":",1)[1].strip())
+    return nomes
+def dns_zona():
+    return (realm() or "").lower()
+DNS_TIPOS={"A","AAAA","CNAME","NS","SRV","MX","TXT","PTR","SOA"}
+def dns_zonas(pw):
+    rc,out,e=stc(["dns","zonelist","127.0.0.1"],pw)
+    zs=[]
+    for ln in (out or "").splitlines():
+        if "pszZoneName" in ln and ":" in ln:
+            z=ln.split(":",1)[1].strip()
+            if z: zs.append(z)
+    return zs
+def dns_registros(pw, zona=None):
+    zona=zona or dns_zona()
+    rc,out,e=stc(["dns","query","127.0.0.1",zona,"@","ALL"],pw)
+    regs=[]; nome=""
+    for ln in (out or "").splitlines():
+        s=ln.strip()
+        if s.startswith("Name="):
+            m=re.search(r"Name=([^,]*)",s); nome=(m.group(1) if m else "").strip(); continue
+        m=re.match(r"([A-Z]+):\s*(.*)",s)
+        if m and m.group(1) in DNS_TIPOS:
+            tipo=m.group(1); dado=m.group(2).strip()
+            if tipo in ("A","AAAA","CNAME","NS","PTR"): dado=dado.split(" ")[0]
+            regs.append({"nome":nome or "@","tipo":tipo,"dado":dado})
+    return zona, regs, (e if rc!=0 else "")
+
+# ---- Construtor de GPO (modelos prontos → Registry.pol) ----
+import struct
+REG_SZ=1; REG_DWORD=4
+POL_SYS="Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
+POL_EXP="Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer"
+CSE_REG="[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F72-3407-48AE-BA88-E8213C6761F1}]"
+def _dw(n): return (REG_DWORD, struct.pack("<I",int(n)))
+def _sz(s): return (REG_SZ, (str(s).encode("utf-16-le")+b"\x00\x00"))
+# cada modelo: nome, scope, desc, params[], fn(params)->[(key,value,type,data)]
+MODELOS={
+ "usb":{"nome":"Bloquear pen drives (USB)","scope":"machine","desc":"Impede pen drive / HD externo USB","params":[],
+        "fn":lambda p:[("SYSTEM\\CurrentControlSet\\Services\\USBSTOR","Start")+_dw(4)]},
+ "login_msg":{"nome":"Mensagem no login","scope":"machine","desc":"Aviso que aparece antes de entrar",
+        "params":[{"id":"titulo","label":"Título","ph":"Aviso"},{"id":"texto","label":"Mensagem","ph":"Uso exclusivo da empresa."}],
+        "fn":lambda p:[(POL_SYS,"legalnoticecaption")+_sz(p.get("titulo","")),(POL_SYS,"legalnoticetext")+_sz(p.get("texto",""))]},
+ "wallpaper":{"nome":"Definir papel de parede","scope":"user","desc":"Imagem fixa para todos (caminho de rede/local)",
+        "params":[{"id":"caminho","label":"Caminho da imagem","ph":"\\\\servidor\\publico\\wall.jpg"}],
+        "fn":lambda p:[(POL_SYS,"Wallpaper")+_sz(p.get("caminho","")),(POL_SYS,"WallpaperStyle")+_sz("2")]},
+ "bloqueio_tela":{"nome":"Bloquear tela por inatividade","scope":"user","desc":"Protetor com senha após X minutos",
+        "params":[{"id":"minutos","label":"Minutos","ph":"10"}],
+        "fn":lambda p:[(POL_SYS,"ScreenSaveActive")+_sz("1"),(POL_SYS,"ScreenSaverIsSecure")+_sz("1"),
+                       (POL_SYS,"ScreenSaveTimeOut")+_sz(str(int(float(p.get("minutos") or 10))*60)),(POL_SYS,"SCRNSAVE.EXE")+_sz("scrnsave.scr")]},
+ "painel":{"nome":"Esconder Painel de Controle","scope":"user","desc":"Oculta Painel de Controle e Configurações","params":[],
+        "fn":lambda p:[(POL_EXP,"NoControlPanel")+_dw(1)]},
+ "cmd":{"nome":"Bloquear Prompt de Comando","scope":"user","desc":"Desativa o cmd","params":[],
+        "fn":lambda p:[("Software\\Policies\\Microsoft\\Windows\\System","DisableCMD")+_dw(2)]},
+ "regedit":{"nome":"Bloquear Editor de Registro","scope":"user","desc":"Desativa o regedit","params":[],
+        "fn":lambda p:[(POL_SYS,"DisableRegistryTools")+_dw(1)]},
+ "run":{"nome":"Esconder 'Executar'","scope":"user","desc":"Remove o Executar do menu","params":[],
+        "fn":lambda p:[(POL_EXP,"NoRun")+_dw(1)]},
+}
+def _u16(s): return s.encode("utf-16-le")+b"\x00\x00"
+def preg(entradas):
+    out=b"PReg"+struct.pack("<I",1)
+    for key,value,typ,data in entradas:
+        out+= "[".encode("utf-16-le")+_u16(key)+";".encode("utf-16-le")+_u16(value)+";".encode("utf-16-le")
+        out+= struct.pack("<I",typ)+";".encode("utf-16-le")+struct.pack("<I",len(data))+";".encode("utf-16-le")+data+"]".encode("utf-16-le")
+    return out
+def gpo_path(guid):
+    return "/var/lib/samba/sysvol/%s/Policies/%s"%((realm() or "").lower(),guid)
+def aplicar_modelos(guid, selec, pw):
+    # selec: lista de {"id":..., "params":{...}}
+    base=gpo_path(guid)
+    if not os.path.isdir(base): return False,"Política não encontrada no SYSVOL ("+base+")."
+    maq=[]; usr=[]
+    for item in selec:
+        m=MODELOS.get(item.get("id"))
+        if not m: continue
+        try: ent=m["fn"](item.get("params") or {})
+        except Exception as ex: return False,"Parâmetro inválido em '%s': %s"%(m["nome"],ex)
+        (maq if m["scope"]=="machine" else usr).extend(ent)
+    try:
+        os.makedirs(base+"/Machine",exist_ok=True); os.makedirs(base+"/User",exist_ok=True)
+        open(base+"/Machine/Registry.pol","wb").write(preg(maq))
+        open(base+"/User/Registry.pol","wb").write(preg(usr))
+        ver=((1 if usr else 0)<<16)|(1 if maq else 0)
+        open(base+"/GPT.INI","w").write("[General]\r\nVersion=%d\r\n"%ver)
+        dn="CN=%s,CN=Policies,CN=System,%s"%(guid,base_dn())
+        set_attr_raw(dn,"versionNumber",str(ver))
+        set_attr_raw(dn,"gPCMachineExtensionNames",CSE_REG if maq else None)
+        set_attr_raw(dn,"gPCUserExtensionNames",CSE_REG if usr else None)
+        return True,""
+    except Exception as ex:
+        return False,str(ex)
+def set_attr_raw(dn,attr,val):
+    if val:
+        ldif="dn: %s\nchangetype: modify\nreplace: %s\n%s: %s\n"%(dn,attr,attr,val)
+    else:
+        ldif="dn: %s\nchangetype: modify\ndelete: %s\n"%(dn,attr)
+    run(["ldbmodify","-H",DB],inp=ldif)
+def organograma():
+    recs=ldbsearch("(&(objectCategory=person)(objectClass=user))",["sAMAccountName","displayName","manager","title","thumbnailPhoto"])
+    d2l,_=mapa_dn()
+    out=[]
+    for r in recs:
+        login=_s(r.get("sAMAccountName"))
+        if not login or login.lower() in ("krbtgt","guest"): continue
+        mgr=_s(r.get("manager"))
+        out.append({"login":login,"nome":_s(r.get("displayName")) or login,"cargo":_s(r.get("title")),
+                    "chefe": d2l.get(mgr.lower(),"") if mgr else "",
+                    "foto": foto_uri(r.get("thumbnailPhoto"))})
+    return out
+
+ADMIN_GROUPS={"domain admins","administrators","enterprise admins","schema admins",
+    "administradores","admins. do domínio","admins do domínio"}
+def check_login(usuario, senha):
+    r = realm()
+    if not r: return (False,"Domínio não configurado neste servidor.")
+    usuario = (usuario or "Administrator").strip() or "Administrator"
+    if not senha: return (False,"Informe a senha.")
+    cc = "/tmp/gad-%s" % secrets.token_hex(4)
+    env = dict(os.environ, KRB5CCNAME="FILE:"+cc)
+    rc,_,_ = run(["kinit", usuario+"@"+r], inp=senha+"\n", env=env)
+    try: os.remove(cc)
+    except Exception: pass
+    if rc != 0: return (False,"Usuário ou senha incorretos.")
+    if usuario.lower()=="administrator": return (True,"")
+    rc2,o,e = st(["user","getgroups",usuario])
+    grupos = {g.strip().lower() for g in (o or "").splitlines() if g.strip()}
+    if grupos & ADMIN_GROUPS: return (True,"")
+    return (False,"Essa conta existe, mas não é administradora do domínio (Domain Admins).")
+def check_pass(senha):  # compat
+    return check_login("Administrator", senha)[0]
+
+def lista(kind):
+    rc,out,err = st([kind,"list"])
+    return sorted([l for l in out.splitlines() if l.strip()]) if rc==0 else []
+
+def estado():
+    rc,out,err = st(["domain","info","127.0.0.1"])
+    info={}
+    for ln in out.splitlines():
+        if ":" in ln:
+            k,v=ln.split(":",1); info[k.strip()]=v.strip()
+    svc = run(["systemctl","is-active","samba-ad-dc"])[1]
+    d={}
+    try: d=dict(l.strip().split("=",1) for l in open("/etc/guata-id/dominio.conf") if "=" in l)
+    except Exception: pass
+    # usuários: ativos vs inativos (fora contas de sistema)
+    us=[u for u in usuarios_ricos() if u["login"].lower() not in ("krbtgt","guest")]
+    ativos=sum(1 for u in us if u["ativo"]); inativos=len(us)-ativos
+    # computadores: windows vs outros
+    comps=ldbsearch("(objectClass=computer)",["sAMAccountName","operatingSystem","userAccountControl"])
+    total_c=win=outros=dcs=0
+    for c in comps:
+        if not _s(c.get("sAMAccountName")): continue
+        total_c+=1
+        os_=(_s(c.get("operatingSystem")) or "").lower()
+        if "windows" in os_: win+=1
+        elif os_: outros+=1
+        try:
+            if int(_s(c.get("userAccountControl","0")) or 0) & 0x2000: dcs+=1
+        except Exception: pass
+    insec=len(contas_inseguras())
+    return {"dominio": d.get("REALM",info.get("Domain","")),
+            "servidor": info.get("DC name", d.get("HOST","")),
+            "ip": d.get("IPCIDR","").split("/")[0],
+            "servico": svc, "controladores": max(dcs,1),
+            "usuarios": len(us), "usuarios_ativos":ativos, "usuarios_inativos":inativos,
+            "grupos": len(lista("group")),
+            "computadores": total_c, "computadores_windows":win, "computadores_outros":outros,
+            "inseguras": insec}
+
+class H(BaseHTTPRequestHandler):
+    def log_message(self,*a): pass
+    def _send(self, code, body, ctype="application/json"):
+        b = body.encode() if isinstance(body,str) else body
+        self.send_response(code); self.send_header("Content-Type",ctype)
+        self.send_header("Content-Length",str(len(b)))
+        self.send_header("X-Content-Type-Options","nosniff")
+        self.end_headers(); self.wfile.write(b)
+    def _json(self, code, obj): self._send(code, json.dumps(obj))
+    def _tok(self):
+        c = self.headers.get("Cookie","")
+        m = re.search(r"gad_sess=([a-f0-9]+)", c)
+        if not m: return None
+        t=m.group(1); s=SESS.get(t)
+        if s and s["exp"]>time.time(): return t
+        SESS.pop(t,None); return None
+    def _senha(self):
+        t=self._tok(); s=(SESS.get(t) or {}) if t else {}
+        u=s.get("usuario","Administrator"); p=s.get("senha","")
+        return ("%s%%%s"%(u,p)) if p else ""
+    def _body(self):
+        n=int(self.headers.get("Content-Length","0") or 0)
+        try: return json.loads(self.rfile.read(n) or b"{}")
+        except Exception: return {}
+    def do_GET(self):
+        if self.path in ("/","/index.html"):
+            try: self._send(200, open(WEBDIR+"/index.html","rb").read(), "text/html; charset=utf-8")
+            except Exception: self._send(500,"erro","text/plain")
+            return
+        if self.path.startswith("/assets/"):
+            rel = self.path.split("?")[0].lstrip("/")
+            safe = os.path.normpath(os.path.join(WEBDIR, rel))
+            if safe.startswith(WEBDIR+os.sep) and os.path.isfile(safe):
+                ct = mimetypes.guess_type(safe)[0] or "application/octet-stream"
+                try: return self._send(200, open(safe,"rb").read(), ct)
+                except Exception: pass
+            return self._send(404,"404","text/plain")
+        if self.path=="/api/sessao":
+            return self._json(200, {"logado": bool(self._tok()), "provisionado": is_provisionado()})
+        if self.path=="/api/estado-inicial":
+            ip=run(["sh","-c","ip -o -4 addr show scope global | awk '{print $4}' | head -1"])[1]
+            gw=run(["sh","-c","ip -o -4 route show to default | awk '{print $3}' | head -1"])[1]
+            return self._json(200, {"provisionado":is_provisionado(),"ip_sugerido":ip,"gw_sugerido":gw,"host_sugerido":run(["hostname"])[1]})
+        if self.path=="/api/provisionar-status":
+            return self._json(200, PROV)
+        if self.path.startswith("/api/"):
+            if not self._tok(): return self._json(401,{"erro":"faça login"})
+            if self.path=="/api/estado": return self._json(200, estado())
+            if self.path=="/api/painel-atencao": return self._json(200, painel_atencao())
+            if self.path=="/api/usuarios": return self._json(200, {"itens":usuarios_ricos()})
+            if self.path.startswith("/api/usuario?"):
+                from urllib.parse import parse_qs, urlparse
+                login=(parse_qs(urlparse(self.path).query).get("login") or [""])[0]
+                u=usuario_detalhe(login)
+                if not u: return self._json(404,{"erro":"não encontrado"})
+                return self._json(200, u)
+            if self.path=="/api/grupos": return self._json(200, {"itens":grupos_ricos()})
+            if self.path.startswith("/api/grupo?"):
+                from urllib.parse import parse_qs, urlparse
+                nome=(parse_qs(urlparse(self.path).query).get("nome") or [""])[0]
+                return self._json(200, grupo_detalhe(nome))
+            if self.path=="/api/computadores":
+                its=computadores_ricos()
+                return self._json(200, {"itens":its,"resumo":computadores_resumo(its)})
+            if self.path.startswith("/api/delegacao-comando"):
+                from urllib.parse import parse_qs, urlparse
+                qs=parse_qs(urlparse(self.path).query)
+                oudn=(qs.get("ou") or [""])[0]; grupo=(qs.get("grupo") or [""])[0]
+                nivel=(qs.get("nivel") or ["total"])[0]
+                rc,out,_=run(["wbinfo","-n",grupo]); sid=(out.split()[0] if out else "")
+                # SDDL: CI=herda p/ objetos-filho. total=GA (controle total). gerencia=criar/apagar+reset senha.
+                if nivel=="gerencia":
+                    direitos="CCDCLCRPWP"  # criar/apagar filhos + ler/escrever props (gerenciar objetos)
+                else:
+                    direitos="GA"          # Generic All = controle total
+                sddl="(A;CI;%s;;;%s)"%(direitos, sid or "SID-DO-GRUPO")
+                cmd='samba-tool dsacl set --objectdn="%s" --action=allow --sddl="%s"'%(oudn, sddl)
+                return self._json(200, {"cmd":cmd,"sid":sid,"ou":oudn,"grupo":grupo,"nivel":nivel,
+                    "ok_sid":bool(sid)})
+            if self.path.startswith("/api/usuario-maquinas"):
+                from urllib.parse import parse_qs, urlparse
+                qs=parse_qs(urlparse(self.path).query)
+                lg=(qs.get("login") or [""])[0]; nm=(qs.get("nome") or [""])[0]
+                return self._json(200, {"maquinas":maquinas_do_usuario(lg,nm)})
+            if self.path.startswith("/api/inventario-qr"):
+                from urllib.parse import parse_qs, urlparse
+                mq=(parse_qs(urlparse(self.path).query).get("maquina") or [""])[0]
+                iv=inventario_de(mq)
+                txt="Guatá ID\nMáquina: %s\nPatrimônio: %s\nSetor: %s\nResponsável: %s"%(
+                    mq, iv.get("patrimonio","-") or "-", iv.get("setor","-") or "-", iv.get("responsavel","-") or "-")
+                try:
+                    import qrcode, qrcode.image.svg, io
+                    img=qrcode.make(txt, image_factory=qrcode.image.svg.SvgPathImage, box_size=11, border=2)
+                    buf=io.BytesIO(); img.save(buf)
+                    return self._send(200, buf.getvalue(), "image/svg+xml")
+                except Exception as ex:
+                    return self._json(503,{"erro":"QR indisponível (instale python3-qrcode): "+str(ex)[:120]})
+            if self.path.startswith("/api/inventario"):
+                from urllib.parse import parse_qs, urlparse
+                mq=(parse_qs(urlparse(self.path).query).get("maquina") or [""])[0]
+                return self._json(200, {"maquina":mq,"campos":inventario_de(mq)})
+            if self.path=="/api/saude": return self._json(200, saude())
+            if self.path.startswith("/api/saude-cmd"):
+                from urllib.parse import parse_qs, urlparse
+                o=(parse_qs(urlparse(self.path).query).get("o") or [""])[0]
+                cmds={"showrepl":["drs","showrepl"],"dbcheck":["dbcheck"],
+                      "fsmo":["fsmo","show"],"sysvolcheck":["ntacl","sysvolcheck"]}
+                if o not in cmds: return self._json(400,{"erro":"comando inválido"})
+                rc,out,err=st(cmds[o])
+                return self._json(200,{"ok":rc==0,"saida":(out or err or "(sem saída)"),
+                    "cmd":"samba-tool "+" ".join(cmds[o])})
+            if self.path=="/api/backups":
+                return self._json(200,{"dir":BACKUP_DIR,"itens":backups_listar(),"agenda":_agenda_backup_estado()})
+            if self.path=="/api/backup-status":
+                return self._json(200, BKP)
+            if self.path.startswith("/api/backup-baixar"):
+                from urllib.parse import parse_qs, urlparse
+                arq=(parse_qs(urlparse(self.path).query).get("f") or [""])[0]
+                safe=os.path.normpath(os.path.join(BACKUP_DIR,arq))
+                if (not arq) or ("/" in arq) or (not safe.startswith(BACKUP_DIR+os.sep)) or (not os.path.isfile(safe)):
+                    return self._json(404,{"erro":"arquivo não encontrado"})
+                try:
+                    b=open(safe,"rb").read()
+                    self.send_response(200); self.send_header("Content-Type","application/octet-stream")
+                    self.send_header("Content-Length",str(len(b)))
+                    self.send_header("Content-Disposition",'attachment; filename="%s"'%arq)
+                    self.send_header("X-Content-Type-Options","nosniff")
+                    self.end_headers(); self.wfile.write(b); return
+                except Exception as ex:
+                    return self._json(500,{"erro":str(ex)})
+            if self.path=="/api/auditoria": return self._json(200, {"itens":auditoria_recente()})
+            if self.path.startswith("/api/dns"):
+                from urllib.parse import parse_qs, urlparse
+                zq=(parse_qs(urlparse(self.path).query).get("zona") or [""])[0]
+                cred=self._senha()
+                zona,regs,err=dns_registros(cred, zq or None)
+                return self._json(200, {"zona":zona,"zonas":dns_zonas(cred),"itens":regs,"erro":err})
+            if self.path.startswith("/api/agenda"):
+                from urllib.parse import parse_qs, urlparse
+                lg=(parse_qs(urlparse(self.path).query).get("login") or [None])[0]
+                return self._json(200, {"itens":agenda_listar(lg)})
+            if self.path=="/api/organograma": return self._json(200, {"itens":organograma()})
+            if self.path=="/api/ous": return self._json(200, {"itens":ous_lista(),"base":base_dn()})
+            if self.path=="/api/gpos":
+                gs,err=gpos_lista(self._senha())
+                return self._json(200, {"itens":gs,"erro":err})
+            if self.path=="/api/gpo-modelos":
+                return self._json(200,{"itens":[{"id":k,"nome":m["nome"],"scope":m["scope"],"desc":m["desc"],"params":m["params"]} for k,m in MODELOS.items()]})
+            if self.path.startswith("/api/ou-conteudo?"):
+                from urllib.parse import parse_qs, urlparse
+                dn=(parse_qs(urlparse(self.path).query).get("dn") or [""])[0]
+                return self._json(200, ou_conteudo(dn))
+            if self.path=="/api/contas-inseguras": return self._json(200, {"itens":contas_inseguras()})
+            if self.path=="/api/politica-senha": return self._json(200, politica_show())
+        self._send(404,"não encontrado","text/plain")
+    def do_POST(self):
+        if self.path=="/api/login":
+            d=self._body(); usuario=(d.get("usuario") or "Administrator").strip() or "Administrator"; senha=d.get("senha","")
+            ok,erro=check_login(usuario,senha)
+            if ok:
+                t=secrets.token_hex(16); SESS[t]={"exp":time.time()+TTL,"usuario":usuario,"senha":senha}
+                audit("login no painel",usuario,True,self.client_address[0])
+                self.send_response(200); self.send_header("Content-Type","application/json")
+                self.send_header("Set-Cookie", f"gad_sess={t}; Path=/; HttpOnly; SameSite=Strict; Max-Age={TTL}")
+                body=json.dumps({"ok":True,"usuario":usuario}).encode(); self.send_header("Content-Length",str(len(body)))
+                self.end_headers(); self.wfile.write(body); return
+            return self._json(401, {"erro":erro or "Falha no login."})
+        if self.path=="/api/provisionar":
+            if is_provisionado(): return self._json(403,{"erro":"Este servidor já tem um domínio."})
+            d=self._body()
+            dom=(d.get("dominio") or "").strip().lower()
+            if not re.match(r"^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$",dom):
+                return self._json(400,{"erro":"Nome de domínio inválido (ex: empresa.local)."})
+            if len(d.get("senha") or "")<8: return self._json(400,{"erro":"Senha muito curta (mínimo 8)."})
+            if not (d.get("ip") or "").strip(): return self._json(400,{"erro":"Informe o IP fixo."})
+            if PROV.get("pct",0)>0 and not PROV.get("erro") and not PROV.get("pronto"):
+                return self._json(200,{"ok":True})
+            PROV.clear(); PROV.update({"pct":1,"etapa":"Iniciando...","pronto":False,"erro":""})
+            threading.Thread(target=do_provision,args=(d,),daemon=True).start()
+            return self._json(200,{"ok":True})
+        if not self._tok(): return self._json(401,{"erro":"faça login"})
+        d=self._body()
+        if self.path=="/api/logout":
+            t=self._tok(); SESS.pop(t,None); return self._json(200,{"ok":True})
+        if self.path=="/api/inventario-salvar":
+            mq=(d.get("maquina") or "").strip(); campos=d.get("campos") or {}
+            if not mq: return self._json(400,{"erro":"máquina faltando"})
+            ok=inventario_salvar(mq,campos)
+            audit("salvar inventário",mq,ok,self.client_address[0])
+            return self._json(200 if ok else 400,{"ok":ok})
+        if self.path=="/api/backup-criar":
+            if BKP.get("rodando"): return self._json(200,{"ok":True,"ja":True})
+            threading.Thread(target=backup_criar,daemon=True).start()
+            audit("backup do domínio","manual",True,self.client_address[0])
+            return self._json(200,{"ok":True})
+        if self.path=="/api/backup-apagar":
+            arq=(d.get("arquivo") or "")
+            safe=os.path.normpath(os.path.join(BACKUP_DIR,arq))
+            if (not arq) or ("/" in arq) or (not safe.startswith(BACKUP_DIR+os.sep)) or (not os.path.isfile(safe)):
+                return self._json(404,{"erro":"arquivo não encontrado"})
+            try:
+                os.remove(safe)
+                sp=safe+".sha256"
+                if os.path.exists(sp): os.remove(sp)
+                audit("apagar backup",arq,True,self.client_address[0])
+                return self._json(200,{"ok":True})
+            except Exception as ex:
+                return self._json(500,{"erro":str(ex)})
+        if self.path=="/api/backup-agenda":
+            ligar=bool(d.get("ligar"))
+            acao="enable" if ligar else "disable"
+            rc,o,e=run(["systemctl",acao,"--now","guata-id-backup.timer"])
+            audit("agendamento de backup",acao,rc==0,self.client_address[0])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":(e or o) if rc!=0 else "","agenda":_agenda_backup_estado()})
+        if self.path=="/api/usuario-criar":
+            u=(d.get("login") or "").strip(); p=d.get("senha") or ""; nome=(d.get("nome") or u).strip()
+            email=(d.get("email") or "").strip(); cargo=(d.get("cargo") or "").strip(); grupo=(d.get("grupo") or "").strip()
+            if not re.match(r"^[A-Za-z0-9._-]{1,64}$",u): return self._json(400,{"erro":"Login inválido (use letras, números, ponto)."})
+            if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$",email): return self._json(400,{"erro":"E-mail inválido."})
+            if len(p)<8 or not re.search(r"[A-Z]",p) or not re.search(r"[a-z]",p) or not re.search(r"[0-9]",p):
+                return self._json(400,{"erro":"Senha fraca (mín. 8, com maiúscula, minúscula e número)."})
+            parts=nome.split(" ",1); gn=parts[0]; sn=parts[1] if len(parts)>1 else ""
+            args=["user","create",u,p]
+            if gn: args.append("--given-name=%s"%gn)
+            if sn: args.append("--surname=%s"%sn)
+            if email: args.append("--mail-address=%s"%email)
+            if cargo: args.append("--job-title=%s"%cargo)
+            ou=(d.get("ou") or "").strip()
+            if ou and ou!=base_dn(): args.append("--userou=%s"%ou_rel(ou))
+            rc,o,e=st(args)
+            if rc!=0: return self._json(400,{"ok":False,"erro":e or o})
+            if nome: set_attr(u,"displayName",nome)
+            if grupo: st(["group","addmembers",grupo,u])
+            return self._json(200,{"ok":True})
+        if self.path=="/api/pessoa-criar":
+            nome=(d.get("nome") or "").strip(); sob=(d.get("sobrenome") or "").strip()
+            login=(d.get("login") or "").strip(); email=(d.get("email") or "").strip()
+            ou=(d.get("ou") or "").strip(); grupos=d.get("grupos") or []; senha=d.get("senha") or ""
+            trocar=bool(d.get("trocar")); completo=(nome+" "+sob).strip()
+            if not re.match(r"^[A-Za-z0-9._-]{1,64}$",login): return self._json(400,{"erro":"Login inválido."})
+            if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$",email): return self._json(400,{"erro":"E-mail inválido."})
+            if len(senha)<8 or not re.search(r"[A-Z]",senha) or not re.search(r"[a-z]",senha) or not re.search(r"[0-9]",senha):
+                return self._json(400,{"erro":"Senha fraca (mín. 8, com Maiúscula, minúscula e número)."})
+            args=["user","create",login,senha]
+            if nome: args.append("--given-name=%s"%nome)
+            if sob: args.append("--surname=%s"%sob)
+            if email: args.append("--mail-address=%s"%email)
+            ounome=""
+            if ou and ou!=base_dn():
+                args.append("--userou=%s"%ou_rel(ou)); ounome=ou_rel(ou)
+            rc,o,e=st(args)
+            if rc!=0: return self._json(400,{"ok":False,"erro":e or o})
+            if completo: set_attr(login,"displayName",completo)
+            if ounome: set_attr(login,"department",ou_rel(ou).split(",")[0].replace("OU=",""))
+            add_ok=[]
+            for g in grupos:
+                r2,_,_=st(["group","addmembers",g,login])
+                if r2==0: add_ok.append(g)
+            if trocar: set_trocar_logon(login,True)
+            dc=run(["hostname"])[1]
+            import time as _t
+            aid="AUD-%d"%int(_t.time())
+            audit("criar pessoa", login, True, self.client_address[0])
+            detalhes={"login":login,"ou":(ou or base_dn()),"grupos":add_ok,"dc":dc,
+                      "resultado":"sucesso","audit":aid}
+            return self._json(200,{"ok":True,"detalhes":detalhes})
+        if self.path=="/api/pessoas-importar":
+            import secrets as _sx, string as _str
+            def _gera():
+                return (_sx.choice(_str.ascii_uppercase)+_sx.choice(_str.ascii_lowercase)+_sx.choice(_str.digits)
+                        +_sx.choice("@#!$%")+"".join(_sx.choice(_str.ascii_letters+_str.digits) for _ in range(6)))
+            linhas=d.get("linhas") or []
+            res=[]
+            for row in linhas[:500]:
+                nome=(row.get("nome") or "").strip(); login=(row.get("login") or "").strip()
+                email=(row.get("email") or "").strip(); cargo=(row.get("cargo") or "").strip()
+                ou=(row.get("ou") or "").strip(); senha=(row.get("senha") or "").strip()
+                if not re.match(r"^[A-Za-z0-9._-]{1,64}$",login):
+                    res.append({"login":login or "(vazio)","nome":nome,"ok":False,"erro":"login inválido"}); continue
+                if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$",email):
+                    res.append({"login":login,"nome":nome,"ok":False,"erro":"e-mail inválido"}); continue
+                gerada=False
+                if not senha: senha=_gera(); gerada=True
+                elif len(senha)<8 or not re.search(r"[A-Z]",senha) or not re.search(r"[a-z]",senha) or not re.search(r"[0-9]",senha):
+                    res.append({"login":login,"nome":nome,"ok":False,"erro":"senha fraca (deixe em branco p/ gerar)"}); continue
+                parts=(nome or login).split(" ",1); gn=parts[0]; sn=parts[1] if len(parts)>1 else ""
+                args=["user","create",login,senha]
+                if gn: args.append("--given-name=%s"%gn)
+                if sn: args.append("--surname=%s"%sn)
+                if email: args.append("--mail-address=%s"%email)
+                if cargo: args.append("--job-title=%s"%cargo)
+                oudn=ou
+                if ou and not ou.lower().endswith(base_dn().lower()):
+                    oudn="OU=%s,%s"%(ou,base_dn())
+                if oudn and oudn.lower()!=base_dn().lower():
+                    args.append("--userou=%s"%ou_rel(oudn))
+                rc,o,e=st(args)
+                if rc!=0:
+                    res.append({"login":login,"nome":nome,"ok":False,"erro":(e or o).splitlines()[-1][:120] if (e or o) else "falha"}); continue
+                if nome: set_attr(login,"displayName",nome)
+                res.append({"login":login,"nome":nome,"ok":True,"senha":(senha if gerada else ""),"gerada":gerada})
+            okn=sum(1 for r in res if r["ok"])
+            audit("importar pessoas (lote)","%d ok / %d total"%(okn,len(res)),True,self.client_address[0])
+            return self._json(200,{"itens":res,"total":len(res),"ok":okn,"falhas":len(res)-okn})
+        if self.path=="/api/jornada-saida":
+            u=(d.get("login") or "").strip()
+            if not u: return self._json(400,{"erro":"pessoa faltando"})
+            st(["user","disable",u])
+            removidos=[]
+            for g in grupos_do(u):
+                if g.lower() in ("domain users","usuários do domínio"): continue
+                r2,_,_=st(["group","removemembers",g,u])
+                if r2==0: removidos.append(g)
+            audit("desligamento: pessoa saiu",u,True,self.client_address[0])
+            import time as _t
+            return self._json(200,{"ok":True,"detalhes":{"login":u,"grupos_removidos":removidos,
+                "dc":run(["hostname"])[1],"resultado":"conta desativada e acessos removidos","audit":"AUD-%d"%int(_t.time())}})
+        if self.path=="/api/jornada-comprometida":
+            u=(d.get("login") or "").strip()
+            if not u: return self._json(400,{"erro":"pessoa faltando"})
+            st(["user","disable",u])
+            import secrets as _sx, string as _str, time as _t
+            nova=_sx.choice(_str.ascii_uppercase)+_sx.choice(_str.ascii_lowercase)+_sx.choice(_str.digits)+_sx.choice("@#!$%")+"".join(_sx.choice(_str.ascii_letters+_str.digits) for _ in range(6))
+            st(["user","setpassword",u,"--newpassword=%s"%nova])
+            set_trocar_logon(u,True)
+            audit("conta comprometida: bloqueada e senha trocada",u,True,self.client_address[0])
+            ativ=[a for a in auditoria_recente(400) if a.get("objeto")==u][:8]
+            return self._json(200,{"ok":True,"detalhes":{"login":u,"nova_senha":nova,"dc":run(["hostname"])[1],
+                "resultado":"conta bloqueada, senha redefinida, troca no próximo acesso","audit":"AUD-%d"%int(_t.time())},"atividade":ativ})
+        if self.path=="/api/jornada-departamento":
+            nome=re.sub(r"[^A-Za-z0-9 _-]","",(d.get("nome") or "")).strip()
+            if not nome: return self._json(400,{"erro":"Nome do departamento inválido."})
+            import time as _t
+            oudn="OU=%s,%s"%(nome,base_dn())
+            rc,o,e=st(["ou","create",oudn])
+            if rc!=0 and "already" not in (e+o).lower(): return self._json(400,{"ok":False,"erro":e or o})
+            gnome="Equipe %s"%nome
+            st(["group","add",gnome,"--group-scope=Global","--groupou=OU=%s"%nome])
+            audit("novo departamento",nome,True,self.client_address[0])
+            return self._json(200,{"ok":True,"detalhes":{"departamento":nome,"unidade":oudn,"grupo":gnome,
+                "dc":run(["hostname"])[1],"resultado":"unidade e grupo criados","audit":"AUD-%d"%int(_t.time())}})
+        if self.path=="/api/usuario-editar":
+            u=(d.get("login") or "").strip()
+            if not u: return self._json(400,{"erro":"login faltando"})
+            email=(d.get("email") or "").strip()
+            if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$",email): return self._json(400,{"erro":"E-mail inválido."})
+            campos=[("mail",email),("title",(d.get("cargo") or "").strip()),
+                    ("department",(d.get("departamento") or "").strip()),
+                    ("telephoneNumber",(d.get("telefone") or "").strip()),
+                    ("company",(d.get("empresa") or "").strip()),
+                    ("description",(d.get("descricao") or "").strip()),
+                    ("physicalDeliveryOfficeName",(d.get("escritorio") or "").strip())]
+            nome=(d.get("nome") or "").strip()
+            if nome: campos.append(("displayName",nome))
+            err=""
+            for attr,val in campos:
+                ok,e=set_attr(u,attr,val)
+                if not ok: err=e
+            return self._json(200 if not err else 400,{"ok":not err,"erro":err})
+        if self.path=="/api/usuario-superior":
+            u=(d.get("login") or "").strip(); sup=(d.get("superior") or "").strip()
+            if sup:
+                if sup.lower()==u.lower(): return self._json(400,{"erro":"Um usuário não pode ser superior de si mesmo."})
+                dn=user_dn(sup)
+                if not dn: return self._json(400,{"erro":"Superior não encontrado."})
+                ok,e=set_attr(u,"manager",dn)
+            else:
+                ok,e=set_attr(u,"manager","")
+            return self._json(200 if ok else 400,{"ok":ok,"erro":e})
+        if self.path=="/api/usuario-foto":
+            u=(d.get("login") or "").strip(); b64=d.get("foto") or ""
+            if b64.startswith("data:"): b64=b64.split(",",1)[-1]
+            if b64 and len(b64)>200000: return self._json(400,{"erro":"Foto muito grande."})
+            ok,e=set_attr_bin(u,"thumbnailPhoto",b64)
+            return self._json(200 if ok else 400,{"ok":ok,"erro":e})
+        if self.path=="/api/usuario-senha":
+            u=(d.get("login") or "").strip(); p=d.get("senha") or ""
+            if len(p)<8 or not re.search(r"[A-Z]",p) or not re.search(r"[a-z]",p) or not re.search(r"[0-9]",p):
+                return self._json(400,{"erro":"Senha fraca."})
+            rc,o,e=st(["user","setpassword",u,f"--newpassword={p}"])
+            audit("resetar senha",u,rc==0,self.client_address[0])
+            return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/usuario-estado":
+            u=(d.get("login") or "").strip(); acao="disable" if d.get("acao")=="desativar" else "enable"
+            rc,o,e=st(["user",acao,u])
+            audit("desativar conta" if acao=="disable" else "ativar conta", u, rc==0, self.client_address[0])
+            return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-criar":
+            g=(d.get("nome") or "").strip()
+            if not g: return self._json(400,{"erro":"Nome vazio."})
+            args=["group","add",g]
+            esc_=(d.get("escopo") or "").strip()
+            if esc_ in ("Domain","Global","Universal"): args.append("--group-scope=%s"%esc_)
+            tipo=(d.get("tipo") or "").strip()
+            if tipo in ("Security","Distribution"): args.append("--group-type=%s"%tipo)
+            ou=(d.get("ou") or "").strip()
+            if ou and ou!=base_dn(): args.append("--groupou=%s"%ou_rel(ou))
+            rc,o,e=st(args); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-membro":
+            g=(d.get("grupo") or "").strip(); u=(d.get("login") or "").strip()
+            rc,o,e=st(["group","addmembers",g,u]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-remover-membro":
+            g=(d.get("grupo") or "").strip(); u=(d.get("login") or "").strip()
+            rc,o,e=st(["group","removemembers",g,u]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/grupo-editar":
+            g=(d.get("nome") or "").strip()
+            dn=next((_s(x.get("dn")) for x in ldbsearch("(sAMAccountName=%s)"%g,["dn"])), None)
+            if not dn: return self._json(400,{"erro":"Grupo não encontrado."})
+            err=""
+            for attr,val in [("description",(d.get("descricao") or "").strip()),("mail",(d.get("email") or "").strip())]:
+                if val: run(["ldbmodify","-H",DB],inp="dn: %s\nchangetype: modify\nreplace: %s\n%s: %s\n"%(dn,attr,attr,val))
+                else: run(["ldbmodify","-H",DB],inp="dn: %s\nchangetype: modify\ndelete: %s\n"%(dn,attr))
+            return self._json(200,{"ok":True,"erro":err})
+        if self.path=="/api/grupo-apagar":
+            g=(d.get("nome") or "").strip()
+            rc,o,e=st(["group","delete",g]); audit("apagar grupo",g,rc==0,self.client_address[0]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/computador-remover":
+            c=(d.get("nome") or "").strip()
+            rc,o,e=st(["computer","delete",c]); audit("remover computador",c,rc==0,self.client_address[0]); return self._json(200 if rc==0 else 400, {"ok":rc==0,"erro":e or o})
+        if self.path=="/api/ou-criar":
+            nome=re.sub(r"[^A-Za-z0-9 _-]","",(d.get("nome") or "")).strip()
+            if not nome: return self._json(400,{"erro":"Nome inválido."})
+            base=base_dn()
+            pai=(d.get("pai") or "").strip()
+            # valida a OU pai: precisa terminar no domínio e ser uma OU
+            if pai and not pai.lower().endswith(base.lower()): pai=""
+            destino=pai or base
+            dn="OU=%s,%s"%(nome,destino)
+            args=["ou","create",dn]
+            desc=(d.get("descricao") or "").strip()
+            if desc: args.append("--description=%s"%desc)
+            rc,o,e=st(args)
+            if rc!=0: return self._json(400,{"ok":False,"erro":e or o})
+            extra=""
+            if d.get("bloquear_heranca"):
+                rc2,o2,e2=stldb(["gpo","setinheritance",dn,"block"])
+                if rc2!=0: extra=" (unidade criada, mas não consegui bloquear a herança: %s)"%((e2 or o2)[:120])
+            audit("criar unidade",dn,True,self.client_address[0])
+            return self._json(200,{"ok":True,"dn":dn,"aviso":extra})
+        if self.path=="/api/ou-apagar":
+            dn=(d.get("dn") or "").strip()
+            rc,o,e=st(["ou","delete",dn]); audit("apagar unidade",dn,rc==0,self.client_address[0]); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/usuario-mover":
+            u=(d.get("login") or "").strip(); dn=(d.get("dn") or "").strip()
+            if not dn: return self._json(400,{"erro":"destino faltando"})
+            rc,o,e=st(["user","move",u,dn]); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/gpo-criar":
+            nome=(d.get("nome") or "").strip()
+            if not nome: return self._json(400,{"erro":"Nome vazio."})
+            rc,o,e=stldb(["gpo","create",nome])
+            mg=re.search(r"\{[0-9A-Fa-f-]+\}", o or "")
+            audit("criar política (GPO)",nome,rc==0,self.client_address[0])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o,"guid":(mg.group(0) if mg else "")})
+        if self.path=="/api/gpo-apagar":
+            g=(d.get("guid") or "").strip()
+            rc,o,e=stldb(["gpo","del",g]); audit("apagar política",g,rc==0,self.client_address[0]); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/gpo-vincular":
+            dn=(d.get("ou") or "").strip(); g=(d.get("guid") or "").strip()
+            rc,o,e=stldb(["gpo","setlink",dn,g]); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/gpo-desvincular":
+            dn=(d.get("ou") or "").strip(); g=(d.get("guid") or "").strip()
+            rc,o,e=stldb(["gpo","dellink",dn,g]); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/gpo-construir":
+            g=(d.get("guid") or "").strip(); selec=d.get("selec") or []
+            if not g: return self._json(400,{"erro":"política faltando"})
+            ok,e=aplicar_modelos(g,selec,self._senha())
+            audit("configurar política (GPO)",g,ok,self.client_address[0])
+            return self._json(200 if ok else 400,{"ok":ok,"erro":e})
+        if self.path=="/api/ou-renomear":
+            dn=(d.get("dn") or "").strip(); novo=re.sub(r"[^A-Za-z0-9 _-]","",(d.get("nome") or "")).strip()
+            if not dn or not novo: return self._json(400,{"erro":"dados faltando"})
+            resto=dn.split(",",1)[1] if "," in dn else base_dn()
+            rc,o,e=st(["ou","rename",dn,"OU=%s,%s"%(novo,resto)]); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/usuario-flag":
+            u=(d.get("login") or "").strip(); flag=d.get("flag"); on=bool(d.get("valor"))
+            if flag=="nunca_expira": ok,e=set_uac_flag(u,UAC_DONT_EXPIRE,on)
+            elif flag=="trocar_logon": ok,e=set_trocar_logon(u,on)
+            else: return self._json(400,{"erro":"flag desconhecida"})
+            return self._json(200 if ok else 400,{"ok":ok,"erro":e})
+        if self.path=="/api/usuario-expira":
+            u=(d.get("login") or "").strip(); dias=d.get("dias")
+            if dias in (None,"","nunca"):
+                rc,o,e=st(["user","setexpiry",u,"--noexpiry"])
+            else:
+                try: nd=int(dias)
+                except Exception: return self._json(400,{"erro":"dias inválido"})
+                rc,o,e=st(["user","setexpiry",u,"--days=%d"%nd])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/usuario-desbloquear":
+            u=(d.get("login") or "").strip()
+            ok,e=set_attr(u,"lockoutTime","0")
+            audit("desbloquear conta",u,ok,self.client_address[0])
+            return self._json(200 if ok else 400,{"ok":ok,"erro":e})
+        if self.path=="/api/agendar":
+            u=(d.get("login") or "").strip(); acao=(d.get("acao") or "").strip()
+            try: quando=int(d.get("quando") or 0)
+            except Exception: quando=0
+            if acao not in ("ativar","desativar"): return self._json(400,{"erro":"ação inválida"})
+            if not quando: return self._json(400,{"erro":"informe a data/hora"})
+            os.makedirs(ETC,exist_ok=True)
+            with open(AGENDA,"a") as f: f.write(json.dumps({"quando":quando,"acao":acao,"login":u,"por":"Administrator"},ensure_ascii=False)+"\n")
+            run(["systemctl","enable","--now","guata-id-agenda.timer"])
+            audit("agendar "+acao,u,True,self.client_address[0])
+            return self._json(200,{"ok":True})
+        if self.path=="/api/dns-add":
+            nome=(d.get("nome") or "").strip(); ip=(d.get("ip") or "").strip()
+            if not re.match(r"^[A-Za-z0-9._-]+$",nome): return self._json(400,{"erro":"Nome inválido."})
+            if not re.match(r"^\d{1,3}(\.\d{1,3}){3}$",ip): return self._json(400,{"erro":"IP inválido."})
+            rc,o,e=stc(["dns","add","127.0.0.1",dns_zona(),nome,"A",ip],self._senha())
+            audit("criar host DNS",nome+" → "+ip,rc==0,self.client_address[0])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/dns-registro-add":
+            nome=(d.get("nome") or "").strip(); tipo=(d.get("tipo") or "A").strip().upper()
+            dado=(d.get("dado") or "").strip(); zona=(d.get("zona") or "").strip() or dns_zona()
+            if tipo not in ("A","AAAA","CNAME","NS","MX","TXT","SRV","PTR"):
+                return self._json(400,{"erro":"Tipo de registro inválido."})
+            if not nome or not re.match(r"^[@A-Za-z0-9._*-]+$",nome): return self._json(400,{"erro":"Nome inválido."})
+            if not dado: return self._json(400,{"erro":"Informe o destino/valor do registro."})
+            if tipo=="A" and not re.match(r"^\d{1,3}(\.\d{1,3}){3}$",dado): return self._json(400,{"erro":"IP (A) inválido."})
+            rc,o,e=stc(["dns","add","127.0.0.1",zona,nome,tipo,dado],self._senha())
+            audit("criar registro DNS","%s %s %s"%(nome,tipo,dado),rc==0,self.client_address[0])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/dns-remover":
+            nome=(d.get("nome") or "").strip(); tipo=(d.get("tipo") or "A").strip(); dado=(d.get("dado") or "").strip()
+            rc,o,e=stc(["dns","delete","127.0.0.1",dns_zona(),nome,tipo,dado],self._senha())
+            audit("remover host DNS",nome,rc==0,self.client_address[0])
+            return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        if self.path=="/api/agenda-cancelar":
+            u=(d.get("login") or "").strip()
+            try: quando=int(d.get("quando") or 0)
+            except Exception: quando=0
+            try:
+                linhas=open(AGENDA).read().splitlines()
+                novas=[]
+                for l in linhas:
+                    try: it=json.loads(l)
+                    except Exception: continue
+                    if it.get("login")==u and it.get("quando")==quando: continue
+                    novas.append(l)
+                open(AGENDA,"w").write("\n".join(novas)+("\n" if novas else ""))
+            except Exception as ex: return self._json(400,{"erro":str(ex)})
+            return self._json(200,{"ok":True})
+        if self.path=="/api/politica-senha":
+            def arg(k,v): return "%s=%s"%(k,v)
+            a=["domain","passwordsettings","set"]
+            if "complexidade" in d: a.append("--complexity=%s"%("on" if d["complexidade"] else "off"))
+            if d.get("min_tamanho") not in (None,""): a.append("--min-pwd-length=%d"%int(d["min_tamanho"]))
+            if d.get("historico") not in (None,""): a.append("--history-length=%d"%int(d["historico"]))
+            if d.get("min_idade") not in (None,""): a.append("--min-pwd-age=%d"%int(d["min_idade"]))
+            if d.get("max_idade") not in (None,""): a.append("--max-pwd-age=%d"%int(d["max_idade"]))
+            if d.get("bloqueio_tentativas") not in (None,""): a.append("--account-lockout-threshold=%d"%int(d["bloqueio_tentativas"]))
+            if d.get("bloqueio_duracao") not in (None,""): a.append("--account-lockout-duration=%d"%int(d["bloqueio_duracao"]))
+            if d.get("bloqueio_reset") not in (None,""): a.append("--reset-account-lockout-after=%d"%int(d["bloqueio_reset"]))
+            if len(a)==3: return self._json(400,{"erro":"nada para alterar"})
+            rc,o,e=st(a); return self._json(200 if rc==0 else 400,{"ok":rc==0,"erro":e or o})
+        self._send(404,"não encontrado","text/plain")
+
+if __name__=="__main__":
+    srv=ThreadingHTTPServer(("0.0.0.0",PORT), H)
+    print(f"Guatá ID Web em http://0.0.0.0:{PORT}")
+    srv.serve_forever()

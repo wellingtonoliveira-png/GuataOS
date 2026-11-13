@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">
+<wallpapers>
+  <wallpaper deleted="false">
+    <name>Guatá · Amazônia</name>
+    <filename>/usr/share/backgrounds/guata/amazonia.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Caatinga</name>
+    <filename>/usr/share/backgrounds/guata/caatinga.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Cerrado</name>
+    <filename>/usr/share/backgrounds/guata/cerrado.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Foz do Iguaçu</name>
+    <filename>/usr/share/backgrounds/guata/iguacu.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Lençóis Maranhenses</name>
+    <filename>/usr/share/backgrounds/guata/lencois.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Manguezais</name>
+    <filename>/usr/share/backgrounds/guata/manguezais.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Serra da Mantiqueira</name>
+    <filename>/usr/share/backgrounds/guata/mantiqueira.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Mata Atlântica</name>
+    <filename>/usr/share/backgrounds/guata/mataatlantica.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Fernando de Noronha</name>
+    <filename>/usr/share/backgrounds/guata/noronha.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Pampa</name>
+    <filename>/usr/share/backgrounds/guata/pampa.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Guatá · Pantanal</name>
+    <filename>/usr/share/backgrounds/guata/pantanal.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Abstrato — Onda</name>
+    <filename>/usr/share/backgrounds/guata/abstratos/aurora-copilot.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Abstrato — Aurora</name>
+    <filename>/usr/share/backgrounds/guata/abstratos/aurora.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Abstrato — Folhas</name>
+    <filename>/usr/share/backgrounds/guata/abstratos/folhas.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Abstrato — Onda & Folha</name>
+    <filename>/usr/share/backgrounds/guata/abstratos/onda-folha-copilot.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Abstrato — Ondas</name>
+    <filename>/usr/share/backgrounds/guata/abstratos/ondas.png</filename>
+    <options>zoom</options>
+    <pcolor>#0f2a1c</pcolor><scolor>#0f2a1c</scolor><shade_type>solid</shade_type>
+  </wallpaper>
+</wallpapers>

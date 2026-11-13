@@ -1,0 +1,35 @@
+---
+componentName: guata
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 820px,540px
+windowPlacement: center
+sidebar: widget
+navigation: widget
+strings:
+    productName: guataOS
+    shortProductName: guataOS
+    version: 0.17.1
+    shortVersion: 0.17.1
+    versionedName: guataOS 0.17.1
+    shortVersionedName: guataOS 0.17.1
+    bootloaderEntryName: guataOS
+    productUrl: https://guataos.com.br
+    supportUrl: https://guataos.com.br
+    knownIssuesUrl: https://guataos.com.br
+    releaseNotesUrl: https://guataos.com.br
+    productLogo: "capivara.png"
+    productIcon: "capivara.png"
+    productWelcome: "capivara.png"
+images:
+    productLogo: "capivara.png"
+    productIcon: "capivara.png"
+    productWelcome: "capivara.png"
+slideshow: "show.qml"
+slideshowAPI: 2
+style:
+    sidebarBackground:    "#0f201a"
+    sidebarText:          "#eaf5ef"
+    sidebarTextSelect:    "#1fae79"
+    sidebarTextHighlight: "#1fae79"
