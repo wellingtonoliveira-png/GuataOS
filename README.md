@@ -1,91 +1,126 @@
-# Guatá Server — Ecossistema Soberano
+<p align="center">
+  <img src="docs/screenshots/01-greeter.jpg" alt="GuataOS — tela de entrada" width="860">
+</p>
 
-> **BETA.** Software em evolução, fornecido *no estado em que se encontra*. Leia os
-> [Termos de Uso e Isenção de Responsabilidade](docs/termos-e-beta.md) antes de usar em produção.
+<h1 align="center">GuataOS</h1>
 
-Um servidor base (Debian 13 / guataOS) que ganha **funções (roles)** instaláveis — igual
-Windows Server, só que soberano, em português e open-source por baixo. Cada função é um
-pacote `.deb` assinado com um **painel web no mesmo padrão visual** e um assistente de
-configuração guiado por mascotes.
+<p align="center">
+  <strong>A distribuição Linux brasileira — soberana, em português, com identidade própria.</strong><br>
+  <em>A sovereign Brazilian Linux distribution — in Portuguese, with its own identity.</em>
+</p>
 
-A tese: **um motor open-source poderoso, vestido de fácil, lindo e soberano.**
-O Samba, o nftables, o CUPS já existem e são potentes — o Guatá os veste de produto.
-
----
-
-## As funções (roles)
-
-| Função | Pacote | Motor por baixo | O que faz | Versão | Estado |
-|---|---|---|---|---|---|
-| **Guatá ID** (AD) | `guata-id` / `guata-ad` | Samba AD DC | Active Directory: pessoas, grupos, máquinas, GPO, DNS, auditoria | 1.43 / 1.2 | BETA — no ar |
-| **Guatá Files** | `guata-files` | Samba + VFS | Servidor de arquivos: compartilhamentos, tiers, snapshots anti-ransomware, ClamAV | 1.7.0 | BETA — no ar |
-| **Guatá Firewall** | `guata-firewall` | nftables | Portas por serviço, encaminhamentos (NAT), registros | esboço | em construção |
-| **Guatá DHCP** | `guata-dhcp` | Kea / isc-dhcp | Escopos, leases, reservas MAC, DDNS → DNS do Samba | roadmap | fila |
-| **Guatá Server** | `guata-server` | — | Menu "Adicionar função" que instala as roles acima | 1.1.0 | BETA — no ar |
-| **Guatá Print** | `guata-print` | CUPS | Servidor de impressão: bilhetagem, cotas por usuário, relatórios de custo | 1.0 | BETA — no ar |
-| **Guatá BOTO** | `guata-boto` | psql / sqlcmd | Sonar de banco de dados: sessões, bloqueios e queries lentas numa leitura só (PostgreSQL e SQL Server) | 1.1.0 | BETA — no ar |
-| **Guatá BackupOS** | (appliance ISO) | PBS / restic | Backup isolado (NÃO é role — appliance separado por segurança) | 1.1 | BETA |
-
-> **Em evolução:** Firewall em construção; MySQL/MariaDB chegando ao BOTO. Contribuições são bem-vindas.
+<p align="center">
+  <a href="https://guataos.com.br">guataos.com.br</a>
+  &nbsp;·&nbsp; Debian 13
+  &nbsp;·&nbsp; open source
+  &nbsp;·&nbsp; <strong>BETA</strong>
+</p>
 
 ---
 
-## Como o usuário instala
+## O que é
 
-No **Debian / guataOS**:
+O **GuataOS** é um Linux brasileiro construído sobre o Debian, pensado para ser **simples, bonito e soberano** — do desktop ao servidor. Nasce de uma ideia direta: *a tecnologia deveria ser humana e ter a nossa cara.*
+
+Inspirado na natureza e na biodiversidade do Brasil, reúne três coisas numa identidade só:
+
+- **Um desktop limpo e nosso** — tela de entrada, papéis de parede dos biomas, sons e ícones com a mesma linguagem visual.
+- **A Ocara** — uma loja de aplicativos que **instala em um clique**, com curadoria e sem complicação.
+- **Um servidor que ganha funções** — como o Windows Server, só que aberto e em português: domínio (AD), arquivos, DHCP, impressão e banco de dados, cada um com um painel web guiado.
+
+> **Não é só mais um tema de Linux.** É um sistema com identidade própria — e a jornada está só começando.
+
+---
+
+## Telas
+
+<p align="center">
+  <img src="docs/screenshots/02-ocara.png" alt="Ocara — a loja de aplicativos do GuataOS" width="820">
+  <br><em>Ocara — a loja do GuataOS: instala em um clique, com curadoria.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/03-servidor.png" alt="Guatá Server — adicionar funções ao servidor" width="820">
+  <br><em>Guatá Server — transforma o sistema em servidor escolhendo funções, pelo navegador.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/06-bioma-amazonia.jpg" alt="Papel de parede inspirado nos biomas brasileiros" width="820">
+  <br><em>Papéis de parede inspirados nos nossos biomas — Amazônia, Mata Atlântica, Cerrado, Pantanal, Caatinga, Pampa...</em>
+</p>
+
+---
+
+## O servidor: funções (roles)
+
+Cada função veste um motor open-source consagrado com um **painel web no mesmo padrão** e um assistente guiado. A tese: *um motor poderoso, vestido de fácil, lindo e soberano.*
+
+| Função | Pacote | Motor por baixo | O que faz | Estado |
+|---|---|---|---|---|
+| **Guatá ID** (AD) | `guata-id` / `guata-ad` | Samba AD DC | Domínio: pessoas, grupos, máquinas, GPO, DNS, auditoria | BETA — no ar |
+| **Guatá Files** | `guata-files` | Samba + VFS | Arquivos: compartilhamentos, níveis de acesso, snapshots anti-ransomware, ClamAV | BETA — no ar |
+| **Guatá DHCP** | `guata-dhcp` | Kea / isc-dhcp | Entrega de IPs: escopos, leases, reservas por MAC, DDNS | BETA — no ar |
+| **Guatá Print** | `guata-print` | CUPS | Impressão: bilhetagem, cotas por usuário, relatórios de custo | BETA — no ar |
+| **Guatá Server** | `guata-server` | — | Menu "Adicionar função" (Debian e Oracle Linux 9) | BETA — no ar |
+| **Guatá BOTO** | `guata-boto` | psql / sqlcmd | Sonar de banco de dados: sessões, bloqueios e queries lentas numa leitura só (PostgreSQL e SQL Server) | BETA — no ar |
+
+---
+
+## Como instalar as funções
+
+**Debian / GuataOS:**
 ```bash
 sudo apt install guata-server      # traz o menu de funções
 sudo guata-server                  # "Adicionar função": AD / Arquivos / Banco (BOTO)...
 ```
 
-No **Oracle Linux 9 / RHEL** (via repositório `el9`, painel web):
+**Oracle Linux 9 / RHEL** (repositório `el9`, painel web):
 ```bash
 sudo dnf config-manager --add-repo https://guataos.com.br/el9/guata.repo
 sudo dnf install guata-server
 guata-server-token                 # mostra a URL do painel + o token de acesso
 ```
 
-Cada função abre seu **configurador web** (assistente) ao instalar. Tudo também aparece
-na **loja Ocara** do guataOS — instalar uma função pela loja transforma o desktop em
-"Guatá Server OS".
-
-## Entrega (resumo)
-
-Pacotes `.deb` assinados num **repositório APT próprio** (Debian/guataOS) e pacotes
-`.rpm` num repositório **el9** (Oracle Linux / RHEL). O cliente adiciona o repositório
-e instala com `apt` ou `dnf`.
+Cada função abre seu **configurador web** ao instalar. Tudo também aparece na loja **Ocara** — instalar uma função pela loja transforma o desktop em "Guatá Server".
 
 ---
 
 ## Mapa do repositório
 
 ```
-guata-ecosystem/
-├── README.md               ← você está aqui
-├── docs/
-│   ├── doutrina.md         ← os princípios inegociáveis do produto
-│   ├── arquitetura.md      ← modelo de roles, repo APT, AD+Files no mesmo servidor
-│   ├── termos-e-beta.md    ← isenção de responsabilidade + rótulo BETA
-│   ├── estado.md           ← estado vivo (versões, o que falta) — handoff
-│   └── seguranca-files.md  ← análise de segurança do Files (achados + correções)
-├── roles/
-│   ├── guata-id/ guata-ad/ guata-files/ guata-dhcp/ guata-print/ guata-server/ guata-boto/
-│   │   └── pkg/<pacote>/    ← árvore .deb (DEBIAN/, usr/, lib/, etc/)
-│   └── */README.md         ← ficha de cada função
-├── brand/                  ← logos e mascotes por função
-└── site-servidores/        ← página pública /servidores do site Guatá
+GuataOS/
+├── distro/          ← a distribuição (guataOS, baseada no Debian 13)
+├── roles/           ← as funções de servidor (id, ad, files, dhcp, print, server, boto)
+├── brand/           ← identidade visual: logos e mascotes
+├── site-servidores/ ← página pública de servidores
+└── docs/            ← doutrina, arquitetura, roadmap e termos
 ```
 
-> Este repositório é o **espelho público versionado + documentação** do ecossistema Guatá.
+Este repositório é o **espelho público versionado + documentação** do ecossistema GuataOS.
 
 ---
 
 ## Doutrina em uma linha
 
-**O Guatá não esconde, traduz.** Nenhum botão cosmético, nunca inventar funcionalidade
-que não existe de verdade, zero emoji (só SVG premium), segurança e LGPD por concepção.
-Detalhes em [docs/doutrina.md](docs/doutrina.md).
+**O Guatá não esconde, traduz.** Nada de botão cosmético, nunca inventar funcionalidade que não existe de verdade, interface limpa, segurança e LGPD por concepção. Detalhes em [docs/doutrina.md](docs/doutrina.md).
 
 ---
 
-*Feito com carinho pela equipe · **Wellsystem** · todo sistema é produto Wellsystem.*
+## Como ajudar
+
+O GuataOS está em **desenvolvimento ativo (BETA)** e contribuições são bem-vindas:
+
+- **Dê uma estrela** se gostou da ideia — ajuda o projeto a ser encontrado.
+- **Abra uma issue** para relatar um problema ou sugerir algo.
+- **Contribua** — veja [CONTRIBUTING.md](CONTRIBUTING.md) e o [ROADMAP.md](ROADMAP.md).
+
+---
+
+<p align="center">
+  <strong>Feito no Brasil · Made in Brazil</strong><br>
+  Inspirado na nossa natureza. A capivara Guatá é a nossa cara.
+</p>
+
+<p align="center">
+  <sub>Software em BETA, fornecido no estado em que se encontra — veja os <a href="docs/termos-e-beta.md">Termos e Isenção</a>. Um produto Wellsystem.</sub>
+</p>
