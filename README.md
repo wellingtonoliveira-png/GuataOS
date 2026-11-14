@@ -81,6 +81,8 @@ sudo dnf install guata-server
 guata-server-token                 # mostra a URL do painel + o token de acesso
 ```
 
+📘 **Documentação completa:** [guataos.com.br/docs](https://guataos.com.br/docs) — instalar, montar servidor, configurar AD/Files/DHCP/BOTO/Backup.
+
 Cada função abre seu **configurador web** ao instalar. Tudo também aparece na loja **Ocara** — instalar uma função pela loja transforma o desktop em "Guatá Server".
 
 ---

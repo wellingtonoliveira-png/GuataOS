@@ -7,6 +7,7 @@ Novidades e atualizações. Versão online: https://guataos.com.br/novidades
 - 🌍 **GuatáOS público e aberto** — código no GitHub sob Apache-2.0, com README, telas e roadmap.
 - 🐧 **Instalação em Oracle Linux 9 / Rocky / Alma (el9)** — `dnf install guata-server`, além do Debian/guataOS.
 - 🦅 **UIRÁ** — jogo arcade (estilo "subir o rio atirando") reestilizado, com gráficos premium, som e ranking.
+- 📘 **Central de Documentação** — como instalar, montar servidor (Rocky/OL9) e configurar AD/Files/DHCP/BOTO/Backup em guataos.com.br/docs
 - 📚 **Guia de Git para equipes** — material visual em guataos.com.br/git
 - 🔒 **Contador de visitas com privacidade** — sem cookies, sem IP, sem rastreadores (LGPD).
 - 🎨 **Identidade de marca** — favicon, kit de imprensa e a família de mascotes BOTO 🐬 · TUCANO 🦜 · UIRÁ 🦅.
