@@ -2,12 +2,12 @@
 
 Novidades e atualizações. Versão online: https://guataos.com.br/novidades
 
-## 0.28.1 — 13/11/2026
+## 0.28.2 — 13/11/2026
 
 - 🔢 **Versão unificada** — a tela "Sobre" mostrava 0.18 mesmo na ISO 0.27; número agora coerente em pacote, sistema e loja.
 - 🌐 **Domínio oficial guataos.com.br** em todos os apps (Sobre, Receitas, Bíblia, Projetos, loja e repositório APT).
 - 🐬 **BOTO na Ocara** — aparece em Servidores e baixa a imagem do container sob demanda na 1ª execução.
-- 🔔 **Aviso de atualização estilo Ubuntu** — notificação clicável "Atualizar agora"; o sistema não instala mais calado.
+- 🔔 **Aviso de atualização com a capivara** — uma telinha com a mascote ("Oi! Tem atualização nova") e botão "Atualizar agora"; o sistema não instala mais calado.
 
 ## 13 de novembro de 2026 — grande atualização
 - 🐬 **BOTO** — sonar de banco de dados (PostgreSQL e SQL Server): sessões, bloqueios e queries lentas numa leitura só. Função no Guatá Server e na loja Ocara.
