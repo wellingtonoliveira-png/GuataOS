@@ -2,6 +2,11 @@
 
 Novidades e atualizações. Versão online: https://guataos.com.br/novidades
 
+## 0.28.4 — 13/11/2026
+
+- 💬 **Conte sua experiência** — telinha com a capivara pra você dar feedback do BETA (bom/ruim + o que aconteceu). A gente vê tudo num painel interno pra resolver junto.
+- 🐬 **BOTO sem fricção** — se faltar o motor de containers, ele instala o Podman sozinho e sobe.
+
 ## 0.28.2 — 13/11/2026
 
 - 🔢 **Versão unificada** — a tela "Sobre" mostrava 0.18 mesmo na ISO 0.27; número agora coerente em pacote, sistema e loja.
