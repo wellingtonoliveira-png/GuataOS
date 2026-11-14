@@ -122,5 +122,5 @@ O GuataOS está em **desenvolvimento ativo (BETA)** e contribuições são bem-v
 </p>
 
 <p align="center">
-  <sub>Software em BETA, fornecido no estado em que se encontra — veja os <a href="docs/termos-e-beta.md">Termos e Isenção</a>. Um produto Wellsystem.</sub>
+  <sub>Software em <strong>BETA</strong> — veja os <a href="TERMOS.md">Termos de Uso e Isenção</a> e <a href="CHANGELOG.md">o que veio de novo</a>. Um produto Wellsystem.</sub>
 </p>
